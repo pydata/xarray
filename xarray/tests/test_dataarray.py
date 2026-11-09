@@ -7449,6 +7449,97 @@ def test_isin(da) -> None:
     assert_equal(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("to_replace", "value", "expected_data"),
+    [
+        (1, 10, [0, 10, 2, 3]),
+        ([1, 3], [10, 30], [0, 10, 2, 30]),
+        (np.array([3, 1]), np.array([30, 10]), [0, 10, 2, 30]),
+        ([1, 3], -1, [0, -1, 2, -1]),
+        ([5, 7], [50, 70], [0, 1, 2, 3]),
+        ([], [], [0, 1, 2, 3]),
+    ],
+    ids=["scalar", "list", "unsorted", "scalar-value", "no-match", "empty"],
+)
+def test_replace_values(
+    to_replace: Any, value: Any, expected_data: list[int], use_dask: bool
+) -> None:
+    da = DataArray(
+        [0, 1, 2, 3],
+        dims="x",
+        coords={"x": [0, 1, 2, 3]},
+        name="foo",
+        attrs={"units": "m"},
+    )
+    if use_dask:
+        da = da.chunk(x=2)
+    expected = da.copy(data=np.array(expected_data))
+
+    actual = da.replace_values(to_replace, value)
+    assert_identical(actual, expected)
+
+
+def test_replace_values_nan(use_dask: bool) -> None:
+    da = DataArray([np.nan, 1.0, np.nan, 3.0], dims="x")
+    if use_dask:
+        da = da.chunk(x=2)
+
+    actual = da.replace_values(np.nan, 0.0)
+    assert_identical(actual, DataArray([0.0, 1.0, 0.0, 3.0], dims="x"))
+
+    actual = da.replace_values([3.0, np.nan], [30.0, 0.0])
+    assert_identical(actual, DataArray([0.0, 1.0, 0.0, 30.0], dims="x"))
+
+
+@pytest.mark.parametrize(
+    ("data", "value", "expected_dtype"),
+    [
+        (np.array([1, 2], dtype="int32"), 10, np.dtype("int32")),
+        (np.array([1, 2], dtype="int32"), [10], np.dtype("int64")),
+        (np.array([1, 2]), 0.5, np.dtype("float64")),
+        (np.array([1.0, 2.0], dtype="float32"), [10.0], np.dtype("float64")),
+        (np.array([1, 2]), ["a"], np.dtype(object)),
+    ],
+)
+def test_replace_values_dtype(
+    data: np.ndarray, value: Any, expected_dtype: np.dtype, use_dask: bool
+) -> None:
+    da = DataArray(data, dims="x")
+    if use_dask:
+        da = da.chunk()
+
+    actual = da.replace_values([1], value)
+    assert actual.dtype == expected_dtype
+    assert actual.values[0] == np.asarray(value).item(0)
+    assert actual.values[1] == 2
+
+
+@pytest.mark.parametrize(
+    ("to_replace", "value", "match"),
+    [
+        ([1, 2], [10], "same length"),
+        (1, [10, 20], "same length"),
+        ([1, 2], [[10, 20]], "same length"),
+        ([[1, 2]], [[10, 20]], "1D"),
+        ([1, 1], [10, 20], "duplicates"),
+        ([np.nan, np.nan], [10, 20], "duplicates"),
+    ],
+)
+def test_replace_values_errors(to_replace: Any, value: Any, match: str) -> None:
+    da = DataArray([0, 1, 2], dims="x")
+    with pytest.raises(ValueError, match=match):
+        da.replace_values(to_replace, value)
+
+
+@requires_dask
+def test_replace_values_lazy() -> None:
+    da = DataArray([0, 1, 2, 3], dims="x").chunk(x=2)
+    with raise_if_dask_computes():
+        actual = da.replace_values([1, 3], [10, 30])
+    assert isinstance(actual.data, dask_array_type)
+    assert_identical(actual, DataArray([0, 10, 2, 30], dims="x"))
+
+
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
         _ = xr.DataArray([1, 2, np.nan]) > 0

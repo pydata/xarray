@@ -109,6 +109,7 @@ Missing value handling
   DataArray.interpolate_na
   DataArray.where
   DataArray.isin
+  DataArray.replace_values
 
 Comparisons
 -----------
