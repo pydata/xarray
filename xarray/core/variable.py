@@ -1100,7 +1100,10 @@ class Variable(
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
             mask = indexing.create_mask(indexer, self.shape)
-            data = duck_array_ops.broadcast_to(fill_value, getattr(mask, "shape", ()))
+            # copy, since broadcast_to returns a read-only view
+            data = duck_array_ops.broadcast_to(
+                fill_value, getattr(mask, "shape", ())
+            ).copy()
 
         if new_order:
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)

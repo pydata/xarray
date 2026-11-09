@@ -2002,6 +2002,13 @@ class TestDataArray:
             "Dtype of reindexed DataArray should remain float32"
         )
 
+    def test_reindex_empty_array_writeable(self) -> None:
+        # GH8274
+        x = xr.DataArray([], dims=("x",), coords={"x": []})
+        y = x.reindex(x=[1.0, 2.0], fill_value=0)
+        y[0] = 5
+        assert y.values.tolist() == [5, 0]
+
     @pytest.mark.parametrize(
         "extension_array",
         [

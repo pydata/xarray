@@ -211,6 +211,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`align` and :py:meth:`DataArray.reindex` on an empty array now
+  return a writeable array instead of a read-only view (:issue:`8274`).
+  By `Isaac Yong <https://github.com/NaNIsaac>`_.
 - Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
   ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
   ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
