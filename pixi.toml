@@ -82,8 +82,6 @@ seaborn = "*"
 
 [feature.extras.dependencies]
 # array
-sparse = "*"
-pint = "*"
 array-api-strict = "*"
 
 # algorithms
@@ -96,8 +94,11 @@ pooch = "*"
 # calendar
 cftime = "*"
 
-[feature.extras.pypi-dependencies]
-# array
+[feature.duckarray.dependencies]
+pint = "*"
+sparse = "*"
+
+[feature.duckarray.pypi-dependencies]
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
 [feature.minimal.dependencies]
@@ -147,6 +148,11 @@ zarr = "3.1.*"
 pyarrow = "*"        # required by dask.dataframe
 # numcodecs warns on import when crc32c is used instead of google-crc32c
 google-crc32c = "*"
+
+[feature.duckarray-min.pypi-dependencies]
+# Pint and Sparse use the pins in min-versions. The policy checker ignores PyPI
+# dependencies, so update JAX manually following the 12-month version policy.
+jax = "==0.8.*"
 
 
 [feature.test.dependencies]
@@ -315,6 +321,9 @@ policy-min-versions = [
   { task = "_check-policy", args = [
     "pixi:test-py312-min-versions",
   ] },
+  { task = "_check-policy", args = [
+    "pixi:test-py312-duckarray-min",
+  ] },
 ]
 [feature.policy.tasks.policy]
 
@@ -324,6 +333,7 @@ depends-on = [
     pixi:test-py312-bare-minimum \
     pixi:test-py312-bare-min-and-scipy \
     pixi:test-py312-min-versions \
+    pixi:test-py312-duckarray-min \
     """,
   ] },
 ]
@@ -429,6 +439,7 @@ test-py313 = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
 ] }
 test-py315-no-numba = { features = [
   "py315",
@@ -438,6 +449,7 @@ test-py315-no-numba = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
 ] }
 test-py315-no-dask = { features = [
   "py314",
@@ -448,6 +460,7 @@ test-py315-no-dask = { features = [
   "numba",
   "viz",
   "extras",
+  "duckarray",
 ] }
 test-py314 = { features = [
   "py314",
@@ -458,6 +471,7 @@ test-py314 = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
 ] }
 
 test-py312 = { features = [
@@ -469,6 +483,7 @@ test-py312 = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
 ] }
 
 test-py315 = { features = [
@@ -480,6 +495,7 @@ test-py315 = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
 ] }
 
 test-py312-with-typing = { features = [
@@ -491,6 +507,7 @@ test-py312-with-typing = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
   "typing",
   "typing-stubs",
 ] }
@@ -504,6 +521,7 @@ test-py315-with-typing = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
   "typing",
   "typing-stubs",
 ] }
@@ -521,6 +539,25 @@ test-py312-min-versions = { features = [
   "min-versions",
 ] }
 
+test-py315-duckarray = { features = [
+  "py315",
+  "test",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "duckarray",
+] }
+test-py312-duckarray-min = { features = [
+  "test",
+  "numba",
+  "minimal",
+  "minimum-scipy",
+  "min-versions",
+  "duckarray-min",
+] }
+
 
 # Extra
 typing = { features = ["typing", "typing-stubs"] }
@@ -531,6 +568,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
+  "duckarray",
   "numba",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
@@ -544,6 +582,7 @@ default = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
