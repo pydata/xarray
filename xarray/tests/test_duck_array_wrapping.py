@@ -112,12 +112,14 @@ NAMESPACE_ARRAYS = {
     },
 }
 
-NAMESPACE_REQUIREMENTS = {
+# The duckarray marker targets JAX, Pint, and Sparse for dedicated CI;
+# Dask and CuPy retain their existing test selection.
+NAMESPACE_REQUIREMENTS: dict[str, pytest.MarkDecorator | list[pytest.MarkDecorator]] = {
     "cupy": requires_cupy,
     "dask.array": requires_dask,
-    "jax.numpy": requires_jax,
-    "pint": requires_pint,
-    "sparse": requires_sparse,
+    "jax.numpy": [requires_jax, pytest.mark.duckarray],
+    "pint": [requires_pint, pytest.mark.duckarray],
+    "sparse": [requires_sparse, pytest.mark.duckarray],
 }
 NAMESPACES = [
     pytest.param(namespace, marks=NAMESPACE_REQUIREMENTS[namespace])

@@ -2561,6 +2561,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_pandas_categorical_dtype()
 
 
+@pytest.mark.duckarray
 @requires_sparse
 class TestVariableWithSparse:
     # TODO inherit VariableSubclassobjects to cover more tests
@@ -3111,8 +3112,9 @@ class TestNumpyCoercion:
         assert_identical(v_chunked.as_numpy(), v.compute())
         np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
 
+    @pytest.mark.duckarray
     @requires_pint
-    def test_from_pint(self, Var):
+    def test_from_pint(self, Var: type[Variable]) -> None:
         import pint
 
         arr = np.array([1, 2, 3])
@@ -3125,10 +3127,11 @@ class TestNumpyCoercion:
         assert_identical(v.as_numpy(), Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
 
+    @pytest.mark.duckarray
     @requires_dask
     @requires_pint
     @pytest.mark.skip_with_dask_array
-    def test_from_pint_wrapping_dask(self, Var):
+    def test_from_pint_wrapping_dask(self, Var: type[Variable]) -> None:
         import dask
         import pint
 
@@ -3146,6 +3149,7 @@ class TestNumpyCoercion:
 
 
 # Not part of TestNumpyCoercion, as these only apply to Variable, not IndexVariable
+@pytest.mark.duckarray
 @requires_sparse
 def test_numpy_coercion_from_sparse() -> None:
     # Can't have 2D IndexVariables

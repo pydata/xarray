@@ -50,6 +50,7 @@ no_unit_values = ("none", None)
 
 
 pytestmark = [
+    pytest.mark.duckarray,
     pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
