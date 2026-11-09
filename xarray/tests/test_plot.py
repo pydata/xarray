@@ -3870,3 +3870,47 @@ def test_facetgrid_figsize_rcparams() -> None:
             g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
             actual_figsize = g.fig.get_size_inches()
             np.testing.assert_allclose(actual_figsize, explicit_size)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("col_wrap", ["z", 2.5, True])
+def test_col_wrap_invalid_type_raises(col_wrap: Any) -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        with pytest.raises(TypeError, match=r"col_wrap must be an integer or 'auto'"):
+            da.plot(col="z", col_wrap=col_wrap)  # type: ignore[call-arg]
+        with pytest.raises(TypeError, match=r"col_wrap must be an integer or 'auto'"):
+            xplt.FacetGrid(da, col="z", col_wrap=col_wrap)
+
+
+@requires_matplotlib
+def test_col_wrap_not_positive_raises() -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        with pytest.raises(ValueError, match=r"col_wrap must be a positive integer"):
+            da.plot(col="z", col_wrap=0)  # type: ignore[call-arg]
+
+
+@requires_matplotlib
+def test_col_wrap_without_facets_raises() -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    ds = Dataset({"a": da, "b": da})
+    match = r"col_wrap can only be used with faceted plots"
+    with figure_context():
+        with pytest.raises(ValueError, match=match):
+            da.plot(col_wrap=2)  # type: ignore[call-arg]
+        with pytest.raises(ValueError, match=match):
+            da.isel(z=0).plot.pcolormesh(col_wrap=2)
+        with pytest.raises(ValueError, match=match):
+            da.plot.scatter(col_wrap=2)
+        with pytest.raises(ValueError, match=match):
+            ds.plot.scatter(x="a", y="b", col_wrap=2)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("col_wrap", [2, np.int64(2), "auto"])
+def test_col_wrap_valid(col_wrap: int | np.integer | str) -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        g = da.plot(col="z", col_wrap=col_wrap)  # type: ignore[call-arg]
+        assert isinstance(g, xplt.FacetGrid)
