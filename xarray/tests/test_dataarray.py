@@ -8149,13 +8149,15 @@ class TestArrowPyCapsule:
         )
 
     @requires_pyarrow
-    def test_data_array_unnamed_variable(self):
+    def test_data_array_unnamed_raises(self) -> None:
         import pyarrow as pa
 
         da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [0, 1, 2]})
-        table = pa.table(da)
 
-        assert "values" in table.column_names
+        with pytest.raises(ValueError, match="unnamed DataArray"):
+            pa.table(da)
+        with pytest.raises(ValueError, match="unnamed DataArray"):
+            pa.schema(da)
 
     @requires_polars
     def test_polars_dataframe_1d(self):
@@ -8212,6 +8214,17 @@ class TestArrowPyCapsule:
         )
         with pytest.raises(ValueError):
             pa.table(dask_da)
+
+    @requires_dask
+    @requires_pyarrow
+    def test_dask_coord_raises(self) -> None:
+        import pyarrow as pa
+
+        da = xr.DataArray([1, 2], dims="x", name="v").assign_coords(
+            c=xr.DataArray([10, 20], dims="x").chunk()
+        )
+        with pytest.raises(ValueError, match="must be computed first"):
+            pa.table(da)
 
     @requires_polars
     @requires_pyarrow

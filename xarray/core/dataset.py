@@ -7751,6 +7751,11 @@ class Dataset(
                 "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
+        if any(is_chunked_array(v._data) for v in self.variables.values()):
+            raise ValueError(
+                "Chunked Dataset must be computed first, use: Dataset.compute()"
+            )
+
         dims = tuple(self.dims)
         sizes = self.sizes
         shape = tuple(sizes[dim] for dim in dims)

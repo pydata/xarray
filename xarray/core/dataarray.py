@@ -502,7 +502,9 @@ class DataArray(
                 "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
-        if is_chunked_array(self._variable._data):
+        if is_chunked_array(self._variable._data) or any(
+            is_chunked_array(coord._data) for coord in self._coords.values()
+        ):
             raise ValueError(
                 "Chunked DataArray must be computed first, use: DataArray.compute()"
             )
@@ -511,7 +513,7 @@ class DataArray(
         dims = self._variable.dims
         shape = self._variable.shape
 
-        values_column = self.name or "values"
+        values_column = self.name
 
         if not values.flags.c_contiguous:
             values = np.ascontiguousarray(values)
