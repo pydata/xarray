@@ -213,6 +213,13 @@ Bug Fixes
 ~~~~~~~~~
 - Dataset weighted arithmetic reductions now skip nonnumeric data variables
   (:issue:`9322`).
+- Reducing a groupby or resample object over a dimension that does not exist,
+  e.g. ``da.groupby("time").mean("longitude")``, now raises
+  ``ValueError: Dimensions ('longitude',) not found in data dimensions (...)``,
+  like reductions on :py:class:`DataArray` and :py:class:`Dataset`, with or
+  without ``flox``. The suggestion to install ``flox`` is only shown when it
+  would help (:issue:`10875`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
   ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
   ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
