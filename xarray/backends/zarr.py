@@ -716,6 +716,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_cache_members",
         "_close_store_on_close",
         "_consolidate_on_close",
+        "_consolidate_path",
         "_group",
         "_members",
         "_mode",
@@ -750,6 +751,7 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
+            consolidate_path,
         ) = _get_open_params(
             store=store,
             mode=mode,
@@ -785,6 +787,7 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 align_chunks=align_chunks,
                 cache_members=cache_members,
+                consolidate_path=consolidate_path,
             )
             for group, group_store in group_members.items()
         }
@@ -813,6 +816,7 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
+            consolidate_path,
         ) = _get_open_params(
             store=store,
             mode=mode,
@@ -836,6 +840,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask,
             align_chunks=align_chunks,
             cache_members=cache_members,
+            consolidate_path=consolidate_path,
         )
 
     def __init__(
@@ -851,6 +856,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         align_chunks: bool = False,
         cache_members: bool = True,
+        consolidate_path: str | None = None,
     ):
         if align_chunks:
             # Disabled the safe_chunks validations if the alignment is going to be applied
@@ -861,6 +867,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._group = self.zarr_group.path
         self._mode = mode
         self._consolidate_on_close = consolidate_on_close
+        self._consolidate_path = consolidate_path
         self._append_dim = append_dim
         self._write_region = write_region
         self._align_chunks = align_chunks
@@ -898,6 +905,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=self._use_zarr_fill_value_as_mask,
             align_chunks=self._align_chunks,
             cache_members=self._cache_members,
+            consolidate_path=self._consolidate_path,
         )
 
     @property
@@ -1186,6 +1194,14 @@ class ZarrStore(AbstractWritableDataStore):
                 self.zarr_group.store,
                 zarr_format=self.zarr_group.metadata.zarr_format,
             )
+            if self._consolidate_path:
+                # also consolidate the node the store addresses: that's where
+                # reading the same store looks for consolidated metadata
+                zarr.consolidate_metadata(
+                    self.zarr_group.store,
+                    path=self._consolidate_path,
+                    zarr_format=self.zarr_group.metadata.zarr_format,
+                )
 
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
@@ -1997,6 +2013,16 @@ def _get_open_params(
 
     close_store_on_close = zarr_group.store is not store
 
+    # The store may address a node below the root of the underlying store (e.g.
+    # a StorePath with a path). That node, not the store root, is where reading
+    # the same store looks for consolidated metadata, so consolidate there too
+    # when writing.
+    nested = (group or "").strip("/")
+    consolidate_path = zarr_group.path
+    if nested:
+        consolidate_path = consolidate_path.removesuffix(nested)
+    consolidate_path = consolidate_path.strip("/") or None
+
     # we use this to determine how to handle fill_value
     if use_zarr_fill_value_as_mask is None:
         if zarr_group.metadata.zarr_format == 3:
@@ -2011,6 +2037,7 @@ def _get_open_params(
         consolidate_on_close,
         close_store_on_close,
         use_zarr_fill_value_as_mask,
+        consolidate_path,
     )
 
 
