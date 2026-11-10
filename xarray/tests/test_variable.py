@@ -88,6 +88,64 @@ def test_as_compatible_data_writeable(data):
         pd.reset_option("mode.copy_on_write")
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param(np.array(["a", "bc"], dtype=object), id="string"),
+        pytest.param(np.array([1, 2], dtype=object), id="integer"),
+        pytest.param(np.array([datetime(2000, 1, 1)], dtype=object), id="datetime"),
+        pytest.param(np.array([timedelta(seconds=1)], dtype=object), id="timedelta"),
+        pytest.param(
+            np.array([np.datetime64("2000-01-01", "s")], dtype=object),
+            id="datetime64",
+        ),
+        # GH11484: labelled "mixed" / "datetime" by infer_dtype, but must still be
+        # handled exactly like the pd.Series roundtrip handles them
+        pytest.param(
+            np.array([pd.Timestamp("2000"), np.datetime64("2000-01-02")], dtype=object),
+            id="timestamp-and-datetime64",
+        ),
+        pytest.param(
+            np.array(
+                [pd.Timestamp("2000", tz="UTC"), pd.Timestamp("2000", tz="US/Eastern")],
+                dtype=object,
+            ),
+            id="mixed-timezones",
+        ),
+        pytest.param(
+            np.array(
+                [datetime(2000, 1, 1, tzinfo=pytz.utc), datetime(2000, 1, 1)],
+                dtype=object,
+            ),
+            id="tz-aware-and-naive",
+        ),
+    ],
+)
+# TODO: remove the infer_string parametrization (and the filterwarnings mark)
+#       once the option is removed in pandas 4.0
+@pytest.mark.filterwarnings("ignore:The 'future.infer_string' option is deprecated")
+@pytest.mark.parametrize("infer_string", [False, True])
+def test_as_compatible_data_object_matches_pandas_roundtrip(data, infer_string):
+    # GH11470: skipping the pd.Series roundtrip must not change the result
+    with pd.option_context("future.infer_string", infer_string):
+        expected = np.asarray(pd.Series(data, copy=False))
+        actual = as_compatible_data(data)
+    assert actual.dtype == expected.dtype
+    np.testing.assert_array_equal(actual, expected)
+
+
+# TODO: remove the option_context (and the filterwarnings mark) once the option
+#       is removed in pandas 4.0
+@pytest.mark.filterwarnings("ignore:The 'future.infer_string' option is deprecated")
+def test_as_compatible_data_object_strings_keep_none():
+    # GH11470: object strings are returned as-is, so None is not turned into NaN
+    # like the pd.Series roundtrip does when pandas infers the str dtype
+    data = np.array(["a", None], dtype=object)
+    with pd.option_context("future.infer_string", True):
+        actual = as_compatible_data(data)
+    assert actual[1] is None
+
+
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     @pytest.fixture
     def target(self, data):

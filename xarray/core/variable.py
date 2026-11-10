@@ -16,6 +16,7 @@ from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
+from xarray.compat.pdcompat import pandas_infers_string_dtype
 from xarray.computation import ops
 from xarray.computation.arithmetic import VariableArithmetic
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
@@ -210,33 +211,45 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention. Object dtype inputs that are inferred to be
-    strings are returned unchanged. For backwards compat, as of 3.0.0 pandas,
-    the remaining object dtype inputs are cast to strings by `pandas.Series`
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
     but we output them as object dtype with the input metadata preserved as well.
-
 
     * datetime.datetime
     * datetime.timedelta
     * pd.Timestamp
     * pd.Timedelta
+
+    When pandas string inference is enabled, building that ``pd.Series`` is
+    expensive for string data (GH11470). So if ``pd.api.types.infer_dtype``
+    labels the values as a type the roundtrip never converts, they are returned
+    unchanged. Anything datetime-like, as well as "mixed" and "empty" (which may
+    hide datetime-likes), still goes through the roundtrip.
     """
-    inferred = pd.api.types.infer_dtype(values.ravel(), skipna=True)
-
-    if inferred == "string":
+    not_converted_by_pandas = {
+        "string",
+        "bytes",
+        "integer",
+        "floating",
+        "mixed-integer",
+        "mixed-integer-float",
+        "decimal",
+        "complex",
+        "boolean",
+        "date",
+        "time",
+        "period",
+        "interval",
+    }
+    if (
+        pandas_infers_string_dtype()
+        and pd.api.types.infer_dtype(values.ravel(), skipna=True)
+        in not_converted_by_pandas
+    ):
         return values
-    elif inferred == "datetime":
-        result = pd.to_datetime(values.ravel()).to_numpy().reshape(values.shape)
-    elif inferred == "timedelta":
-        result = pd.to_timedelta(values.ravel()).to_numpy().reshape(values.shape)
-    elif inferred in ["datetime64", "timedelta64"]:
-        # Casting drops unit info for these cases;
-        # fall back to pd.Series roundtrip, which preserves them.
-        as_series = pd.Series(values.ravel(), copy=False)
-        result = np.asarray(as_series).reshape(values.shape)
-    else:
-        return values
 
+    as_series = pd.Series(values.ravel(), copy=False)
+    result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
