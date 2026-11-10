@@ -1478,6 +1478,24 @@ class TestVariable(VariableSubclassobjects):
         v_new[...] += 99
         assert_array_equal(v_new, v._data[0, 0])
 
+    def test_getitem_with_mask_size_zero_fill_value(self):
+        # GH8274
+        v = Variable(["x"], np.array([], dtype="float64"))
+        actual = v._getitem_with_mask([-1, -1], fill_value=0)
+        assert_identical(actual, Variable(["x"], [0.0, 0.0]))
+        # same dtype as when indexing a non-empty variable
+        assert actual.dtype == np.dtype("float64")
+        # the result must be writeable, not a read-only broadcast view
+        assert actual.values.flags.writeable
+        actual[0] = 1
+        assert_identical(actual, Variable(["x"], [1.0, 0.0]))
+
+        v = Variable(["x"], np.array([], dtype="int32"))
+        assert v._getitem_with_mask([-1], fill_value=0).dtype == np.dtype("int32")
+        actual = v._getitem_with_mask([-1])
+        assert actual.dtype == np.dtype("float64")
+        assert actual.values.flags.writeable
+
     def test_getitem_with_mask_2d_input(self):
         v = Variable(("x", "y"), [[0, 1, 2], [3, 4, 5]])
         assert_identical(
