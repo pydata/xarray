@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, NotRequired, TypedDict, override
@@ -40,6 +41,10 @@ class _NumpyEncoder(json.JSONEncoder):
             return bool(o)
         if isinstance(o, np.ndarray):
             return o.tolist()
+        if isinstance(o, datetime.date | datetime.time):
+            return o.isoformat()
+        if isinstance(o, np.datetime64):
+            return str(o)
         return super().default(o)
 
 
@@ -66,7 +71,9 @@ def _get_schema_from_dataarray(data_array: DataArray) -> pa.Schema:
         pa.field(str(name), pa.from_numpy_dtype(coord.dtype))
         for name, coord in data_array._coords.items()
     ]
-    values_column = data_array.name or "values"
+    if data_array.name is None:
+        raise ValueError("cannot convert an unnamed DataArray to Arrow")
+    values_column = data_array.name
     fields.append(
         pa.field(str(values_column), pa.from_numpy_dtype(data_array._variable.dtype))
     )
@@ -108,6 +115,10 @@ def _get_schema_from_dataset(dataset: Dataset) -> pa.Schema:
         "coords": {
             str(name): coord.to_dict(data=False)
             for name, coord in dataset.coords.variables.items()
+        },
+        "variables": {
+            str(name): variable.to_dict(data=False)
+            for name, variable in dataset.data_vars.variables.items()
         },
     }
     schema_metadata = {

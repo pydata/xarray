@@ -8917,9 +8917,9 @@ class TestDatasetToArrow:
         import json
 
         ds = xr.Dataset(
-            {"temperature": ("x", [1.0, 2.0, 3.0])},
-            coords={"x": [10, 20, 30]},
-            attrs={"units": "K", "long_name": "temperature"},
+            {"temperature": ("x", [1.0, 2.0, 3.0], {"units": "K"})},
+            coords={"x": ("x", [10, 20, 30], {"units": "m"})},
+            attrs={"title": "test"},
         )
         table = ds.to_arrow()
         schema = table.schema
@@ -8930,12 +8930,20 @@ class TestDatasetToArrow:
         assert xarray_meta == {
             "dims": ["x"],
             "shape": [3],
-            "attrs": {"units": "K", "long_name": "temperature"},
+            "attrs": {"title": "test"},
             "coords": {
                 "x": {
                     "dims": ["x"],
-                    "attrs": {},
+                    "attrs": {"units": "m"},
                     "dtype": "int64",
+                    "shape": [3],
+                }
+            },
+            "variables": {
+                "temperature": {
+                    "dims": ["x"],
+                    "attrs": {"units": "K"},
+                    "dtype": "float64",
                     "shape": [3],
                 }
             },
@@ -8951,6 +8959,17 @@ class TestDatasetToArrow:
         )
 
         assert ds.to_arrow().equals(pa.table(ds))
+
+    @requires_dask
+    @requires_pyarrow
+    def test_to_arrow_chunked_raises(self) -> None:
+        ds = xr.Dataset(
+            {"temperature": ("x", [1.0, 2.0, 3.0])},
+            coords={"x": [10, 20, 30]},
+        ).chunk()
+
+        with pytest.raises(ValueError, match="must be computed first"):
+            ds.to_arrow()
 
     @requires_polars
     def test_to_arrow_polars_dataframe(self) -> None:
