@@ -13,7 +13,7 @@ from xarray.backends.api import (
 )
 from xarray.backends.plugins import show_backends
 from xarray.backends.writers import save_mfdataset
-from xarray.backends.zarr import open_zarr
+from xarray.backends.zarr import open_zarr, open_zarr_async
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
@@ -109,6 +109,7 @@ __all__ = (  # noqa: RUF022
     "open_groups",
     "open_mfdataset",
     "open_zarr",
+    "open_zarr_async",
     "polyval",
     "register_dataarray_accessor",
     "register_dataset_accessor",
