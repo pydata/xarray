@@ -50,6 +50,10 @@ warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is depreca
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
 warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
+# flox builds NaT dtypes at import time; numpy deprecated the generic timedelta unit
+warnings.filterwarnings(
+    "ignore", "The 'generic' unit for NumPy timedelta is deprecated"
+)
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -98,12 +102,11 @@ def get_dask_chunkmanager():
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="'cgi' is deprecated and slated for removal in Python 3.13",
-        category=FutureWarning,
+        category=DeprecationWarning,
     )
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -119,22 +122,6 @@ has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_dask_array, requires_dask_array = _importorskip("dask_array")
-has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
-    "dask", minversion="2024.08.1"
-)
-has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
-if has_dask_ge_2025_1_0:
-    has_dask_expr = True
-    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
-else:
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The current Dask DataFrame implementation is deprecated.",
-            category=FutureWarning,
-        )
-        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 
 if has_dask:
     dask_chunkmanager = get_dask_chunkmanager()
@@ -148,10 +135,16 @@ else:
 
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
-has_zarr, requires_zarr = _importorskip("zarr")
-requires_zarr_v3 = requires_zarr
-has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
+with warnings.catch_warnings():
+    # raised when importing numcodecs with crc32c installed
+    warnings.filterwarnings(
+        "ignore", message="crc32c usage is deprecated", category=DeprecationWarning
+    )
+    has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
+has_zarr_rectilinear_chunks, requires_zarr_rectilinear_chunks = _importorskip(
+    "zarr", "3.2.0"
+)
 if has_zarr:
     import zarr
 
@@ -159,12 +152,8 @@ if has_zarr:
     # TODO: use version specifier
     # installing from git main is giving me a lower version than the
     # most recently released zarr
-    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
     has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
 
-    requires_zarr_v3_dtypes = pytest.mark.skipif(
-        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
-    )
     requires_zarr_v3_async_oindex = pytest.mark.skipif(
         not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
     )
@@ -174,6 +163,7 @@ has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_pyarrow, requires_pyarrow = _importorskip("pyarrow")
+has_polars, requires_polars = _importorskip("polars")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -188,9 +178,10 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
+has_pooch, requires_pooch = _importorskip("pooch")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
-
+has_pandas_3_1, requires_pandas_3_1 = _importorskip("pandas", "3.1.0.dev0")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -205,10 +196,10 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
-has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
-has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+has_jax, requires_jax = _importorskip("jax")
+has_aiobotocore, requires_aiobotocore = _importorskip("aiobotocore")
 
 parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
@@ -240,18 +231,6 @@ def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
 
 
 has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3(has_h5netcdf)
-has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
-    "netCDF4", "1.6.2"
-)
-
-has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
-    "h5netcdf", "1.7.0.dev"
-)
-
-has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
-    "netCDF4", "1.7.0"
-)
-
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 
@@ -262,7 +241,8 @@ if has_dask:
 class CountingScheduler:
     """Simple dask scheduler counting the number of computes.
 
-    Reference: https://stackoverflow.com/questions/53289286/"""
+    Reference: https://stackoverflow.com/questions/53289286/
+    """
 
     def __init__(self, max_computes=0):
         self.total_computes = 0
@@ -305,8 +285,9 @@ class IndexerMaker:
 
 
 def source_ndarray(array):
-    """Given an ndarray, return the base object which holds its memory, or the
-    object itself.
+    """Return the base object which holds the memory of an ndarray.
+
+    If there is no base object, return the object itself.
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "DatetimeIndex.base")
@@ -318,7 +299,7 @@ def source_ndarray(array):
 
 
 def format_record(record) -> str:
-    """Format warning record like `FutureWarning('Function will be deprecated...')`"""
+    """Format warning record like `FutureWarning('Function will be deprecated...')`."""
     return f"{str(record.category)[8:-2]}('{record.message}'))"
 
 

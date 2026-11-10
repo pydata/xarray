@@ -2,10 +2,11 @@ import os
 
 import numpy as np
 import pandas as pd
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized, randint, randn, requires_dask
+from . import randint, randn, requires_dask
 
 nx = 2000
 ny = 1000
@@ -95,52 +96,52 @@ class Base:
 
 
 class Indexing(Base):
-    @parameterized(["key"], [list(basic_indexes.keys())])
+    @parameterize({"key": [list(basic_indexes.keys())]})
     def time_indexing_basic(self, key):
         self.ds.isel(**basic_indexes[key]).load()
 
-    @parameterized(["key"], [list(outer_indexes.keys())])
+    @parameterize({"key": [list(outer_indexes.keys())]})
     def time_indexing_outer(self, key):
         self.ds.isel(**outer_indexes[key]).load()
 
-    @parameterized(["key"], [list(vectorized_indexes.keys())])
+    @parameterize({"key": [list(vectorized_indexes.keys())]})
     def time_indexing_vectorized(self, key):
         self.ds.isel(**vectorized_indexes[key]).load()
 
-    @parameterized(["key"], [list(basic_indexes.keys())])
+    @parameterize({"key": [list(basic_indexes.keys())]})
     def time_indexing_basic_ds_large(self, key):
         # https://github.com/pydata/xarray/pull/9003
         self.ds_large.isel(**basic_indexes[key]).load()
 
 
 class IndexingOnly(Base):
-    @parameterized(["key"], [list(basic_indexes.keys())])
+    @parameterize({"key": [list(basic_indexes.keys())]})
     def time_indexing_basic(self, key):
         self.ds.isel(**basic_indexes[key])
 
-    @parameterized(["key"], [list(outer_indexes.keys())])
+    @parameterize({"key": [list(outer_indexes.keys())]})
     def time_indexing_outer(self, key):
         self.ds.isel(**outer_indexes[key])
 
-    @parameterized(["key"], [list(big_vectorized_indexes.keys())])
+    @parameterize({"key": [list(big_vectorized_indexes.keys())]})
     def time_indexing_big_vectorized(self, key):
         self.ds.isel(**big_vectorized_indexes[key])
 
 
 class Assignment(Base):
-    @parameterized(["key"], [list(basic_indexes.keys())])
+    @parameterize({"key": [list(basic_indexes.keys())]})
     def time_assignment_basic(self, key):
         ind = basic_indexes[key]
         val = basic_assignment_values[key]
         self.ds["var1"][ind.get("x", slice(None)), ind.get("y", slice(None))] = val
 
-    @parameterized(["key"], [list(outer_indexes.keys())])
+    @parameterize({"key": [list(outer_indexes.keys())]})
     def time_assignment_outer(self, key):
         ind = outer_indexes[key]
         val = outer_assignment_values[key]
         self.ds["var1"][ind.get("x", slice(None)), ind.get("y", slice(None))] = val
 
-    @parameterized(["key"], [list(vectorized_indexes.keys())])
+    @parameterize({"key": [list(vectorized_indexes.keys())]})
     def time_assignment_vectorized(self, key):
         ind = vectorized_indexes[key]
         val = vectorized_assignment_values[key]

@@ -136,9 +136,7 @@
    core.accessor_dt.DatetimeAccessor.season
    core.accessor_dt.DatetimeAccessor.second
    core.accessor_dt.DatetimeAccessor.time
-   core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
    core.accessor_dt.TimedeltaAccessor.ceil
@@ -253,11 +251,9 @@
    Variable.std
    Variable.sum
    Variable.to_base_variable
-   Variable.to_coord
    Variable.to_dict
    Variable.to_index
    Variable.to_index_variable
-   Variable.to_variable
    Variable.transpose
    Variable.unstack
    Variable.var
@@ -328,11 +324,9 @@
    IndexVariable.std
    IndexVariable.sum
    IndexVariable.to_base_variable
-   IndexVariable.to_coord
    IndexVariable.to_dict
    IndexVariable.to_index
    IndexVariable.to_index_variable
-   IndexVariable.to_variable
    IndexVariable.transpose
    IndexVariable.unstack
    IndexVariable.var
@@ -396,6 +390,7 @@
    plot.imshow
    plot.pcolormesh
    plot.scatter
+   plot.lines
    plot.surface
 
    CFTimeIndex.all
@@ -659,6 +654,8 @@
    backends.BackendArray
    backends.BackendEntrypoint.guess_can_open
    backends.BackendEntrypoint.open_dataset
+   backends.BackendEntrypoint.open_datatree
+   backends.BackendEntrypoint.open_groups_as_dict
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter

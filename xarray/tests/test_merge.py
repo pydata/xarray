@@ -189,7 +189,7 @@ class TestMergeFunction:
     def test_merge_arrays_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         input_attrs1 = attrs1.copy()
         data1 = xr.Dataset(
             {"var1": ("dim1", [], attrs1)}, coords={"dim1": ("dim1", [], attrs1)}
@@ -501,7 +501,7 @@ class TestMergeFunction:
         assert "zero" not in actual.attrs
 
     def test_merge_attrs_no_conflicts_compat_minimal(self):
-        """make sure compat="minimal" does not silence errors"""
+        """Make sure compat="minimal" does not silence errors."""
         ds1 = xr.Dataset({"a": ("x", [], {"a": 0})})
         ds2 = xr.Dataset({"a": ("x", [], {"a": 1})})
 

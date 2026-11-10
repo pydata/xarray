@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -336,21 +336,13 @@ def _unpack_time_units_and_ref_date_cftime(units: str, calendar: str):
     return time_units, ref_date
 
 
-def _decode_cf_datetime_dtype(
-    data,
+def _decoded_dtype(
+    example_value: np.ndarray,
     units: str,
     calendar: str | None,
     use_cftime: bool | None,
-    time_unit: PDDatetimeUnitOptions = "ns",
+    time_unit: PDDatetimeUnitOptions,
 ) -> np.dtype:
-    # Verify that at least the first and last date can be decoded
-    # successfully. Otherwise, tracebacks end up swallowed by
-    # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
-    )
-
     try:
         result = decode_cf_datetime(
             example_value, units, calendar, use_cftime, time_unit
@@ -369,6 +361,68 @@ def _decode_cf_datetime_dtype(
         dtype = getattr(result, "dtype", np.dtype("object"))
 
     return dtype
+
+
+def _decode_cf_datetime_dtype(
+    data,
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions = "ns",
+) -> np.dtype:
+    # Verify that at least the first and last date can be decoded
+    # successfully. Otherwise, tracebacks end up swallowed by
+    # Dataset.__repr__ when users try to view their lazily decoded array.
+    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
+    example_value = np.concatenate(
+        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
+    )
+    return _decoded_dtype(example_value, units, calendar, use_cftime, time_unit)
+
+
+def _decode_cf_datetime_dtype_from_metadata(
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions,
+) -> np.dtype | None:
+    """Infer the decoded dtype from a synthetic ``[0, 1]``, or None if unsure."""
+    try:
+        with warnings.catch_warnings():
+            # this warning would describe the synthetic values, not the data
+            warnings.filterwarnings(
+                "ignore", "Unable to decode time axis", SerializationWarning
+            )
+            dtype = _decoded_dtype(
+                np.array([0, 1]), units, calendar, use_cftime, time_unit
+            )
+    except ValueError:
+        # e.g. "days since 2262-04-11": the synthetic dates overflow although
+        # the stored ones may not
+        return None
+    if (
+        dtype == np.dtype("object")
+        and use_cftime is None
+        and (calendar is None or _is_standard_calendar(calendar))
+    ):
+        # The reference date cannot be represented as datetime64 (e.g.
+        # "hours since 1-1-1"), so dates near it say nothing about the stored
+        # dates, which may well be in 2020.
+        return None
+    return dtype
+
+
+def _decode_cf_datetime_as(num_dates, *, dtype: np.dtype, **kwargs) -> np.ndarray:
+    """decode_cf_datetime, raising if the result does not have ``dtype``."""
+    result = decode_cf_datetime(num_dates, **kwargs)
+    if result.dtype != dtype:
+        raise ValueError(
+            f"time values with units {kwargs['units']!r} decode to "
+            f"{result.dtype}, not to {dtype} as inferred from metadata. Open "
+            "the dataset with decode_times=CFDatetimeCoder(infer_dtype='data'), "
+            "or set use_cftime or time_unit to match the stored values."
+        )
+    return result
 
 
 def _decode_datetime_with_cftime(
@@ -539,8 +593,9 @@ def decode_cf_datetime(
     use_cftime: bool | None = None,
     time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
-    """Given an array of numeric dates in netCDF format, convert it into a
-    numpy array of date time objects.
+    """Convert an array of numeric dates in netCDF format into datetime objects.
+
+    The result is a numpy array of date time objects.
 
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than cftime.num2date. In such a
@@ -678,8 +733,9 @@ def _numbers_to_timedelta(
 def decode_cf_timedelta(
     num_timedeltas, units: str, time_unit: PDDatetimeUnitOptions = "ns"
 ) -> np.ndarray:
-    """Given an array of numeric timedeltas in netCDF format, convert it into a
-    numpy timedelta64 ["s", "ms", "us", "ns"] array.
+    """Convert an array of numeric timedeltas in netCDF format into timedelta64.
+
+    The result is a numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
     num_timedeltas = to_numpy(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
@@ -750,7 +806,7 @@ def _time_units_to_timedelta(units: str) -> timedelta:
 
 
 def infer_calendar_name(dates) -> CFCalendar:
-    """Given an array of datetimes, infer the CF calendar name"""
+    """Given an array of datetimes, infer the CF calendar name."""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
     elif dates.dtype == np.dtype("O") and dates.size > 0:
@@ -769,10 +825,11 @@ def infer_calendar_name(dates) -> CFCalendar:
 
 
 def infer_datetime_units(dates) -> str:
-    """Given an array of datetimes, returns a CF compatible time-unit string of
-    the form "{time_unit} since {date[0]}", where `time_unit` is 'days',
-    'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
-    unique time deltas in `dates`)
+    """Infer a CF compatible time-unit string from an array of datetimes.
+
+    The string has the form "{time_unit} since {date[0]}", where `time_unit` is
+    'days', 'hours', 'minutes' or 'seconds' (the first one that can evenly divide
+    all unique time deltas in `dates`).
     """
     dates = ravel(np.asarray(dates))
     if np.issubdtype(np.asarray(dates).dtype, "datetime64"):
@@ -789,16 +846,18 @@ def infer_datetime_units(dates) -> str:
 
 
 def format_cftime_datetime(date) -> str:
-    """Converts a cftime.datetime object to a string with the format:
-    YYYY-MM-DD HH:MM:SS.UUUUUU
+    """Convert a cftime.datetime object to a string.
+
+    The string has the format YYYY-MM-DD HH:MM:SS.UUUUUU.
     """
     return f"{date.year:04d}-{date.month:02d}-{date.day:02d} {date.hour:02d}:{date.minute:02d}:{date.second:02d}.{date.microsecond:06d}"
 
 
 def infer_timedelta_units(deltas) -> str:
-    """Given an array of timedeltas, returns a CF compatible time-unit from
-    {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
-    divide all unique time deltas in `deltas`)
+    """Infer a CF compatible time-unit from an array of timedeltas.
+
+    The unit is one of {'days', 'hours', 'minutes' 'seconds'} (the first one that
+    can evenly divide all unique time deltas in `deltas`).
     """
     deltas = ravel(deltas)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
@@ -808,11 +867,13 @@ def infer_timedelta_units(deltas) -> str:
 def cftime_to_nptime(
     times, raise_on_invalid: bool = True, time_unit: PDDatetimeUnitOptions = "ns"
 ) -> np.ndarray:
-    """Given an array of cftime.datetime objects, return an array of
-    numpy.datetime64 objects of the same size
+    """Convert an array of cftime.datetime objects to numpy.datetime64 objects.
+
+    The returned array has the same size as the input.
 
     If raise_on_invalid is True (default), invalid dates trigger a ValueError.
-    Otherwise, the invalid element is replaced by np.NaT."""
+    Otherwise, the invalid element is replaced by np.NaT.
+    """
     times = np.asarray(times)
     new = []
     dt: np.datetime64
@@ -919,7 +980,9 @@ def convert_time_or_go_back(date, date_type):
 def _should_cftime_be_used(
     source, target_calendar: str, use_cftime: bool | None
 ) -> bool:
-    """Return whether conversion of the source to the target calendar should
+    """Return whether converting to the target calendar gives a cftime array.
+
+    That is, whether conversion of the source to the target calendar should
     result in a cftime-backed array.
 
     Source is a 1D datetime array, target_cal a string (calendar name) and
@@ -976,7 +1039,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     dates = np.atleast_1d(dates)
 
     # Find all the None position
-    none_position = dates == None  # noqa: E711
+    none_position = dates == None
     filtered_dates = dates[~none_position]
 
     # Since netCDF files do not support storing float128 values, we ensure
@@ -1024,8 +1087,10 @@ def encode_cf_datetime(
     calendar: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str, str]:
-    """Given an array of datetime objects, returns the tuple `(num, units,
-    calendar)` suitable for a CF compliant time variable.
+    """Encode an array of datetime objects as a CF compliant time variable.
+
+    Returns the tuple `(num, units, calendar)` suitable for a CF compliant time
+    variable.
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
@@ -1370,16 +1435,51 @@ class CFDatetimeCoder(VariableCoder):
         May not be supported by all the backends.
     time_unit : PDDatetimeUnitOptions
           Target resolution when decoding dates. Defaults to "ns".
+    infer_dtype : {"data", "metadata"}, default: "data"
+        How to infer the dtype of the decoded variable:
+
+        - ``"data"`` (default): read the first and last values from the
+          store to verify they decode successfully. Preserves
+          backwards-compatible behavior, including the auto-fallback to
+          ``cftime.datetime`` for values outside the
+          ``np.datetime64[ns]`` range.
+        - ``"metadata"``: infer the dtype from ``units``, ``calendar``,
+          ``use_cftime`` and ``time_unit`` alone, assuming the stored dates
+          lie near the reference date in ``units``. Nothing is read from
+          the store, which speeds up opening remote stores with many
+          time-encoded variables. The first and last values are read, as
+          with ``"data"``, only when metadata cannot tell: when, with
+          ``use_cftime=None`` and a standard calendar, dates near the
+          reference date need ``cftime`` (e.g. ``"hours since 1-1-1"`` or a
+          reference date before 1582-10-15), or when decoding dates near
+          the reference date fails.
+
+          The stored values are checked when they are decoded instead, and a
+          ``ValueError`` is raised then if they need a different dtype than
+          inferred. This happens for dates outside the
+          ``np.datetime64[time_unit]`` range (pass ``use_cftime=True`` or a
+          coarser ``time_unit`` such as ``"s"``) and for floating point
+          values with fractions finer than ``units``, e.g. ``0.5`` with
+          ``"seconds since ..."`` (pass a ``time_unit`` fine enough to
+          represent them). Index coordinates are decoded when the dataset
+          is opened, other variables when they are loaded.
     """
 
     def __init__(
         self,
         use_cftime: bool | None = None,
         time_unit: PDDatetimeUnitOptions = "ns",
+        infer_dtype: Literal["data", "metadata"] = "data",
     ) -> None:
+        if infer_dtype not in ("data", "metadata"):
+            raise ValueError(
+                f"infer_dtype must be 'data' or 'metadata', got {infer_dtype!r}"
+            )
         self.use_cftime = use_cftime
         self.time_unit = time_unit
+        self.infer_dtype = infer_dtype
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
             variable
@@ -1404,6 +1504,7 @@ class CFDatetimeCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and "since" in units:
@@ -1411,11 +1512,22 @@ class CFDatetimeCoder(VariableCoder):
 
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
-            dtype = _decode_cf_datetime_dtype(
-                data, units, calendar, self.use_cftime, self.time_unit
-            )
+            dtype = None
+            if self.infer_dtype == "metadata":
+                dtype = _decode_cf_datetime_dtype_from_metadata(
+                    units, calendar, self.use_cftime, self.time_unit
+                )
+            if dtype is None:
+                dtype = _decode_cf_datetime_dtype(
+                    data, units, calendar, self.use_cftime, self.time_unit
+                )
+                decode = decode_cf_datetime
+            else:
+                # nothing was read, so check every decoded chunk against the
+                # inferred dtype instead of letting it be cast silently
+                decode = partial(_decode_cf_datetime_as, dtype=dtype)
             transform = partial(
-                decode_cf_datetime,
+                decode,
                 units=units,
                 calendar=calendar,
                 use_cftime=self.use_cftime,
@@ -1499,6 +1611,7 @@ class CFTimedeltaCoder(VariableCoder):
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -1521,6 +1634,7 @@ class CFTimedeltaCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         has_timedelta_units = isinstance(units, str) and units in TIME_UNITS

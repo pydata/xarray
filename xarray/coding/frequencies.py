@@ -1,4 +1,4 @@
-"""FrequencyInferer analog for cftime.datetime objects"""
+"""FrequencyInferer analog for cftime.datetime objects."""
 
 # The infer_freq method and the _CFTimeFrequencyInferer
 # subclass defined here were copied and adapted for
@@ -60,8 +60,7 @@ _ONE_DAY = 24 * _ONE_HOUR
 
 
 def infer_freq(index):
-    """
-    Infer the most likely frequency given the input index.
+    """Infer the most likely frequency given the input index.
 
     Parameters
     ----------
@@ -80,6 +79,34 @@ def infer_freq(index):
         If the index is not datetime-like.
     ValueError
         If there are fewer than three values or the index is not 1D.
+
+    See Also
+    --------
+    pandas.infer_freq
+
+    Examples
+    --------
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="D")
+    >>> xr.infer_freq(times)
+    'D'
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="2h")
+    >>> xr.infer_freq(times)
+    '2h'
+
+    It also works on time coordinates and with non-standard calendars:
+
+    >>> times = xr.date_range(
+    ...     "2000-01-01", periods=3, freq="MS", calendar="noleap", use_cftime=True
+    ... )
+    >>> da = xr.DataArray([1, 2, 3], dims="time", coords={"time": times})
+    >>> xr.infer_freq(da.time)
+    'MS'
+
+    ``None`` is returned if there is no regular frequency:
+
+    >>> times = pd.DatetimeIndex(["2000-01-01", "2000-01-02", "2000-01-04"])
+    >>> print(xr.infer_freq(times))
+    None
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
@@ -126,7 +153,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         self._month_deltas = None
 
     def get_freq(self):
-        """Find the appropriate frequency string to describe the inferred frequency of self.index
+        """Find the frequency string describing the inferred frequency of self.index.
 
         Adapted from `pandas.tsseries.frequencies._FrequencyInferer.get_freq` for CFTimeIndexes.
 
@@ -231,17 +258,17 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
 
 
 def _unique_deltas(arr):
-    """Sorted unique deltas of numpy array"""
+    """Return the sorted unique deltas of a numpy array."""
     return np.sort(np.unique(np.diff(arr)))
 
 
 def _is_multiple(us, mult: int):
-    """Whether us is a multiple of mult"""
+    """Return whether us is a multiple of mult."""
     return us % mult == 0
 
 
 def _maybe_add_count(base: str, count: float):
-    """If count is greater than 1, add it to the base offset string"""
+    """Add count to the base offset string if it is not 1."""
     if count != 1:
         assert count == int(count)
         count = int(count)

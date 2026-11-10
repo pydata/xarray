@@ -23,13 +23,13 @@ notebooks-examples:
     path: examples/ERA5-GRIB-example.html
     thumbnail: _static/thumbnails/ERA5-GRIB-example.png
 
+external-examples:
   - title: Applying unvectorized functions with apply_ufunc
-    path: examples/apply_ufunc_vectorize_1d.html
+    path: https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
-external-examples:
   - title: Managing raster data with rioxarray
-    path: https://corteva.github.io/rioxarray/stable/examples/examples.html
+    path: https://vylor.github.io/rioxarray/stable/examples/examples.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Xarray and dask on the cloud with Pangeo

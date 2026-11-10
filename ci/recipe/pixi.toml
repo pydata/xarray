@@ -1,0 +1,10 @@
+[workspace]
+preview = ["pixi-build"]
+channels = ["conda-forge"]
+
+[package]
+name = "xarray"
+version = "9999.0.0"
+
+[package.build]
+backend = { name = "pixi-build-rattler-build", version = "*" }

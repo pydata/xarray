@@ -1,5 +1,5 @@
 class Import:
-    """Benchmark importing xarray"""
+    """Benchmark importing xarray."""
 
     def timeraw_import_xarray(self):
         return "import xarray"

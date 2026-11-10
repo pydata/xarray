@@ -14,12 +14,7 @@ from typing import (
 )
 
 import numpy as np
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
 
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.computation import _ensure_numeric, where
@@ -31,7 +26,9 @@ from xarray.structure.alignment import broadcast
 
 
 def _get_func_args(func, param_names):
-    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    """Get the arguments of `func`.
+
+    Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
     they are provided by user.
     """
     func_args: Union[dict[str, Parameter], MappingProxyType[str, Parameter]]
@@ -58,6 +55,7 @@ def _get_func_args(func, param_names):
 
 def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
+
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
 
@@ -108,8 +106,7 @@ def polyfit(
     full: bool = False,
     cov: bool | Literal["unscaled"] = False,
 ):
-    """
-    Least squares polynomial fit.
+    """Least squares polynomial fit.
 
     This replicates the behaviour of `numpy.polyfit` but differs by skipping
     invalid values when `skipna = True`.
@@ -320,8 +317,7 @@ def curvefit(
     errors: ErrorOptions = "raise",
     kwargs: dict[str, Any] | None = None,
 ):
-    """
-    Curve fitting optimization for arbitrary functions.
+    """Curve fitting optimization for arbitrary functions.
 
     Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
 

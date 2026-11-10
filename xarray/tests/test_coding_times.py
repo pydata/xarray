@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import warnings
 from datetime import datetime, timedelta
 from itertools import product, starmap
@@ -46,6 +47,8 @@ from xarray.tests import (
     _STANDARD_CALENDARS,
     DuckArrayWrapper,
     FirstElementAccessibleArray,
+    InaccessibleArray,
+    UnexpectedDataAccess,
     _all_cftime_date_types,
     arm_xfail,
     assert_array_equal,
@@ -539,20 +542,21 @@ def test_infer_datetime_units(freq, units) -> None:
 
 
 @pytest.mark.parametrize(
-    ["dates", "expected"],
+    ["date_strings", "expected"],
     [
         (
-            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"], unit="ns"),
+            ["1900-01-01", "1900-01-02", "NaT"],
             "days since 1900-01-01 00:00:00",
         ),
         (
-            pd.to_datetime(["NaT", "1900-01-01"], unit="ns"),
+            ["NaT", "1900-01-01"],
             "days since 1900-01-01 00:00:00",
         ),
-        (pd.to_datetime(["NaT"], unit="ns"), "days since 1970-01-01 00:00:00"),
+        (["NaT"], "days since 1970-01-01 00:00:00"),
     ],
 )
-def test_infer_datetime_units_with_NaT(dates, expected) -> None:
+def test_infer_datetime_units_with_NaT(date_strings, expected) -> None:
+    dates = pd.to_datetime(date_strings, unit="ns")
     assert expected == infer_datetime_units(dates)
 
 
@@ -976,7 +980,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(
 
     with pytest.warns(SerializationWarning):
         result = decode_cf_datetime(numerical_dates, units, calendar)
-        np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
@@ -1084,16 +1088,19 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
-@pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-@pytest.mark.parametrize("use_cftime", [True, False])
+@pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
+@pytest.mark.skip_if_param(
+    use_cftime=True, freq="ns", reason="Nanosecond frequency is not valid for cftime"
+)
+@pytest.mark.skip_if_param(
+    use_cftime=True,
+    encoding_units="nanoseconds",
+    reason="Nanosecond frequency is not valid for cftime",
+)
 def test_encode_cf_datetime_defaults_to_correct_dtype(
     encoding_units, freq, use_cftime
 ) -> None:
-    if not has_cftime and use_cftime:
-        pytest.skip("Test requires cftime")
-    if (freq == "ns" or encoding_units == "nanoseconds") and use_cftime:
-        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq, use_cftime=use_cftime)
     units = f"{encoding_units} since 2000-01-01"
     encoded, _units, _ = encode_cf_datetime(times, units)
@@ -1171,12 +1178,13 @@ def test_round_trip_standard_calendar_cftime_datetimes_pre_reform() -> None:
 
 
 @pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+# overrides the time_unit fixture: datetime64[ns] values can only be defined
+# post reform
+@pytest.mark.parametrize("time_unit", ["s", "ms", "us"])
 def test_encode_cf_datetime_gregorian_proleptic_gregorian_mismatch_error(
     calendar: str,
     time_unit: PDDatetimeUnitOptions,
 ) -> None:
-    if time_unit == "ns":
-        pytest.skip("datetime64[ns] values can only be defined post reform")
     dates = np.array(["0001-01-01", "2001-01-01"], dtype=f"datetime64[{time_unit}]")
     with pytest.raises(ValueError, match="proleptic_gregorian"):
         encode_cf_datetime(dates, "seconds since 2000-01-01", calendar)
@@ -1268,12 +1276,8 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
         decode_cf_datetime(num_dates, units, calendar)
 
 
-@pytest.mark.parametrize("use_cftime", [True, False])
 def test_decode_0size_datetime(use_cftime):
     # GH1329
-    if use_cftime and not has_cftime:
-        pytest.skip()
-
     dtype = object if use_cftime else "=M8[ns]"
     expected = np.array([], dtype=dtype)
     actual = decode_cf_datetime(
@@ -1712,50 +1716,56 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     np.testing.assert_equal(decoded_times, times)
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [False, pytest.param(True, marks=requires_cftime)]
-)
-@pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_datetime_units_change(use_cftime, use_dask) -> None:
+def test_encode_cf_datetime_units_change(use_cftime) -> None:
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
     encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
     variable = Variable(["time"], times, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Times can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
+    with pytest.warns(UserWarning, match="Times can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    if use_cftime:
+        expected_units = "hours since 2000-01-01 00:00:00.000000"
     else:
-        with pytest.warns(UserWarning, match="Times can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        if use_cftime:
-            expected_units = "hours since 2000-01-01 00:00:00.000000"
-        else:
-            expected_units = "hours since 2000-01-01"
-        assert encoded.attrs["units"] == expected_units
-        decoded = conventions.decode_cf_variable(
-            "name", encoded, decode_times=CFDatetimeCoder(use_cftime=use_cftime)
-        )
-        assert_equal(variable, decoded)
+        expected_units = "hours since 2000-01-01"
+    assert encoded.attrs["units"] == expected_units
+    decoded = conventions.decode_cf_variable(
+        "name", encoded, decode_times=CFDatetimeCoder(use_cftime=use_cftime)
+    )
+    assert_equal(variable, decoded)
 
 
-@pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_datetime_precision_loss_regression_test(use_dask) -> None:
+@requires_dask
+def test_encode_cf_datetime_units_change_dask(use_cftime) -> None:
+    # With dask the units cannot be changed on the fly, so encoding raises
+    times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
+    encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
+    variable = Variable(["time"], times, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Times can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
+
+
+def test_encode_cf_datetime_precision_loss_regression_test() -> None:
     # Regression test for
     # https://github.com/pydata/xarray/issues/9134#issuecomment-2191446463
     times = date_range("2000", periods=5, freq="ns")
     encoding = dict(units="seconds since 1970-01-01", dtype=np.dtype("int64"))
     variable = Variable(["time"], times, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Times can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
-    else:
-        with pytest.warns(UserWarning, match="Times can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        decoded = conventions.decode_cf_variable("name", encoded)
-        assert_equal(variable, decoded)
+    with pytest.warns(UserWarning, match="Times can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("name", encoded)
+    assert_equal(variable, decoded)
+
+
+@requires_dask
+def test_encode_cf_datetime_precision_loss_regression_test_dask() -> None:
+    times = date_range("2000", periods=5, freq="ns")
+    encoding = dict(units="seconds since 1970-01-01", dtype=np.dtype("int64"))
+    variable = Variable(["time"], times, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Times can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
 
 
 @requires_dask
@@ -1787,29 +1797,33 @@ def test_encode_cf_timedelta_via_dask(
     assert decoded_times.dtype == times.dtype
 
 
-@pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_timedelta_units_change(use_dask) -> None:
+def test_encode_cf_timedelta_units_change() -> None:
     timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
     encoding = dict(units="days", dtype=np.dtype("int64"))
     variable = Variable(["time"], timedeltas, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Timedeltas can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
-    else:
-        # In this case we automatically modify the encoding units to continue
-        # encoding with integer values.
-        with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        assert encoded.attrs["units"] == "hours"
-        decoded = conventions.decode_cf_variable(
-            "name", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
-        )
-        assert_equal(variable, decoded)
+    # In this case we automatically modify the encoding units to continue
+    # encoding with integer values.
+    with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    assert encoded.attrs["units"] == "hours"
+    decoded = conventions.decode_cf_variable(
+        "name", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
+    )
+    assert_equal(variable, decoded)
 
 
-@pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
+@requires_dask
+def test_encode_cf_timedelta_units_change_dask() -> None:
+    # With dask the units cannot be changed on the fly, so encoding raises
+    timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
+    encoding = dict(units="days", dtype=np.dtype("int64"))
+    variable = Variable(["time"], timedeltas, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Timedeltas can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
+
+
 def test_encode_cf_timedelta_small_dtype_missing_value(use_dask) -> None:
     # Regression test for GitHub issue #9134
     timedeltas = np.array([1, 2, "NaT", 4], dtype="timedelta64[D]").astype(
@@ -1859,7 +1873,7 @@ def test_decode_timedelta_via_units(
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     attrs = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=attrs)
-    encoded = Variable(["time"], np.array([0, 1, 2]), attrs=attrs)
+    encoded = Variable(["time"], np.array([0, 1, 2], dtype=np.int64), attrs=attrs)
     decoded = conventions.decode_cf_variable(
         "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
     )
@@ -1975,9 +1989,7 @@ def test_lazy_decode_timedelta_error() -> None:
     "calendar",
     [
         "standard",
-        pytest.param(
-            "360_day", marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
-        ),
+        pytest.param("360_day", marks=requires_cftime),
     ],
 )
 def test_duck_array_decode_times(calendar) -> None:
@@ -2184,8 +2196,8 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
     # regression test for GitHub issue #10310
     encoding = {"units": "days", "dtype": np.dtype("int64")}
     data = np.array([], dtype=f"=m8[{time_unit}]")
-    decoded = Variable(["time"], data, encoding=encoding)
-    encoded = conventions.encode_cf_variable(decoded, name="foo")
+    original = Variable(["time"], data, encoding=encoding)
+    encoded = conventions.encode_cf_variable(original, name="foo")
     assert encoded.dtype == encoding["dtype"]
     assert encoded.attrs["units"] == encoding["units"]
     decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
@@ -2215,3 +2227,194 @@ def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> N
     )
     assert_identical(variable, roundtripped)
     assert roundtripped.dtype == variable.dtype
+
+
+def _time_variable(data, units: str, calendar: str | None = None) -> Variable:
+    attrs = {"units": units} | ({} if calendar is None else {"calendar": calendar})
+    return Variable(("t",), data, attrs=attrs)
+
+
+def _assert_metadata_matches_data(make_variable, **coder_kwargs) -> None:
+    # infer_dtype="metadata" must predict what infer_dtype="data" produces
+    # without reading the data: the same dtype, or the same failure.
+    def decode(infer_dtype):
+        coder = CFDatetimeCoder(infer_dtype=infer_dtype, **coder_kwargs)
+        return coder.decode(make_variable())
+
+    try:
+        expected = decode("data").dtype
+    except ValueError as err:
+        with pytest.raises(ValueError, match=re.escape(str(err))):
+            decode("metadata")
+    else:
+        decoded = decode("metadata")
+        assert decoded.dtype == expected
+        # the declared (lazy) dtype is also what loading produces
+        assert decoded.load().dtype == expected
+
+
+class TestInferDtypeOptIn:
+    """``CFDatetimeCoder(infer_dtype="metadata")``: dtype without data reads."""
+
+    @pytest.mark.parametrize(
+        ("use_cftime", "calendar", "kind"),
+        [
+            (None, "standard", "M"),
+            pytest.param(True, "standard", "O", marks=requires_cftime),
+            pytest.param(None, "noleap", "O", marks=requires_cftime),
+        ],
+    )
+    def test_no_reads(self, use_cftime, calendar, kind, time_unit) -> None:
+        variable = _time_variable(
+            InaccessibleArray(np.zeros(3, dtype="int64")),
+            "days since 2000-01-01",
+            calendar,
+        )
+        coder = CFDatetimeCoder(
+            use_cftime=use_cftime, time_unit=time_unit, infer_dtype="metadata"
+        )
+        assert coder.decode(variable).dtype.kind == kind
+
+    def test_data_default_reads_first_and_last(self) -> None:
+        variable = _time_variable(
+            InaccessibleArray(np.zeros(3, dtype="int64")), "days since 2000-01-01"
+        )
+        with pytest.raises(UnexpectedDataAccess):
+            CFDatetimeCoder().decode(variable)
+
+    def test_invalid_infer_dtype_raises(self) -> None:
+        with pytest.raises(
+            ValueError, match="infer_dtype must be 'data' or 'metadata'"
+        ):
+            CFDatetimeCoder(infer_dtype="bogus")  # type: ignore[arg-type]
+
+    @requires_cftime
+    @pytest.mark.parametrize("calendar", [None, "standard", "noleap", "360_day"])
+    @pytest.mark.parametrize("use_cftime", [None, True, False])
+    @pytest.mark.parametrize("time_unit", ["s", "ns"])
+    @pytest.mark.parametrize(
+        "units",
+        [
+            "days since 2000-01-01",
+            "seconds since 2000-01-01",
+            "milliseconds since 2000-01-01",
+            "nanoseconds since 2000-01-01",
+            "seconds since 2000-01-01 00:00:00.001",
+            "nonsense since whenever",
+        ],
+    )
+    @pytest.mark.parametrize("dtype", ["int64", "float64"])
+    def test_matches_data_path(
+        self, calendar, use_cftime, time_unit, units, dtype
+    ) -> None:
+        _assert_metadata_matches_data(
+            lambda: _time_variable(np.array([0, 1, 2], dtype=dtype), units, calendar),
+            use_cftime=use_cftime,
+            time_unit=time_unit,
+        )
+
+    @requires_cftime
+    @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
+    @pytest.mark.parametrize("calendar", [None, *_STANDARD_CALENDAR_NAMES])
+    @pytest.mark.parametrize("time_unit", ["s", "ns"])
+    @pytest.mark.parametrize(
+        ("units", "values"),
+        [
+            # dates near the reference date need cftime, but the stored dates
+            # are in 2020 (or decoding dates near it fails)
+            ("hours since 1-1-1 00:00:0.0", [17_700_000.0, 17_700_024.0]),
+            ("days since 1500-01-01", [190_000, 190_001]),
+            ("days since 1677-01-01", [125_000, 125_001]),
+            ("days since 3000-01-01", [-357_000, -356_999]),
+            ("days since 2262-04-11", [-5, -1]),
+        ],
+    )
+    def test_far_reference_date_matches_data_path(
+        self, calendar, time_unit, units, values
+    ) -> None:
+        _assert_metadata_matches_data(
+            lambda: _time_variable(np.array(values), units, calendar),
+            time_unit=time_unit,
+        )
+
+    @pytest.mark.parametrize(
+        ("values", "units", "use_cftime"),
+        [
+            # the synthetic day 1 overflows datetime64[ns], the stored dates don't
+            ([-5, -1], "days since 2262-04-11", False),
+            # cftime rejects these units, but there is nothing to decode
+            pytest.param(
+                np.array([], dtype="int64"),
+                "nanoseconds since 2000-01-01",
+                True,
+                marks=requires_cftime,
+            ),
+        ],
+    )
+    def test_synthetic_decode_failure_matches_data_path(
+        self, values, units, use_cftime
+    ) -> None:
+        _assert_metadata_matches_data(
+            lambda: _time_variable(np.array(values), units), use_cftime=use_cftime
+        )
+
+    @requires_cftime
+    @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
+    def test_far_reference_date_reads_data(self) -> None:
+        variable = _time_variable(
+            InaccessibleArray(np.zeros(3)), "hours since 1-1-1 00:00:0.0"
+        )
+        with pytest.raises(UnexpectedDataAccess):
+            CFDatetimeCoder(infer_dtype="metadata").decode(variable)
+
+    def test_fractional_values_with_fine_time_unit(self) -> None:
+        # fractions finer than the units need a fine enough time_unit
+        variable = _time_variable(np.array([0.0, 0.5, 1.0]), "seconds since 2000-01-01")
+        decoded = CFDatetimeCoder(time_unit="ms", infer_dtype="metadata").decode(
+            variable
+        )
+        expected = CFDatetimeCoder(time_unit="ms").decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ms]")
+        assert_identical(decoded.load(), expected.load())
+
+    @pytest.mark.filterwarnings("ignore:Unable to decode time axis")
+    @pytest.mark.filterwarnings("ignore:Can't decode floating point datetimes")
+    @pytest.mark.parametrize(
+        "chunked", [False, pytest.param(True, marks=requires_dask)]
+    )
+    @pytest.mark.parametrize(
+        ("values", "units", "coder_kwargs"),
+        [
+            # dates beyond datetime64[ns]
+            pytest.param(
+                [0, 300_000], "days since 2000-01-01", {}, marks=requires_cftime
+            ),
+            # fractions finer than time_unit
+            ([0.0, 0.5], "seconds since 2000-01-01", {"time_unit": "s"}),
+        ],
+    )
+    def test_wrong_inferred_dtype_raises_on_load(
+        self, chunked, values, units, coder_kwargs
+    ) -> None:
+        variable = _time_variable(np.array(values), units)
+        if chunked:
+            variable = variable.chunk(t=1)
+        coder = CFDatetimeCoder(infer_dtype="metadata", **coder_kwargs)
+        decoded = coder.decode(variable)
+        with pytest.raises(ValueError, match="as inferred from metadata"):
+            decoded.compute()
+
+    @requires_dask
+    def test_dask_dtype_matches_computed(self) -> None:
+        # map_blocks casts every chunk to the declared dtype, so a wrong
+        # declaration would silently change the values
+        variable = _time_variable(
+            np.array([0, 1, 2]), "milliseconds since 2000-01-01"
+        ).chunk(t=1)
+        coder = CFDatetimeCoder(use_cftime=False, time_unit="s", infer_dtype="metadata")
+        decoded = coder.decode(variable)
+        expected = CFDatetimeCoder(use_cftime=False, time_unit="s").decode(
+            variable.compute()
+        )
+        assert decoded.dtype == np.dtype("datetime64[ms]")
+        assert_identical(decoded.compute(), expected.load())
