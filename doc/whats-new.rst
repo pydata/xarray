@@ -211,6 +211,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Reindexing or aligning an empty object (e.g. with ``join="outer"``) no longer
+  returns a read-only array, and the filled values now get the same dtype as
+  when reindexing non-empty data, so in-place operations on the result work
+  (:issue:`8274`).
+  By `Summar Kumar <https://github.com/devsummar>`_.
 - Reducing a groupby or resample object over a dimension that does not exist,
   e.g. ``da.groupby("time").mean("longitude")``, now raises
   ``ValueError: Dimensions ('longitude',) not found in data dimensions (...)``,

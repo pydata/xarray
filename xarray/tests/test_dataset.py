@@ -2621,6 +2621,18 @@ class TestDataset:
         actual = ds1.reindex(y=ds2.y)
         assert_identical(actual, ds2)
 
+    def test_align_outer_empty_with_fill_value_is_writeable(self) -> None:
+        # GH8274
+        x = Dataset({"foo": ("dim", np.array([]))}, coords={"dim": []})
+        y = Dataset({"foo": ("dim", np.array([1]))}, coords={"dim": ["a"]})
+
+        x2, y2 = xr.align(x, y, join="outer", fill_value=0)
+
+        assert x2["foo"].dtype == np.dtype("float64")
+        x2["foo"] += y2["foo"]
+        expected = Dataset({"foo": ("dim", [1.0])}, coords={"dim": ["a"]})
+        assert_identical(x2, expected)
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value) -> None:
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})

@@ -1101,6 +1101,10 @@ class Variable(
             # build the mask directly instead.
             mask = indexing.create_mask(indexer, self.shape)
             data = duck_array_ops.broadcast_to(fill_value, getattr(mask, "shape", ()))
+            # broadcast_to returns a read-only view and ignores the dtype of the
+            # original data, so cast (which also copies) like the branch above
+            dtype = dtypes.result_type(self._data, fill_value)
+            data = duck_array_ops.astype(data, dtype)
 
         if new_order:
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
