@@ -149,8 +149,7 @@ def test_as_compatible_data_object_strings_keep_none():
     # like the pd.Series roundtrip does when pandas infers the str dtype
     data = np.array(["a", None], dtype=object)
     with pd.option_context("future.infer_string", True):
-        actual = as_compatible_data(data)
-    assert actual[1] is None
+        assert as_compatible_data(data)[1] is None
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
