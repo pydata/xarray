@@ -151,7 +151,7 @@ In this example `axs` is an array consisting of the left and right
 axes created by `plt.subplots`.
 
 ```{code-cell}
-fig, axs = plt.subplots(ncols=2)
+fig, axs = plt.subplots(ncols=2, figsize=(12, 4), layout="constrained")
 
 print(axs)
 
