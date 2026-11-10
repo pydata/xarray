@@ -10,6 +10,7 @@ from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _add_colorbar,
+    _check_col_wrap,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
     _process_cmap_cbar_kwargs,
@@ -227,6 +228,8 @@ levels : int or array-like, optional
             )
 
         hue_style = meta_data["hue_style"]
+
+        _check_col_wrap(col_wrap, row, col)
 
         # handle facetgrids first
         if col or row:

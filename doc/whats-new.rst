@@ -217,6 +217,23 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Reducing a groupby or resample object over a dimension that does not exist,
+  e.g. ``da.groupby("time").mean("longitude")``, now raises
+  ``ValueError: Dimensions ('longitude',) not found in data dimensions (...)``,
+  like reductions on :py:class:`DataArray` and :py:class:`Dataset`, with or
+  without ``flox``. The suggestion to install ``flox`` is only shown when it
+  would help (:issue:`10875`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
+- Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
+  ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
+  ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
+  ``row`` raises a ``ValueError`` instead of being silently ignored
+  (:issue:`5614`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:func:`apply_ufunc` no longer fails on :py:mod:`sparse` arrays when it
+  needs to move core dimensions to the end. The internal ``transpose`` duck
+  array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
