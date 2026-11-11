@@ -1228,6 +1228,8 @@ def test_repr_pandas_multi_index() -> None:
     ds = xr.Dataset(coords=coords)
 
     obj_nbytes = 4 * np.dtype(object).itemsize
+    foo_dtype = ds.foo.dtype
+    foo_nbytes = ds.foo.nbytes
 
     actual = repr(ds.x)
     expected = f"""
@@ -1235,18 +1237,18 @@ def test_repr_pandas_multi_index() -> None:
 [4 values with dtype=object]
 Coordinates:
   * x        (x) object {obj_nbytes}B MultiIndex
-  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
+  * foo      (x) {foo_dtype} {foo_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
 
     actual = repr(ds.foo)
     expected = f"""
-<xarray.DataArray 'foo' (x: 4)> Size: {obj_nbytes}B
-[4 values with dtype=object]
+<xarray.DataArray 'foo' (x: 4)> Size: {foo_nbytes}B
+[4 values with dtype={foo_dtype}]
 Coordinates:
   * x        (x) object {obj_nbytes}B MultiIndex
-  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
+  * foo      (x) {foo_dtype} {foo_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
