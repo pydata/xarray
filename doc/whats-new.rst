@@ -211,6 +211,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.chunk` and :py:meth:`Dataset.chunk` now convert scalar data
+  variables to chunked arrays, preserving eager scalar coordinates (:issue:`8251`).
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).

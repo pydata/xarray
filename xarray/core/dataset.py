@@ -2747,6 +2747,7 @@ class Dataset(
                 inline_array=inline_array,
                 chunked_array_type=chunkmanager,
                 from_array_kwargs=from_array_kwargs.copy(),
+                chunk_scalar=k not in self._coord_names,
             )
             for k, v in self.variables.items()
         }

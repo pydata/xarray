@@ -69,6 +69,51 @@ pytestmark = [
 ]
 
 
+@requires_dask
+@pytest.mark.parametrize("chunks", [{}, "auto", -1])
+@pytest.mark.parametrize(
+    "array",
+    [
+        DataArray(),
+        DataArray(None),
+        DataArray(np.int16(7)),
+        DataArray(np.float32(1.5)),
+        DataArray("scalar"),
+        DataArray(np.datetime64("2000-01-01", "ns")),
+    ],
+)
+def test_chunk_scalar(array: DataArray, chunks: Any) -> None:
+    array = array.assign_coords(scalar=42).rename("value")
+    array.attrs = {"description": "scalar data"}
+    array.encoding = {"dtype": array.dtype}
+
+    with raise_if_dask_computes():
+        actual = array.chunk(chunks)
+        expanded = actual.expand_dims(x=3)
+
+    assert isinstance(actual.data, dask_array_type)
+    assert actual.shape == actual.chunks == ()
+    assert actual.dtype == array.dtype
+    assert actual.encoding == array.encoding
+    assert isinstance(actual.scalar.data, np.ndarray)
+    assert isinstance(expanded.data, dask_array_type)
+    assert_identical(actual, array)
+    assert_identical(expanded, array.expand_dims(x=3))
+
+
+@requires_dask
+def test_chunk_scalar_lazy() -> None:
+    array = DataArray(dask_array_api.from_array(np.array(7)), name="value")
+    with raise_if_dask_computes():
+        actual = array.chunk()
+        expanded = actual.expand_dims(x=3)
+
+    assert isinstance(actual.data, dask_array_type)
+    assert actual.data.name == array.data.name
+    assert isinstance(expanded.data, dask_array_type)
+    assert_identical(expanded, DataArray([7, 7, 7], dims="x", name="value"))
+
+
 class TestDataArray:
     @pytest.fixture(autouse=True)
     def setup(self):
