@@ -211,6 +211,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
+  ``ValueError: cannot convert float NaN to integer``
+  (:pull:`11860`).
+  By `Wei-Lun Li <https://github.com/b84330808>`_.
 - Reducing a groupby or resample object over a dimension that does not exist,
   e.g. ``da.groupby("time").mean("longitude")``, now raises
   ``ValueError: Dimensions ('longitude',) not found in data dimensions (...)``,
