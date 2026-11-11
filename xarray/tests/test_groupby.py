@@ -819,15 +819,26 @@ def test_groupby_grouping_errors() -> None:
         UniqueGrouper(dataset.x, labels=[1, 2, 3])  # type: ignore[misc]
 
 
-def test_groupby_reduce_dimension_error(array) -> None:
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_groupby_reduce_dimension_error(array: xr.DataArray, use_flox: bool) -> None:
     grouped = array.groupby("y")
-    # assert_identical(array, grouped.mean())
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
-        grouped.mean("huh")
+    with xr.set_options(use_flox=use_flox):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('huh',\) not found in data dimensions \('x', 'y', 'z'\)",
+        ):
+            grouped.mean("huh")
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
-        grouped.mean(("x", "y", "asd"))
+        with pytest.raises(
+            ValueError, match=r"Dimensions \('asd',\) not found in data dimensions"
+        ):
+            grouped.mean(("x", "y", "asd"))
+
+    with pytest.raises(
+        ValueError, match=r"Dimensions \('huh',\) not found in data dimensions"
+    ):
+        grouped.reduce(np.mean, "huh")
 
     assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
     assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
@@ -837,6 +848,37 @@ def test_groupby_reduce_dimension_error(array) -> None:
 
     assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
     assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
+
+
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_dataset_groupby_reduce_dimension_error(
+    dataset: xr.Dataset, use_flox: bool
+) -> None:
+    grouped = dataset.groupby("y")
+    with xr.set_options(use_flox=use_flox):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('huh',\) not found in data dimensions \('x', 'y', 'z'\)",
+        ):
+            grouped.mean("huh")
+
+    with pytest.raises(
+        ValueError, match=r"Dimensions \('huh',\) not found in data dimensions"
+    ):
+        grouped.reduce(np.mean, "huh")
+
+
+def test_groupby_reduce_stacked_dimension_error() -> None:
+    # Grouping by a 2D variable stacks its dimensions, so without flox they can
+    # not be reduced over. The error suggests flox, which supports this.
+    da = xr.DataArray(
+        np.arange(12).reshape(3, 4),
+        dims=("x", "y"),
+        coords={"g": (("x", "y"), np.array([[0, 0, 1, 1]] * 3))},
+    )
+    with xr.set_options(use_flox=False):
+        with pytest.raises(ValueError, match=r"install the `flox` package"):
+            da.groupby("g").mean("x")
 
 
 def test_groupby_multiple_string_args(array) -> None:
