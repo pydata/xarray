@@ -3,7 +3,6 @@ from __future__ import annotations
 import atexit
 import threading
 import uuid
-import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
 from contextlib import AbstractContextManager, contextmanager, suppress
 from typing import Any, Literal, TypeVar, cast, override
@@ -366,11 +365,10 @@ class CachingFileManager(FileManager[T_File]):
                     ).start()
 
             if OPTIONS["warn_for_unclosed_files"]:
-                warnings.warn(
+                utils.emit_user_level_warning(
                     f"deallocating {self}, but file is not already closed. "
                     "This may indicate a bug.",
                     RuntimeWarning,
-                    stacklevel=2,
                 )
 
     def __getstate__(self):
@@ -521,11 +519,10 @@ class PickleableFileManager(FileManager[T_File]):
             self.close()
 
             if OPTIONS["warn_for_unclosed_files"]:
-                warnings.warn(
+                utils.emit_user_level_warning(
                     f"deallocating {self}, but file is not already closed. "
                     "This may indicate a bug.",
                     RuntimeWarning,
-                    stacklevel=2,
                 )
 
     def __getstate__(self):
