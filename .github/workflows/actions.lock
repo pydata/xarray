@@ -17,23 +17,23 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
         - 'codecov/codecov-action@v7.1.1'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
         - 'xarray-contrib/ci-trigger@v1.2.1'
         - 'xarray-contrib/pixi-lock@v0.1.1'
-        - 'zizmorcore/zizmor-action@v0.8.0'
+        - 'zizmorcore/zizmor-action@v0.8.1'
     '.github/workflows/ci.yaml':
         - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
         - 'codecov/codecov-action@v7.1.1'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
         - 'xarray-contrib/ci-trigger@v1.2.1'
         - 'xarray-contrib/pixi-lock@v0.1.1'
     '.github/workflows/hypothesis.yaml':
         - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
         - 'scientific-python/issue-from-pytest-log-action@v1.6.2'
         - 'xarray-contrib/ci-trigger@v1.2.1'
         - 'xarray-contrib/pixi-lock@v0.1.1'
@@ -43,12 +43,12 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/download-artifact@v8.0.2'
         - 'actions/upload-artifact@v7.0.2'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
     '.github/workflows/nightly-wheels.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/download-artifact@v8.0.2'
         - 'actions/upload-artifact@v7.0.2'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
         - 'scientific-python/upload-nightly-action@0.6.6'
     '.github/workflows/publish-test-results.yaml':
         - 'enricomi/publish-unit-test-result-action@v2.25.0'
@@ -63,7 +63,7 @@ workflows:
         - 'actions/download-artifact@v8.0.2'
         - 'actions/upload-artifact@v7.0.2'
         - 'codecov/codecov-action@v7.1.1'
-        - 'prefix-dev/setup-pixi@v0.11.2'
+        - 'prefix-dev/setup-pixi@v0.11.3'
         - 'scientific-python/issue-from-pytest-log-action@v1.6.2'
         - 'xarray-contrib/ci-trigger@v1.2.1'
         - 'xarray-contrib/pixi-lock@v0.1.1'
@@ -130,9 +130,9 @@ dependencies:
         commit: 'sha1-7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d'
         owner_id: 44700269
         repo_id: 290227969
-    'github/codeql-action@24c54180a607b1449ed407dd24f251e4e9147c8d':
-        ref: 'v4.38.3'
-        commit: 'sha1-24c54180a607b1449ed407dd24f251e4e9147c8d'
+    'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370':
+        ref: 'v4.39.1'
+        commit: 'sha1-9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         owner_id: 9919
         repo_id: 259445878
     'mamba-org/setup-micromamba@v3.2.1':
@@ -150,9 +150,9 @@ dependencies:
         commit: 'sha1-ad1da6449d9e506fd127fd67ab2d054a769f6a94'
         owner_id: 111356225
         repo_id: 686703662
-    'prefix-dev/setup-pixi@v0.11.2':
-        ref: 'v0.11.2'
-        commit: 'sha1-ad1da6449d9e506fd127fd67ab2d054a769f6a94'
+    'prefix-dev/setup-pixi@v0.11.3':
+        ref: 'v0.11.3'
+        commit: 'sha1-9936258fee697aff89b3fed6ca1f80a382ef694e'
         owner_id: 111356225
         repo_id: 686703662
     'pypa/gh-action-pypi-publish@v1.14.3':
@@ -194,10 +194,10 @@ dependencies:
         uses:
             - 'actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7'
             - 'prefix-dev/setup-pixi@82d477f15f3a381dbcc8adc1206ce643fe110fb7'
-    'zizmorcore/zizmor-action@v0.8.0':
-        ref: 'v0.8.0'
-        commit: 'sha1-53290badfa369cb0bf7ad16342cb62c2fa47ac7b'
+    'zizmorcore/zizmor-action@v0.8.1':
+        ref: 'v0.8.1'
+        commit: 'sha1-45d7276c9ca790aabd705e31ca99c6185c3e76dd'
         owner_id: 210636713
         repo_id: 985558803
         uses:
-            - 'github/codeql-action@24c54180a607b1449ed407dd24f251e4e9147c8d'
+            - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
