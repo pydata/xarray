@@ -75,6 +75,11 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Added `Arrow PyCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`Dataset`.
+  Added :py:meth:`Dataset.to_arrow` & :py:meth:`DataArray.to_arrow` to export to flat :py:class:`pyarrow.Table`.
+  By `Jules Chéron <https://github.com/jules-ch>`_. (:pull:`11600`)
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
