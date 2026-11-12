@@ -1872,6 +1872,16 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_indexed_coords_non_string(self) -> None:
+        arr = DataArray(
+            [[0, 1], [2, 3]],
+            dims=(10, ("a", "b")),
+            coords={10: [5, 6], ("a", "b"): ["x", "y"]},
+        )
+        assert list(arr.xindexes) == [10, ("a", "b")]
+        assert arr.sel({10: 6, ("a", "b"): "y"}).item() == 3
+        assert list(arr.rename({10: 11}).xindexes) == [11, ("a", "b")]
+
     def test_coords_delitem_delete_indexes(self) -> None:
         # regression test for GH3746
         arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})

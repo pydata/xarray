@@ -199,7 +199,7 @@ class Index:
         """
         if variables is not None:
             # pass through
-            return dict(**variables)
+            return dict(variables)
         else:
             return {}
 
@@ -1819,8 +1819,8 @@ class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping)
             )
 
         self._index_type = index_type
-        self._indexes = dict(**indexes)
-        self._variables = dict(**variables)
+        self._indexes = dict(indexes)
+        self._variables = dict(variables)
 
         self._dims: Mapping[Hashable, int] | None = None
         self.__coord_name_id: dict[Any, int] | None = None

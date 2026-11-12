@@ -35,6 +35,19 @@ def test_tree_index_init() -> None:
 
 
 @requires_scipy
+def test_tree_index_non_str_coord_names() -> None:
+    xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
+    ds = xr.Dataset(coords={1: (("y", "x"), xx), 2: (("y", "x"), yy)})
+
+    ds_indexed = ds.set_xindex((1, 2), NDPointIndex)
+    assert ds_indexed.xindexes[1] is ds_indexed.xindexes[2]
+
+    actual = ds_indexed.sel({1: 1.9, 2: 3.1}, method="nearest")
+    assert actual[1].item() == 2.0
+    assert actual[2].item() == 3.0
+
+
+@requires_scipy
 def test_tree_index_init_errors() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)})
