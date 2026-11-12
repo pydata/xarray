@@ -214,6 +214,9 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Indexed coordinates can now have non-string names, e.g. integers or tuples,
+  instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
