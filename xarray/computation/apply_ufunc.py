@@ -444,7 +444,11 @@ def apply_dict_of_variables_vfunc(
     for name, variable_args in zip(names, grouped_by_name, strict=True):
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
-            result_vars[name] = func(*variable_args)
+            try:
+                result_vars[name] = func(*variable_args)
+            except Exception as e:
+                e.add_note(f"Raised while applying function to variable {name!r}")
+                raise
         elif on_missing_core_dim == "raise":
             raise ValueError(core_dim_present)
         elif on_missing_core_dim == "copy":
@@ -674,7 +678,7 @@ def broadcast_compat_data(
     reordered_dims = old_broadcast_dims + core_dims
     if reordered_dims != old_dims:
         order = tuple(old_dims.index(d) for d in reordered_dims)
-        data = duck_array_ops.transpose(data, order)
+        data = duck_array_ops.permute_dims(data, order)
 
     if new_dims != reordered_dims:
         key_parts: list[slice | None] = []

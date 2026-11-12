@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: build-wheels
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload wheel
         id: upload
-        uses: scientific-python/upload-nightly-action@16fa02eacee1655195143de09f03676e60ef2bf5 # 0.6.5
+        uses: scientific-python/upload-nightly-action@5a74a2a4ec19d7ab8b5317c1cdd356c150d92cd0 # 0.6.6
         with:
           anaconda_nightly_upload_token: ${{ secrets.ANACONDA_NIGHTLY }}
           artifacts_path: dist

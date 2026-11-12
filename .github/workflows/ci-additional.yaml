@@ -85,7 +85,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -127,7 +127,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -177,7 +177,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -230,7 +230,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -278,7 +278,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -330,7 +330,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -380,7 +380,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         if: steps.filter.outputs.changed == 'true'
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
@@ -423,7 +423,7 @@ jobs:
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         if: steps.filter.outputs.changed == 'true'
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
@@ -488,4 +488,4 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1

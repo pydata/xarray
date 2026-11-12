@@ -452,6 +452,27 @@ def _assert_valid_xy(
         )
 
 
+def _check_col_wrap(
+    col_wrap: Any, row: Hashable | None = None, col: Hashable | None = None
+) -> None:
+    """Make sure col_wrap is a positive integer or "auto" and used with facets."""
+    if col_wrap is None:
+        return
+    if col_wrap != "auto":
+        if isinstance(col_wrap, bool) or not isinstance(col_wrap, int | np.integer):
+            raise TypeError(
+                f"col_wrap must be an integer or 'auto'. Received {col_wrap!r} instead."
+            )
+        if col_wrap < 1:
+            raise ValueError(
+                f"col_wrap must be a positive integer. Received {col_wrap!r} instead."
+            )
+    if row is None and col is None:
+        raise ValueError(
+            "col_wrap can only be used with faceted plots, pass a dimension name to col."
+        )
+
+
 def get_axis(
     figsize: Iterable[float] | None = None,
     size: float | None = None,

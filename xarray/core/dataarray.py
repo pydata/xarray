@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, ove
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DataArrayExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
@@ -36,6 +37,7 @@ from xarray.core.indexes import (
     Index,
     Indexes,
     PandasMultiIndex,
+    drop_scalar_index_coords,
     filter_indexes_from_coords,
     isel_indexes,
 )
@@ -283,6 +285,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    DataArrayExternalAccessorMixin,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -1795,6 +1798,8 @@ class DataArray(
 
         variable = self._variable.isel(indexers, missing_dims=missing_dims)
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        if drop:
+            drop_scalar_index_coords(indexes, index_variables, self._coords, indexers)
 
         coords = {}
         for coord_name, coord_value in self._coords.items():

@@ -31,6 +31,7 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload, override
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DatasetExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
@@ -65,6 +66,7 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
+    drop_scalar_index_coords,
     filter_indexes_from_coords,
     is_full_ordered_product,
     isel_indexes,
@@ -233,6 +235,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
+    DatasetExternalAccessorMixin,
     Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
@@ -2984,6 +2987,10 @@ class Dataset(
         coord_names = self._coord_names.copy()
 
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, indexers
+            )
 
         for name, var in self._variables.items():
             # preserve variable order
@@ -3020,6 +3027,10 @@ class Dataset(
 
         variables: dict[Hashable, Variable] = {}
         indexes, index_variables = isel_indexes(self.xindexes, valid_indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, valid_indexers
+            )
 
         for name, var in self.variables.items():
             if name in index_variables:
