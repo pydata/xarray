@@ -6,7 +6,7 @@ import inspect
 import math
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
+from typing import TYPE_CHECKING, Any, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,9 @@ from xarray.core.utils import (
 from xarray.namedarray.pycompat import to_numpy
 
 if TYPE_CHECKING:
-    from xarray.core.types import ErrorOptions, JoinOptions, Self
+    from typing import Self
+
+    from xarray.core.types import ErrorOptions, JoinOptions
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import duckarray
 
@@ -648,9 +650,6 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     return indexer
 
 
-T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
-
-
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
@@ -965,9 +964,7 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     @override
-    def _copy(
-        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
-    ) -> T_PandasIndex:
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Self:
         if deep:
             # pandas is not using the memo
             index = self.index.copy(deep=True)

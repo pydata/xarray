@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args, override
+from typing import TYPE_CHECKING, ClassVar, Literal, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -77,7 +77,6 @@ if TYPE_CHECKING:
 
 
 DayOption: TypeAlias = Literal["start", "end"]
-T_FreqStr = TypeVar("T_FreqStr", str, None)
 
 
 def get_date_type(calendar, use_cftime=True):
