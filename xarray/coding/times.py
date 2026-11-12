@@ -373,10 +373,23 @@ def _decode_cf_datetime_dtype(
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
-    )
+    values = indexing.as_indexable(data)
+    if (
+        values.ndim > 0
+        and values.size > 1
+        and indexing.supports_vectorized_indexing(values)
+    ):
+        # Backends that support vectorized indexing (e.g. zarr) load the first
+        # and last value with a single request instead of one request each.
+        indexer = indexing.VectorizedIndexer(
+            tuple(np.array([0, size - 1]) for size in values.shape)
+        )
+        example_value = to_numpy(indexing.apply_indexer(values, indexer))
+    else:
+        values = indexing.ImplicitToExplicitIndexingAdapter(values)
+        example_value = np.concatenate(
+            [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
+        )
     return _decoded_dtype(example_value, units, calendar, use_cftime, time_unit)
 
 

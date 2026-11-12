@@ -1530,6 +1530,39 @@ class TestInstrumentedZarrStore:
                     assert_identical(actual, ds)
             self.check_requests(expected, patches)
 
+    def test_datetime_decoding_reads_time_chunk_twice(self) -> None:
+        # GH10560: decoding a time variable used to read its chunk three
+        # times: once for the first value, once for the last value (to infer
+        # the decoded dtype) and once to load the values. The first and last
+        # values are now selected with a single vectorized request.
+        ds = Dataset(
+            {"v": ("time", np.zeros(10))},
+            coords={
+                "time": ("time", np.arange(10), {"units": "days since 2000-01-01"})
+            },
+        )
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store, consolidated=False)
+
+            patches = self.make_patches(store)
+            with patch.multiple(KVStore, **patches):
+                with open_dataset(store, engine="zarr", consolidated=False) as actual:
+                    assert actual.time.dtype == np.dtype("datetime64[ns]")
+                    assert actual.time.values[0] == np.datetime64("2000-01-01")
+                    assert actual.time.values[-1] == np.datetime64("2000-01-10")
+
+            # count only the chunk storing the values, not the array metadata
+            time_reads = [
+                call.args[0]
+                for call in patches["get"].mock_calls
+                if call.args
+                and str(call.args[0]).startswith("time/")
+                and not str(call.args[0]).endswith(
+                    (".zarray", ".zattrs", ".zgroup", "zarr.json")
+                )
+            ]
+            assert len(time_reads) == 2, time_reads
+
 
 @requires_zarr
 def test_roundtrip_stringdtype_zarr_v3() -> None:

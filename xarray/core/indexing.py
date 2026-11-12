@@ -1066,6 +1066,29 @@ def as_indexable(array):
     raise TypeError(f"Invalid array type: {type(array)}")
 
 
+def supports_vectorized_indexing(array: ExplicitlyIndexed) -> bool:
+    """Whether a VectorizedIndexer is passed to the backend without over-reading.
+
+    True only for arrays backed by a ``BackendArray`` that declares
+    ``supports_vectorized_indexing``. For other backends, a vectorized indexer
+    is decomposed into a bounding-box read (see ``decompose_indexer``), so an
+    indexer like ``[0, -1]`` would load the whole axis. In-memory arrays return
+    ``False`` as well: the fallback path is cheap for them and some adapters
+    for third-party duck arrays do not implement vectorized indexing.
+    """
+    # avoid a circular import (xarray.backends imports from this module)
+    from xarray.backends.common import BackendArray
+
+    if not isinstance(array, ExplicitlyIndexedNDArrayMixin):
+        return False
+    while not isinstance(array, IndexingAdapter | BackendArray):
+        inner = getattr(array, "array", None)
+        if not isinstance(inner, ExplicitlyIndexed):
+            return False
+        array = inner
+    return isinstance(array, BackendArray) and array.supports_vectorized_indexing
+
+
 def _outer_to_vectorized_indexer(
     indexer: BasicIndexer | OuterIndexer, shape: Shape
 ) -> VectorizedIndexer:
