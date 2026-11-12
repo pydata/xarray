@@ -2418,3 +2418,58 @@ class TestInferDtypeOptIn:
         )
         assert decoded.dtype == np.dtype("datetime64[ms]")
         assert_identical(decoded.compute(), expected.load())
+
+
+class TestDecodeDtypeSample:
+    """The values sampled to infer the decoded dtype of a time variable."""
+
+    def test_zero_dimensional(self) -> None:
+        variable = Variable(
+            (), np.array(0, dtype="int64"), attrs={"units": "days since 2000-01-01"}
+        )
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+        assert decoded.values == np.datetime64("2000-01-01")
+
+    def test_empty(self) -> None:
+        variable = _time_variable(np.zeros(0, dtype="int64"), "days since 2000-01-01")
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+        assert decoded.size == 0
+
+    def test_size_one(self) -> None:
+        variable = _time_variable(np.array([1], dtype="int64"), "days since 2000-01-01")
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(decoded.values, [np.datetime64("2000-01-02")])
+
+    def test_multidimensional(self) -> None:
+        values = np.arange(6, dtype="int64").reshape(2, 3)
+        variable = Variable(
+            ("x", "y"), values, attrs={"units": "days since 2000-01-01"}
+        )
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+        expected = np.datetime64("2000-01-01") + values * np.timedelta64(1, "D")
+        np.testing.assert_array_equal(decoded.values, expected)
+
+    def test_non_vectorized_array(self) -> None:
+        # arrays without vectorized indexing (e.g. local backends and remote
+        # stores) keep the two separate first/last reads
+        data = FirstElementAccessibleArray(np.array([0, 1, 2], dtype="int64"))
+        variable = _time_variable(data, "days since 2000-01-01")
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+
+    @requires_dask
+    def test_dask(self) -> None:
+        import dask.array
+
+        values = np.arange(4, dtype="int64")
+        variable = _time_variable(
+            dask.array.from_array(values, chunks=2), "days since 2000-01-01"
+        )
+        decoded = CFDatetimeCoder().decode(variable)
+        assert decoded.dtype == np.dtype("datetime64[ns]")
+        expected = np.datetime64("2000-01-01") + values * np.timedelta64(1, "D")
+        np.testing.assert_array_equal(decoded.values, expected)
