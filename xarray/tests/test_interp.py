@@ -228,6 +228,7 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
 
     if use_dask:
         da = da.chunk({"y": 5})
+    da_in_memory = da.compute()
 
     # xdest is 1d but has different dimension
     xdest = xr.DataArray(
@@ -239,14 +240,14 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da.compute(), "x", xdest, method),
+        func(da_in_memory, "x", xdest, method),
         dims=["z", "y"],
         coords={
             "z": xdest["z"],
             "z2": xdest["z2"],
             "y": da["y"],
             "x": ("z", xdest.values),
-            "x2": ("z", func(da["x2"], "x", xdest, method)),
+            "x2": ("z", func(da_in_memory["x2"], "x", xdest, method)),
         },
     )
     assert_allclose(actual, expected.transpose("z", "y", transpose_coords=True))
@@ -265,15 +266,15 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da.compute(), "x", xdest, method),
+        func(da_in_memory, "x", xdest, method),
         dims=["z", "w", "y"],
         coords={
             "z": xdest["z"],
             "w": xdest["w"],
             "z2": xdest["z2"],
-            "y": da["y"],
+            "y": da_in_memory["y"],
             "x": (("z", "w"), xdest.data),
-            "x2": (("z", "w"), func(da["x2"], "x", xdest, method)),
+            "x2": (("z", "w"), func(da_in_memory["x2"], "x", xdest, method)),
         },
     )
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
