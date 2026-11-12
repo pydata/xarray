@@ -76,6 +76,10 @@ New Features
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
+- Change behavior of ``chunks="auto"`` to guarantee that chunks in xarray
+  match on-disk chunks or multiples of them. No automatic chunk splitting allowed.
+  (:pull:`11060`).
+  By `Julia Signell <https://github.com/jsignell>`_
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 - The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
