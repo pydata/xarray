@@ -545,7 +545,7 @@ class Variable(
         Parameters
         ----------
         dims : str or sequence of str
-            Name(s) of the the data dimension(s). Must be either a string (only
+            Name(s) of the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions.
         data : array_like

@@ -1665,7 +1665,7 @@ class Dataset(
         broadcasting all variables against each other.
 
         For example, variables that are scalar in one dataset but non-scalar in
-        the other dataset can still be broadcast equal if the the non-scalar
+        the other dataset can still be broadcast equal if the non-scalar
         variable is a constant.
 
         See Also
