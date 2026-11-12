@@ -236,10 +236,10 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
         coords={"z": np.random.randn(30), "z2": ("z", np.random.randn(30))},
     )
 
-    actual = da.interp(x=xdest, method=method)
+    actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da, "x", xdest, method),
+        func(da.compute(), "x", xdest, method),
         dims=["z", "y"],
         coords={
             "z": xdest["z"],
@@ -262,10 +262,10 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
         },
     )
 
-    actual = da.interp(x=xdest, method=method)
+    actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da, "x", xdest, method),
+        func(da.compute(), "x", xdest, method),
         dims=["z", "w", "y"],
         coords={
             "z": xdest["z"],
