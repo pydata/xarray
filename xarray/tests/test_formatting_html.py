@@ -314,12 +314,13 @@ def test_repr_of_nonstr_names(kind: str) -> None:
         coords={10: [5, 6, 7], 7: ((("a", "b"),), ["x", "y"])},
         attrs={3: "int key", ("a", "b"): "tuple key"},
     )
-    obj: XarrayTypes = {
+    objs: dict[str, XarrayTypes] = {
         "Variable": ds[1].variable,
         "DataArray": ds[1],
         "Dataset": ds,
         "DataTree": xr.DataTree(ds),
-    }[kind]
+    }
+    obj = objs[kind]
     with xr.set_options(display_style="html", display_default_indexes=True):
         html = obj._repr_html_()
 
