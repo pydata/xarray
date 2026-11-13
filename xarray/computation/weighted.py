@@ -361,6 +361,14 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
                 # Possibly empty after nan or zero weight filtering above
                 return np.full(q.size, np.nan)
 
+            # Promote before squaring integer weights, and rescale to avoid
+            # overflow or underflow. Both Kish's effective sample size and the
+            # normalized weights are invariant under a common scaling factor.
+            weights = weights.astype(
+                np.result_type(weights.dtype, np.float64), copy=False
+            )
+            weights = weights / np.abs(weights).max()
+
             # Kish's effective sample size
             nw = weights.sum() ** 2 / (weights**2).sum()
 
