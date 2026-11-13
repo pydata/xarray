@@ -314,6 +314,8 @@ def _decimal_year_cftime(time, year, days_in_year, *, date_class):
 
 
 def _decimal_year_numpy(time, year, days_in_year, *, dtype):
+    if np.isnan(year):  # year is NaN for NaT
+        return np.nan
     time = np.asarray(time).astype(dtype)
     year_start = np.datetime64(int(year) - 1970, "Y").astype(dtype)
     delta = time - year_start

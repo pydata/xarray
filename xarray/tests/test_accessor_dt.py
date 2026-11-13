@@ -681,3 +681,22 @@ def test_decimal_year(use_cftime, use_dask) -> None:
         year + np.arange(periods).reshape(shape) / hours_in_year, dims=dims
     )
     xr.testing.assert_equal(result, expected)
+
+
+def test_decimal_year_nat(use_dask: bool) -> None:
+    times = np.array(["2000-01-01", "NaT", "2000-07-02"], dtype="datetime64[ns]")
+    da = xr.DataArray(times, dims="time")
+    if use_dask:
+        da = da.chunk({"time": 2})
+
+    result = da.dt.decimal_year
+
+    expected = xr.DataArray([2000.0, np.nan, 2000.5], dims="time")
+    xr.testing.assert_equal(result, expected)
+
+
+def test_decimal_year_all_nat() -> None:
+    da = xr.DataArray(np.array(["NaT", "NaT"], dtype="datetime64[ns]"), dims="time")
+    expected = xr.DataArray([np.nan, np.nan], dims="time")
+    xr.testing.assert_equal(da.dt.decimal_year, expected)
+    xr.testing.assert_equal(da[0].dt.decimal_year, expected[0])

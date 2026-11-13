@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Any, overload
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -11,14 +12,20 @@ class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessor:
+class _CachedAccessor[Accessor]:
     """Custom property-like object (descriptor) for caching accessors."""
 
-    def __init__(self, name, accessor):
+    def __init__(self, name: str, accessor: type[Accessor]) -> None:
         self._name = name
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls: type) -> type[Accessor]: ...
+
+    @overload
+    def __get__(self, obj: object, cls: type) -> Accessor: ...
+
+    def __get__(self, obj: Any, cls: type) -> type[Accessor] | Accessor:
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
@@ -36,7 +43,7 @@ class _CachedAccessor:
             pass
 
         try:
-            accessor_obj = self._accessor(obj)
+            accessor_obj = self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
         except AttributeError as err:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
