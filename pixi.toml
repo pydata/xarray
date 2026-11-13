@@ -138,20 +138,22 @@ netcdf4 = "1.7.*"
 numba = "0.62.*"
 numbagg = "0.9.*"
 packaging = "25.0.*"
-pint = "0.25.*"
 pydap = "3.5.*"
 rasterio = "1.4.*"
 seaborn = "0.13.*"
-sparse = "0.17.*"
 toolz = "1.0.*"
 zarr = "3.1.*"
 pyarrow = "*"        # required by dask.dataframe
 # numcodecs warns on import when crc32c is used instead of google-crc32c
 google-crc32c = "*"
 
+[feature.duckarray-min.dependencies]
+pint = "0.25.*"
+sparse = "0.17.*"
+
 [feature.duckarray-min.pypi-dependencies]
-# Pint and Sparse use the pins in min-versions. The policy checker ignores PyPI
-# dependencies, so update JAX manually following the 12-month version policy.
+# The policy checker ignores PyPI dependencies, so update JAX manually following
+# the 12-month version policy.
 jax = "==0.8.*"
 
 
@@ -439,7 +441,6 @@ test-py313 = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
 ] }
 test-py315-no-numba = { features = [
   "py315",
@@ -449,7 +450,6 @@ test-py315-no-numba = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
 ] }
 test-py315-no-dask = { features = [
   "py314",
@@ -460,7 +460,6 @@ test-py315-no-dask = { features = [
   "numba",
   "viz",
   "extras",
-  "duckarray",
 ] }
 test-py314 = { features = [
   "py314",
@@ -471,7 +470,6 @@ test-py314 = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
 ] }
 
 test-py312 = { features = [
@@ -483,7 +481,6 @@ test-py312 = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
 ] }
 
 test-py315 = { features = [
@@ -495,7 +492,6 @@ test-py315 = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
 ] }
 
 test-py312-with-typing = { features = [
@@ -507,7 +503,6 @@ test-py312-with-typing = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
   "typing",
   "typing-stubs",
 ] }
@@ -521,7 +516,6 @@ test-py315-with-typing = { features = [
   "dask",
   "viz",
   "extras",
-  "duckarray",
   "typing",
   "typing-stubs",
 ] }
