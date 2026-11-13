@@ -222,6 +222,10 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Performing a binary operation with a :py:class:`~xarray.core.groupby.DataArrayGroupBy`
+  object no longer mutates scalar coordinates on the right-hand operand in-place
+  (:issue:`11878`).
+  By `uvcode01-max <https://github.com/uvcode01-max>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
