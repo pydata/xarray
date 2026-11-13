@@ -219,6 +219,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`align` and :py:meth:`DataArray.reindex` on an empty array now
+  return a writeable array instead of a read-only view (:issue:`8274`).
+  By `Isaac Yong <https://github.com/NaNIsaac>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
