@@ -810,10 +810,7 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataArray:
-        """
-        Backend open_dataarray method used by Xarray in :py:func:`~xarray.open_dataarray`.
-        """
-
+        """Backend open_dataarray method used by Xarray in :py:func:`~xarray.open_dataarray`."""
         raise NotImplementedError()
 
     def open_dataset(
@@ -822,10 +819,7 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
-        """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_dataarray` if open_dataarray is not implemented.
-        """
-
+        """Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_dataarray` if open_dataarray is not implemented."""
         raise NotImplementedError()
 
     def guess_can_open(
