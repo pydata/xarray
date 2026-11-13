@@ -285,6 +285,10 @@ Bug Fixes
   encoding is now ignored, while a change between bytes and unicode strings is
   still applied (:issue:`10968`, :pull:`11752`).
   By `Matt Van Horn <https://github.com/mvanhorn>`_.
+- :py:meth:`Dataset.drop_sel` and :py:meth:`DataArray.drop_sel` now accept the
+  same labels as ``.sel``, such as partial datetime strings like
+  ``"2022-03-11"``, instead of raising a ``KeyError`` (:issue:`7699`).
+  By `Summar Kumar <https://github.com/devsummar>`_.
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
   allocations when combining Dask arrays with different dtypes (:issue:`10928`,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import pickle
 import re
 import sys
@@ -36,6 +37,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
+from xarray.core.dataset import _drop_index_labels
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.indexing import IndexSelResult
 from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
@@ -3173,6 +3175,156 @@ class TestDataset:
 
         with pytest.raises(KeyError, match=r"not found in axis"):
             data.drop_sel(x=0)
+
+    def test_drop_sel_partial_datetime_string(self) -> None:
+        # GH7699
+        times = pd.to_datetime(
+            ["2022-03-03T13:50:49", "2022-03-11T13:50:50", "2022-03-12T13:44:35"]
+        )
+        data = Dataset({"A": ("time", [0, 1, 2])}, coords={"time": times})
+
+        actual = data.drop_sel(time="2022-03-11")
+        assert_identical(data.isel(time=[0, 2]), actual)
+
+        actual = data.drop_sel(time=["2022-03-11", "2022-03-03"])
+        assert_identical(data.isel(time=[2]), actual)
+
+        actual = data.drop_sel(time="2022-03")
+        assert_identical(data.isel(time=slice(0, 0)), actual)
+
+        # mixing exact labels and partial strings
+        actual = data.drop_sel(time=[times[0], "2022-03-12"])
+        assert_identical(data.isel(time=[1]), actual)
+
+        with pytest.raises(KeyError, match=r"not found in axis"):
+            data.drop_sel(time="2023-01")
+
+        actual = data.drop_sel(time=["2022-03-11", "2023-01"], errors="ignore")
+        assert_identical(data.isel(time=[0, 2]), actual)
+
+        with pytest.raises(KeyError, match=r"1999-01.*2024-05"):
+            data.drop_sel(time=["1999-01", "2022-03-11", "2024-05"])
+
+    def test_drop_sel_partial_datetime_string_with_midnight(self) -> None:
+        # GH7699. ``get_indexer`` casts "2022-03-11" to midnight and, when that
+        # instant exists, drops only it. ``.sel`` drops the whole day.
+        times = pd.to_datetime(
+            ["2022-03-11 00:00:00", "2022-03-11 12:00:00", "2022-03-12 00:00:00"]
+        )
+        data = Dataset({"A": ("time", [0, 1, 2])}, coords={"time": times})
+
+        actual = data.drop_sel(time="2022-03-11")
+        assert_identical(data.isel(time=[2]), actual)
+
+        actual = data.drop_sel(time="2022-03-12 00:00:00")
+        assert_identical(data.isel(time=[0, 1]), actual)
+
+        actual = data.drop_sel(time=[times[2], "2022-03-11"])
+        assert_identical(data.isel(time=slice(0, 0)), actual)
+
+        actual = data.drop_sel(
+            time=np.array(["2022-03-11", "1999-01"]), errors="ignore"
+        )
+        assert_identical(data.isel(time=[2]), actual)
+
+        # non-monotonic: get_loc returns an integer array rather than a slice
+        unsorted = pd.to_datetime(
+            ["2022-03-11 01:00:00", "2022-03-12 01:00:00", "2022-03-11 05:00:00"]
+        )
+        unordered = Dataset({"A": ("time", [0, 1, 2])}, coords={"time": unsorted})
+        actual = unordered.drop_sel(time="2022-03-11")
+        assert_identical(unordered.isel(time=[1]), actual)
+
+    def test_drop_sel_partial_period_string(self) -> None:
+        # Same partial-string pitfall as datetimes: get_indexer("2022") hits
+        # only the first period.
+        periods = pd.period_range("2022-01", periods=4, freq="M")
+        data = Dataset({"A": ("time", [0, 1, 2, 3])}, coords={"time": periods})
+
+        actual = data.drop_sel(time="2022")
+        assert_identical(data.isel(time=slice(0, 0)), actual)
+
+        actual = data.drop_sel(time="2022-03")
+        assert_identical(data.isel(time=[0, 1, 3]), actual)
+
+        actual = data.drop_sel(time=["2022-01", "1999"], errors="ignore")
+        assert_identical(data.isel(time=[1, 2, 3]), actual)
+
+    def test_drop_index_labels_keeps_duplicate_matches(self) -> None:
+        # ``get_indexer`` raises on a non-unique index. The lookup used by
+        # ``drop_sel`` has to drop every copy. Re-selecting that result with
+        # ``.loc`` still goes through ``get_indexer`` and is a separate limit.
+        dup = pd.Index([1, 2, 2, 3])
+        assert _drop_index_labels(dup, [2]).equals(pd.Index([1, 3]))
+        assert _drop_index_labels(dup, [2, 9], errors="ignore").equals(pd.Index([1, 3]))
+        with pytest.raises(KeyError, match=r"not found in axis"):
+            _drop_index_labels(dup, [2, 9])
+
+        times = pd.to_datetime(
+            ["2022-03-11 00:00:00", "2022-03-11 00:00:00", "2022-03-11 12:00:00"]
+        )
+        dropped = _drop_index_labels(pd.DatetimeIndex(times), ["2022-03-11"])
+        assert len(dropped) == 0
+
+        level = pd.MultiIndex.from_tuples([("a", 1), ("a", 1), ("b", 2)])
+        assert _drop_index_labels(level, [("a", 1)]).equals(
+            pd.MultiIndex.from_tuples([("b", 2)])
+        )
+
+    def test_drop_sel_datetime_time_of_day(self) -> None:
+        times = pd.date_range("2022-03-11", periods=4, freq="12h")
+        data = Dataset({"A": ("time", [0, 1, 2, 3])}, coords={"time": times})
+        actual = data.drop_sel(time=datetime.time(12, 0))
+        assert_identical(data.isel(time=[0, 2]), actual)
+        actual = data.drop_sel(time=[datetime.time(12, 0), "1999"], errors="ignore")
+        assert_identical(data.isel(time=[0, 2]), actual)
+
+    @requires_cftime
+    def test_drop_sel_partial_datetime_string_cftime(self) -> None:
+        # GH7699
+        times = xr.date_range(
+            "2000-01-01", periods=4, freq="MS", calendar="noleap", use_cftime=True
+        )
+        data = Dataset({"A": ("time", [0, 1, 2, 3])}, coords={"time": times})
+
+        actual = data.drop_sel(time="2000-02")
+        assert_identical(data.isel(time=[0, 2, 3]), actual)
+
+        # Several stamps in one month, including the first instant. An exact
+        # indexer does not parse CFTime strings, so this must go through get_loc.
+        times = xr.date_range(
+            "2000-01-01", periods=8, freq="10D", calendar="noleap", use_cftime=True
+        )
+        data = Dataset({"A": ("time", np.arange(8))}, coords={"time": times})
+        actual = data.drop_sel(time="2000-02")
+        kept = [i for i, stamp in enumerate(times) if stamp.month != 2]
+        assert_identical(data.isel(time=kept), actual)
+
+        actual = data.drop_sel(time=["2000-01", "1999"], errors="ignore")
+        kept = [i for i, stamp in enumerate(times) if stamp.month != 1]
+        assert_identical(data.isel(time=kept), actual)
+
+        with pytest.raises(KeyError, match=r"not found in axis"):
+            data.drop_sel(time="1999")
+
+    def test_drop_sel_missing_multiindex_label_ignore(self) -> None:
+        data = create_test_multiindex()
+
+        # a missing tuple is a single label and must not drop partial matches
+        actual = data.drop_sel(x=("a", 3), errors="ignore")
+        assert_identical(data, actual)
+
+        with pytest.raises(KeyError):
+            data.drop_sel(x=("a", 3))
+
+        # a present key drops only that entry, and every copy of a duplicate
+        actual = data.drop_sel(x=[("a", 1), ("b", 2)])
+        kept = pd.MultiIndex.from_tuples(
+            [("a", 2), ("b", 1)], names=("level_1", "level_2")
+        )
+        assert_identical(
+            Dataset({}, Coordinates.from_pandas_multiindex(kept, "x")), actual
+        )
 
     def test_drop_labels_by_keyword(self) -> None:
         data = Dataset(
