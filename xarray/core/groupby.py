@@ -277,11 +277,13 @@ def _infer_map_blocks_template(
     block_ids = np.repeat(np.arange(len(chunksizes)), chunksizes)
 
     output_group = template[name]
-    counts = output_group.groupby(name).count()
+    # Counting label occurrences avoids a groupby reduction, which may dispatch
+    # to flox / numbagg and fail on object-like group labels.
+    counts = output_group.to_index().value_counts(sort=False)
     # Reindex to the full group index so codes can be used as positions.
     out_group_lens = counts.reindex(
-        {name: shuffled.encoded.full_index}, fill_value=0
-    ).data
+        shuffled.encoded.full_index, fill_value=0
+    ).to_numpy()
 
     (codes_arr,) = codes
     frame = pd.DataFrame({"block_id": block_ids, "codes": np.asarray(codes_arr)})
