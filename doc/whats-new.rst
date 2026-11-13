@@ -219,6 +219,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Performing a binary operation with a :py:class:`~xarray.core.groupby.DataArrayGroupBy`
+  object no longer mutates scalar coordinates on the right-hand operand in-place
+  (:issue:`11878`).
+  By `uvcode01-max <https://github.com/uvcode01-max>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
