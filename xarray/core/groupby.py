@@ -995,11 +995,13 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         # Broadcast out scalars for backwards compatibility
         # TODO: get rid of this when fixing GH2145
-        for var in other.coords:
-            if other[var].ndim == 0:
-                other[var] = (
-                    other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
-                )
+        if any(other[var].ndim == 0 for var in other.coords):
+            other = other.copy(deep=False)
+            for var in other.coords:
+                if other[var].ndim == 0:
+                    other[var] = (
+                        other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
+                    )
 
         # need to handle NaNs in group or elements that don't belong to any bins
         mask = codes == -1
