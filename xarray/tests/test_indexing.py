@@ -20,6 +20,7 @@ from xarray.tests import (
     dask_array_type,
     has_dask,
     raise_if_dask_computes,
+    requires_array_api_strict,
     requires_dask,
     requires_pandas_3,
     requires_sparse,
@@ -1161,6 +1162,91 @@ def test_as_indexable(array, expected_type):
     actual = indexing.as_indexable(array)
 
     assert isinstance(actual, expected_type)
+
+
+class ArrayWithNamespaceNdArray(np.ndarray):
+    """ndarray subclass implementing both the Array API and numpy protocols."""
+
+    def __array_namespace__(self, /, *, api_version=None):
+        raise NotImplementedError
+
+
+def test_array_api_adapter_vindex_falls_back_to_array_function() -> None:
+    # GH9694: vectorized indexing is not part of the Array API standard, but
+    # arrays implementing both protocols should still support it
+    array = np.arange(6, dtype=np.int64).reshape(2, 3).view(ArrayWithNamespaceNdArray)
+    adapter = indexing.ArrayApiIndexingAdapter(array)
+    indexer = indexing.VectorizedIndexer((np.array([1, 0]), np.array([2, 1])))
+
+    actual = adapter.vindex[indexer]
+
+    expected = np.array([5, 1])
+    np.testing.assert_array_equal(np.asarray(actual), expected)
+
+
+def test_array_api_adapter_vindex_without_array_function_raises() -> None:
+    # GH9694: without the numpy protocol there is no way to vectorize
+    adapter = indexing.ArrayApiIndexingAdapter(ArrayWithNamespace())
+    indexer = indexing.VectorizedIndexer((np.array([0]),))
+
+    with pytest.raises(TypeError, match="Vectorized indexing is not supported"):
+        adapter.vindex[indexer]
+
+
+@requires_array_api_strict
+def test_array_api_adapter_vindex_array_api_strict() -> None:
+    import array_api_strict as xp
+
+    # 3D array: test 1D indexers, 2D indexers, and slices interleaved between indexed axes
+    x_np = np.arange(24, dtype=np.int64).reshape(2, 3, 4)
+    x_xp = xp.asarray(x_np)
+    adapter = indexing.ArrayApiIndexingAdapter(x_xp)
+
+    # 1D indexers with interleaved slice
+    idxr_1d = indexing.VectorizedIndexer(
+        (np.array([0, 1]), slice(1, 3), np.array([3, 2]))
+    )
+    actual_1d = adapter.vindex[idxr_1d]
+    expected_1d = indexing.NdArrayLikeIndexingAdapter(x_np)._vindex_get(idxr_1d)
+    np.testing.assert_array_equal(np.asarray(actual_1d), expected_1d)
+
+    # 2D indexers
+    idxr_2d = indexing.VectorizedIndexer(
+        (
+            np.array([[0, 1], [1, 0]]),
+            slice(0, 2),
+            np.array([[2, 3], [1, 0]]),
+        )
+    )
+    actual_2d = adapter.vindex[idxr_2d]
+    expected_2d = indexing.NdArrayLikeIndexingAdapter(x_np)._vindex_get(idxr_2d)
+    np.testing.assert_array_equal(np.asarray(actual_2d), expected_2d)
+
+    # Vectorized assignment is unsupported
+    with pytest.raises(TypeError, match="Vectorized indexing is not supported"):
+        adapter.vindex[idxr_1d] = 0
+
+
+@requires_sparse
+def test_vectorized_indexing_sparse_array() -> None:
+    # GH9694: DataArray.sel with DataArray indexers (vectorized indexing)
+    # raised TypeError for sparse-backed arrays
+    import sparse
+
+    data = np.arange(15, dtype=np.float64).reshape(3, 5)
+    da = DataArray(
+        sparse.COO.from_numpy(data),
+        dims=("x", "y"),
+        coords={"x": ["x0", "x1", "x2"], "y": ["y0", "y1", "y2", "y3", "y4"]},
+    )
+    newdim = {"newdim": ["nd0", "nd1", "nd2"]}
+    x_idx = DataArray(["x2", "x1", "x2"], coords=newdim, dims="newdim")
+    y_idx = DataArray(["y4", "y2", "y0"], coords=newdim, dims="newdim")
+
+    actual = da.sel(x=x_idx, y=y_idx)
+
+    assert isinstance(actual.data, sparse.COO)
+    np.testing.assert_array_equal(actual.data.todense(), [14.0, 7.0, 10.0])
 
 
 @requires_sparse
