@@ -45,10 +45,10 @@ def collect_dask_array_expr_chunked_data(
     xarray_objs: Sequence[Dataset],
 ) -> tuple[bool, list[Any]]:
     chunked_data = [
-        variable.data
+        variable._data
         for arg in xarray_objs
         for variable in arg.variables.values()
-        if is_dask_collection(variable.data)
+        if is_dask_collection(variable._data)
     ]
     has_dask_array_expr = any(is_dask_array_expr_array(data) for data in chunked_data)
     has_other_chunked = any(not is_dask_array_expr_array(data) for data in chunked_data)

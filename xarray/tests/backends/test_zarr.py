@@ -3315,6 +3315,53 @@ class TestZarrRegionAuto:
 
 @requires_zarr
 @requires_dask
+@pytest.mark.filterwarnings("ignore:Automatic shard shape inference is experimental")
+@pytest.mark.parametrize("compute", [False, True])
+def test_auto_shards_reject_overlapping_dask_chunks(
+    tmp_path: Path, compute: bool
+) -> None:
+    # GH11674: two chunks of five overlap the auto-selected shard at [4:6].
+    ds = xr.Dataset({"v": ("x", np.arange(1, 11, dtype="float32"))}).chunk(x=5)
+    ds["v"].encoding = {"chunks": 1, "shards": "auto"}
+
+    with pytest.raises(ValueError, match="would overlap multiple Dask chunks"):
+        ds.to_zarr(
+            tmp_path / "auto.zarr",
+            zarr_format=3,
+            consolidated=False,
+            compute=compute,
+        )
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.filterwarnings("ignore:Automatic shard shape inference is experimental")
+@pytest.mark.parametrize("ndim", [1, 2])
+@pytest.mark.parametrize("dask_chunk, align_chunks", [(5, True), (4, False)])
+def test_auto_shards_aligned_roundtrip(
+    tmp_path: Path, ndim: int, dask_chunk: int, align_chunks: bool
+) -> None:
+    shape = (10,) * ndim
+    dims = tuple(f"dim_{i}" for i in range(ndim))
+    data = np.arange(np.prod(shape), dtype="float32").reshape(shape)
+    expected = xr.Dataset({"v": (dims, data)})
+    ds = expected.chunk(dict.fromkeys(dims, dask_chunk))
+    ds["v"].encoding = {"chunks": (1,) * ndim, "shards": "auto"}
+    store = tmp_path / "auto.zarr"
+
+    ds.to_zarr(
+        store,
+        zarr_format=3,
+        consolidated=False,
+        align_chunks=align_chunks,
+    )
+    with xr.open_zarr(store, consolidated=False) as actual:
+        assert_identical(actual, expected)
+        assert actual["v"].encoding["shards"] == (2,) * ndim
+
+
+@requires_zarr
+@requires_dask
 @pytest.mark.parametrize(
     "shape, enc_chunks, enc_shards",
     [

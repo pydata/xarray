@@ -20,6 +20,7 @@ from xarray.backends.api import (
 from xarray.backends.common import AbstractWritableDataStore, ArrayWriter, BytesIOProxy
 from xarray.backends.locks import get_dask_scheduler
 from xarray.backends.store import AbstractDataStore
+from xarray.backends.zarr import _validate_zarr_attrs, encode_zarr_attr_value
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.options import OPTIONS
@@ -470,7 +471,14 @@ def to_netcdf(
 
 
 def dump_to_store(
-    dataset, store, writer=None, encoder=None, encoding=None, unlimited_dims=None
+    dataset,
+    store,
+    writer=None,
+    encoder=None,
+    encoding=None,
+    unlimited_dims=None,
+    *,
+    encoded=None,
 ):
     """Store dataset contents to a backends.*DataStore object."""
     if writer is None:
@@ -479,7 +487,10 @@ def dump_to_store(
     if encoding is None:
         encoding = {}
 
-    variables, attrs = conventions.encode_dataset_coordinates(dataset)
+    if encoded is None:
+        variables, attrs = conventions.encode_dataset_coordinates(dataset)
+    else:
+        variables, attrs = encoded
 
     check_encoding = set()
     for k, enc in encoding.items():
@@ -634,6 +645,13 @@ def save_mfdataset(
         )
 
 
+def _encode_zarr_group_attrs(attributes: Mapping) -> dict[str, Any]:
+    """Encode group attributes already prepared by the coordinate encoder."""
+    encoded = {key: encode_zarr_attr_value(value) for key, value in attributes.items()}
+    _validate_zarr_attrs(encoded)
+    return encoded
+
+
 def get_writable_zarr_store(
     store: ZarrStoreLike | None = None,
     *,
@@ -647,6 +665,7 @@ def get_writable_zarr_store(
     storage_options: dict[str, str] | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
+    attributes: Mapping | None = None,
 ) -> backends.ZarrStore:
     """Create a store for writing to Zarr."""
     from xarray.backends.zarr import _choose_default_mode, _get_mappers
@@ -673,6 +692,11 @@ def get_writable_zarr_store(
         align_chunks=align_chunks,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
+        attributes=(
+            _encode_zarr_group_attrs(attributes)
+            if attributes is not None and mode != "r+"
+            else None
+        ),
         **kwargs,
     )
 
@@ -753,6 +777,13 @@ def to_zarr(
     if encoding is None:
         encoding = {}
 
+    # Region validation can drop coordinates, so those writes must prepare
+    # their variables afterwards. Other writes reuse this result below.
+    encoded = (
+        conventions.encode_dataset_coordinates(dataset)
+        if region is None and mode != "r+"
+        else None
+    )
     zstore = get_writable_zarr_store(
         store,
         mode=mode,
@@ -765,6 +796,7 @@ def to_zarr(
         storage_options=storage_options,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
+        attributes=encoded[1] if encoded is not None else None,
     )
 
     dataset = zstore._validate_and_autodetect_region(dataset)
@@ -774,7 +806,7 @@ def to_zarr(
 
     # TODO: figure out how to properly handle unlimited_dims
     try:
-        dump_to_store(dataset, zstore, writer, encoding=encoding)
+        dump_to_store(dataset, zstore, writer, encoding=encoding, encoded=encoded)
         writes = writer.sync(
             compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
         )
@@ -945,6 +977,12 @@ def _datatree_to_zarr(
             f"unexpected encoding group name(s) provided: {set(encoding) - set(dt.groups)}"
         )
 
+    root_dataset = dt.to_dataset(inherit=True)
+    encoded_root = (
+        conventions.encode_dataset_coordinates(root_dataset)
+        if region is None and mode != "r+"
+        else None
+    )
     root_store = get_writable_zarr_store(
         store,
         mode=mode,
@@ -957,18 +995,47 @@ def _datatree_to_zarr(
         storage_options=storage_options,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
+        attributes=encoded_root[1] if encoded_root is not None else None,
     )
 
+    # Children inherit this flag. Consolidate the complete hierarchy once,
+    # after all node metadata is written, rather than after each node.
+    consolidate_on_close = root_store._consolidate_on_close
+    root_store._consolidate_on_close = False
     writer = ArrayWriter()
 
     try:
         for rel_path, node in dt.subtree_with_keys:
             at_root = node is dt
-            dataset = node.to_dataset(inherit=write_inherited_coords or at_root)
+            dataset = (
+                root_dataset
+                if at_root
+                else node.to_dataset(inherit=write_inherited_coords)
+            )
+            encoded = (
+                encoded_root
+                if at_root
+                else (
+                    conventions.encode_dataset_coordinates(dataset)
+                    if region is None and root_store._mode != "r+"
+                    else None
+                )
+            )
             # Use a relative path for group, because absolute paths are broken
             # with consolidated metadata in zarr 3.1.2 and earlier:
             # https://github.com/zarr-developers/zarr-python/pull/3428
-            node_store = root_store if at_root else root_store.get_child_store(rel_path)
+            node_store = (
+                root_store
+                if at_root
+                else root_store.get_child_store(
+                    rel_path,
+                    attributes=(
+                        _encode_zarr_group_attrs(encoded[1])
+                        if encoded is not None
+                        else None
+                    ),
+                )
+            )
 
             dataset = node_store._validate_and_autodetect_region(dataset)
             node_store._validate_encoding(encoding)
@@ -978,11 +1045,15 @@ def _datatree_to_zarr(
                 node_store,
                 writer,
                 encoding=encoding.get(node.path),
+                encoded=encoded,
             )
+        if consolidate_on_close:
+            root_store.consolidate_metadata()
         writes = writer.sync(
             compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
         )
     finally:
+        root_store._consolidate_on_close = consolidate_on_close
         if compute:
             root_store.close()
 
