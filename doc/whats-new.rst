@@ -603,6 +603,11 @@ Performance
   many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
   :pull:`11687`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Speed up creating variables from object arrays of strings when pandas infers
+  the ``str`` dtype (the default since pandas 3.0). Missing values (``None``,
+  ``pd.NA``) in such arrays are no longer converted to ``NaN``
+  (:issue:`11470`, :pull:`11484`).
+  By `Florian Knappers <https://github.com/JJFlorian>`_.
 
 
 Internal Changes
