@@ -204,6 +204,127 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
     return newpositions[newpositions != -1]
 
 
+def _infer_template_from_group(
+    shuffled: GroupBy, func: Callable, *args: Any, **kwargs: Any
+) -> DataArray | Dataset | None:
+    """Cheaply build a template for shape-preserving functions.
+
+    Apply ``func`` to one group and reuse the shuffled object's metadata, replacing
+    only dtypes. Returns None when the function changes dimensions, coordinates, or
+    variables, in which case the caller falls back to the full inference.
+    """
+    from xarray.core.dataarray import DataArray
+
+    group_dim = shuffled._group_dim
+    group = None
+    for index in shuffled.encoded.group_indices:
+        candidate = shuffled._obj.isel({group_dim: index})
+        if candidate.sizes[group_dim] > 0:
+            group = candidate
+            break
+    if group is None:
+        return None
+
+    applied = maybe_wrap_array(group, func(group, *args, **kwargs))
+    if group_dim not in applied.dims:
+        return None
+    if applied.sizes[group_dim] != group.sizes[group_dim]:
+        return None
+
+    obj = shuffled._obj
+    if isinstance(obj, DataArray):
+        if applied.dims != group.dims:
+            return None
+    elif set(applied.dims) != set(group.dims):
+        return None
+
+    if isinstance(obj, DataArray):
+        if set(applied.coords) != set(group.coords):
+            return None
+        return obj.copy(data=obj.data.astype(applied.dtype))
+
+    if applied.data_vars.keys() != group.data_vars.keys():
+        return None
+    template = obj.copy(deep=False)
+    for name, var in applied.data_vars.items():
+        if var.dims != group[name].dims:
+            return None
+        template[name] = template[name].astype(var.dtype)
+    return template
+
+
+def _infer_map_blocks_template(
+    shuffled: GroupBy,
+    func: Callable,
+    codes: tuple[DataArray, ...],
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[DataArray | Dataset, Hashable]:
+    """Build a template for ``map_blocks`` from the shuffled object.
+
+    The shuffled object has one complete group per block (multiple groups may share
+    a block), so the number of output elements per block can be computed from the
+    per-group output lengths and the shuffled codes.
+    """
+    template = _infer_template_from_group(shuffled, func, *args, **kwargs)
+    if template is not None:
+        return template, shuffled._group_dim
+
+    template = shuffled.map(func, args=args, **kwargs)
+    name = shuffled.group1d.name
+    group_dim = shuffled._group_dim
+    chunksizes = shuffled._obj.chunksizes[group_dim]
+    block_ids = np.repeat(np.arange(len(chunksizes)), chunksizes)
+
+    output_group = template[name]
+    counts = output_group.groupby(name).count()
+    # Reindex to the full group index so codes can be used as positions.
+    out_group_lens = counts.reindex(
+        {name: shuffled.encoded.full_index}, fill_value=0
+    ).data
+
+    (codes_arr,) = codes
+    frame = pd.DataFrame({"block_id": block_ids, "codes": np.asarray(codes_arr)})
+    groups_in_chunk = frame["codes"].groupby(block_ids).unique()
+    # One output chunk per input block: sum the output lengths of all groups in
+    # that block. Shuffling guarantees that a group is contained in one block.
+    out_chunks = tuple(int(out_group_lens[group].sum()) for group in groups_in_chunk)
+
+    if group_dim in template.dims:
+        # The function preserves the grouped dimension: chunk the template the same
+        # way the shuffled object is chunked, block by block.
+        if sum(out_chunks) != template.sizes[group_dim]:
+            raise NotImplementedError(
+                "Could not infer output chunks for map(..., shuffle=True). "
+                f"Expected {template.sizes[group_dim]} elements along {group_dim!r}, "
+                f"got {sum(out_chunks)}. This usually means the function changes "
+                "the size of the grouped dimension."
+            )
+        template = template.chunk({group_dim: out_chunks})
+        concat_dim = group_dim
+    else:
+        # The function reduces over the grouped dimension and creates a new
+        # dimension named after the grouping variable. The baseline map reindexes
+        # to the full group index (including empty groups); map_blocks only sees
+        # groups present in each block, so drop empty groups from the template and
+        # reindex the result afterwards.
+        positions = shuffled.encoded.full_index.get_indexer(
+            shuffled.encoded.unique_coord.to_index()
+        )
+        if len(positions) != template.sizes[name]:
+            template = template.isel({name: positions})
+        if sum(out_chunks) != template.sizes[name]:
+            raise NotImplementedError(
+                "Could not infer output chunks for map(..., shuffle=True): "
+                f"expected {template.sizes[name]} groups along {name!r}, "
+                f"got {sum(out_chunks)}."
+            )
+        template = template.chunk({name: out_chunks})
+        concat_dim = name
+
+    return template, concat_dim
+
+
 class _DummyGroup[T_Xarray: (DataArray, Dataset)]:
     """Class for keeping track of grouped dimensions without coordinates.
 
@@ -856,6 +977,114 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         # every group is contiguous if it forms exactly one run of equal codes
         n_runs = np.count_nonzero(np.diff(codes)) + 1
         return n_runs != len(np.unique(codes))
+
+    def _map_shuffled(
+        self,
+        func: Callable,
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = None,
+        **kwargs: Any,
+    ) -> T_Xarray:
+        """Apply ``func`` per block of a shuffled object instead of per group."""
+        from xarray.core.parallel import map_blocks
+        from xarray.groupers import Resampler
+
+        if self._by_chunked:
+            raise NotImplementedError(
+                "map(..., shuffle=True) does not support grouping by a chunked array."
+            )
+        if self._stacked_dim is not None:
+            raise NotImplementedError(
+                "map(..., shuffle=True) does not support multi-dimensional groupers."
+            )
+        if len(self.groupers) != 1:
+            raise NotImplementedError(
+                "map(..., shuffle=True) does not support grouping by multiple variables."
+            )
+        (resolved,) = self.groupers
+        if isinstance(resolved.grouper, Resampler):
+            raise NotImplementedError(
+                "map(..., shuffle=True) is not supported for resampling."
+            )
+
+        shuffled, codes = self._shuffle_obj(None)
+        group_dim = self._group_dim
+        groupers = {resolved.group.name: resolved.grouper.reset()}
+
+        shuffled_gb = shuffled.groupby(groupers)
+        template, concat_dim = _infer_map_blocks_template(
+            shuffled_gb, func, codes, *args, **kwargs
+        )
+
+        if concat_dim == group_dim:
+            if template.sizes[group_dim] != shuffled.sizes[group_dim]:
+                raise NotImplementedError(
+                    "map(..., shuffle=True) only supports functions that preserve the "
+                    f"size of the grouped dimension {group_dim!r}; got "
+                    f"{shuffled.sizes[group_dim]} input and "
+                    f"{template.sizes[group_dim]} output elements. Use shuffle=False."
+                )
+            renamer: dict[Hashable, Hashable] = {}
+        else:
+            # map_blocks cannot add a new multiply-chunked dimension, so rename the
+            # new dimension to the grouped dimension while mapping and back after.
+            renamer = {concat_dim: group_dim}
+            template = template.rename(renamer)
+
+        def wrapper(block, *block_args: Any, **block_kwargs: Any) -> T_Xarray:
+            block_gb = block.groupby(groupers)
+            result = block_gb.map(func, args=block_args, **block_kwargs)
+            if concat_dim != group_dim:
+                # A per-block groupby reindexes reductions to the full group
+                # index; keep only the groups present in this block. The outer
+                # result is reindexed to the full index after concatenation.
+                present = block_gb.encoded.unique_coord.to_index()
+                result = result.sel({concat_dim: present})
+            return result.rename(renamer) if renamer else result
+
+        result = map_blocks(
+            wrapper, shuffled, args=args, kwargs=kwargs, template=template
+        )
+
+        if concat_dim == group_dim:
+            # Invert the shuffle. The inverse permutation maps positions in the
+            # original object to positions in the shuffled/mapped object.
+            inverse = _inverse_permutation_indices(
+                self.encoded.group_indices, N=self.group1d.size
+            )
+            if inverse is not None:
+                indices = [
+                    arr.tolist()
+                    for arr in np.split(
+                        inverse, np.cumsum(result.chunksizes[group_dim])[:-1]
+                    )
+                ]
+                result = result._shuffle(
+                    dim=group_dim, indices=tuple(indices), chunks="auto"
+                )
+        else:
+            result = result.rename({group_dim: concat_dim})
+            # The baseline map reindexes reductions to the full group index,
+            # restoring empty groups as NaN.
+            result = result.reindex({concat_dim: self.encoded.full_index})
+
+        if concat_dim == group_dim:
+            # The shuffled object has group coordinates that the original object
+            # does not; the baseline map does not add them. For reductions the
+            # grouping coordinate becomes the output dimension and must be kept.
+            from xarray.core.dataarray import DataArray
+
+            was_array = isinstance(self._obj, DataArray)
+            as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+            added_coords = {
+                grouper.name
+                for grouper in self.groupers
+                if grouper.name not in as_dataset._variables
+            }
+            added_coords &= set(result.coords)
+            if added_coords:
+                result = result.drop_vars(sorted(added_coords, key=str))
+        return result
 
     def map(
         self,
@@ -1704,6 +1933,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         func: Callable[..., DataArray],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
+        *,
+        shuffle: bool = False,
         **kwargs: Any,
     ) -> DataArray:
         """Apply a function to each array in the group and concatenate the results.
@@ -1738,6 +1969,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        shuffle : bool, default: False
+            If True and the object is chunked, shuffle the object so that each group
+            is contained in a single chunk, then apply ``func`` once per block.
+            This can dramatically reduce the number of tasks when grouping by many
+            labels. ``func`` must preserve the size of the grouped dimension.
         *args : tuple, optional
             Positional arguments passed to `func`.
         **kwargs
@@ -1748,6 +1984,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
+        if shuffle and self._obj.chunksizes:
+            return self._map_shuffled(func, args=args, shortcut=shortcut, **kwargs)
         grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
@@ -1895,6 +2133,8 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         func: Callable[..., Dataset],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
+        *,
+        shuffle: bool = False,
         **kwargs: Any,
     ) -> Dataset:
         """Apply a function to each Dataset in the group and concatenate the results.
@@ -1917,6 +2157,11 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         ----------
         func : callable
             Callable to apply to each sub-dataset.
+        shuffle : bool, default: False
+            If True and the object is chunked, shuffle the object so that each group
+            is contained in a single chunk, then apply ``func`` once per block.
+            This can dramatically reduce the number of tasks when grouping by many
+            labels. ``func`` must preserve the size of the grouped dimension.
         args : tuple, optional
             Positional arguments to pass to `func`.
         **kwargs
@@ -1927,6 +2172,8 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
+        if shuffle and self._obj.chunksizes:
+            return self._map_shuffled(func, args=args, shortcut=shortcut, **kwargs)
         # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)

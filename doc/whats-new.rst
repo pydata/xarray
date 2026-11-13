@@ -13,6 +13,11 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArrayGroupBy.map` and :py:meth:`DatasetGroupBy.map` now accept
+  ``shuffle=True``. The object is shuffled so each group is contained in one
+  chunk, then the function is applied once per block, reducing the dask graph
+  from O(groups) tasks to O(chunks) for out-of-order group labels
+  (:issue:`9220`, :pull:`9706`).
 - :py:func:`apply_ufunc` accepts dimension names for ``vectorize``, e.g.
   ``vectorize=["time"]``, to only loop over these broadcast dimensions and pass
   all other broadcast dimensions to ``func`` in bulk. This is much faster than
