@@ -10,7 +10,7 @@ from numpy.lib.array_utils import normalize_axis_index
 
 from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.utils import emit_user_level_warning, is_duck_array, module_available
 
 try:
     import bottleneck as bn
@@ -226,7 +226,7 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 
 def warn_on_deficient_rank(rank, order):
     if rank != order:
-        warnings.warn("Polyfit may be poorly conditioned", RankWarning, stacklevel=2)
+        emit_user_level_warning("Polyfit may be poorly conditioned", RankWarning)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
