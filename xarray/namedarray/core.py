@@ -26,6 +26,7 @@ from xarray.core.indexing import (
     ImplicitToExplicitIndexingAdapter,
     OuterIndexer,
 )
+from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     DimType_co,
@@ -623,13 +624,12 @@ class NamedArray(
             )
         if len(set(dims_tuple)) < len(dims_tuple):
             repeated_dims = {d for d in dims_tuple if dims_tuple.count(d) > 1}
-            warnings.warn(
+            emit_user_level_warning(
                 f"Duplicate dimension names present: dimensions {repeated_dims} appear more than once in dims={dims_tuple}. "
                 "We do not yet support duplicate dimension names, but we do allow initial construction of the object. "
                 "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
                 "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
                 UserWarning,
-                stacklevel=2,
             )
         return dims_tuple
 

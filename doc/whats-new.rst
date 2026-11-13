@@ -75,6 +75,14 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add static type hints for the accessors of popular external packages:
+  ``.cf`` (cf-xarray), ``.hvplot`` (hvplot), ``.metpy`` (MetPy), ``.odc``
+  (odc-geo), ``.pint`` (pint-xarray), ``.plotly`` (xarray-plotly), ``.rio``
+  (rioxarray), ``.vz`` (VirtualiZarr), ``.xrs`` (xarray-spatial) and ``.xvec``
+  (xvec). If the package is installed, type checkers and IDEs know the
+  accessor's methods. These packages are not new
+  dependencies (:issue:`11078`, :pull:`11087`).
+  By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -546,6 +554,11 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
+  engine now share a file handle while they remain open. The handle closes when
+  the last dataset closes, so changes made on disk are only seen after all
+  datasets using that HDF5 file have closed (:issue:`11581`, :pull:`11809`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - The string accessor uses the vectorized functions of ``np.strings`` for
   ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
   ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,

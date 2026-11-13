@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import itertools
 import sys
-import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
 from numbers import Number
@@ -122,6 +121,8 @@ def drop_missing_dims[DimType: Hashable](
     dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
+    from xarray.core.utils import emit_user_level_warning
+
     supplied_dims_tuple = tuple(supplied_dims)
     supplied_dims_set = {val for val in supplied_dims_tuple if val is not ...}
     dims_set = set(dims)
@@ -131,7 +132,7 @@ def drop_missing_dims[DimType: Hashable](
             msg = f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             if missing_dims == "raise":
                 raise ValueError(msg)
-            warnings.warn(msg, stacklevel=2)
+            emit_user_level_warning(msg)
 
         if missing_dims == "raise":
             return supplied_dims_tuple
