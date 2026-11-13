@@ -197,6 +197,23 @@ class TestDataArrayRolling:
         assert len(actual.chunksizes["x"]) == len(da.chunksizes["x"])
 
     @requires_dask
+    @pytest.mark.parametrize("chunks", ((20,), (10, 10), (5, 5, 5, 5)))
+    @pytest.mark.parametrize("center", (True, False))
+    @pytest.mark.parametrize("use_bottleneck", (True, False))
+    @pytest.mark.parametrize("use_numbagg", (True, False))
+    @pytest.mark.parametrize("name", ("mean", "sum", "count", "median", "std", "max"))
+    def test_rolling_dask_result_keeps_input_chunks(
+        self, name, use_bottleneck, use_numbagg, center, chunks
+    ) -> None:
+        # The result must keep the input chunks along the rolled dimension on
+        # every reduction path (bottleneck/numbagg on and off, center on and
+        # off): https://github.com/pydata/xarray/issues/11689
+        da = DataArray(np.ones((4, 20)), dims=("t", "s")).chunk(t=1, s=chunks)
+        with set_options(use_bottleneck=use_bottleneck, use_numbagg=use_numbagg):
+            actual = getattr(da.rolling(s=5, center=center), name)()
+        assert actual.chunksizes == da.chunksizes
+
+    @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
