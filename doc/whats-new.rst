@@ -174,6 +174,14 @@ Breaking Changes
   Defining one without ``__slots__`` raises an ``AttributeError`` instead of
   the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`, :pull:`11818`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- When combining or comparing attributes, e.g. with
+  ``combine_attrs="drop_conflicts"`` or :py:meth:`DataArray.identical`, ``None``
+  is no longer considered equal to other missing values like ``NaN``, ``NaT``
+  or ``pd.NA``. Attributes that are non-NumPy duck arrays, e.g. pint quantities
+  or sparse arrays, are now compared by value like NumPy arrays, so equal
+  values are kept instead of dropped. Lazy arrays, such as dask arrays, are
+  never computed for these comparisons (:issue:`11841`, :pull:`11845`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Deprecations
@@ -494,6 +502,13 @@ Bug Fixes
 - :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
+  By `David Hoese <https://github.com/djhoese>`_.
+- Comparing attributes that hold dask arrays or dask-backed xarray objects,
+  e.g. in arithmetic with ``keep_attrs=True`` or
+  ``combine_attrs="drop_conflicts"``, no longer computes them. Such attributes
+  are only considered equal if they are dask arrays with matching dask tokens.
+  :py:meth:`DataArray.identical` and :py:meth:`Dataset.identical` also no longer
+  raise ``ValueError`` for these attributes (:issue:`11841`, :pull:`11845`).
   By `David Hoese <https://github.com/djhoese>`_.
 
 
