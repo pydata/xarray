@@ -219,6 +219,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dask-backed datetime :py:class:`DataArray` inputs and
+  :py:meth:`DataArray.astype` results now use the same dtype and values as
+  NumPy-backed arrays for unsupported datetime units such as months or years
+  (:issue:`10673`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
