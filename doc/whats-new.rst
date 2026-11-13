@@ -219,6 +219,20 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Zarr writes with ``shards="auto"`` now validate and align Dask chunks against
+  the resolved shard shape, preventing overlapping writes and data corruption
+  (:issue:`11674`).
+- New Zarr arrays and groups receive their attributes when they are created,
+  avoiding redundant metadata writes and duplicate ZIP entries when writing
+  unconsolidated :py:class:`Dataset` and :py:class:`DataTree` data to a
+  ``zarr.storage.ZipStore`` (:issue:`10827`).
+- :py:meth:`DataTree.to_zarr` consolidates metadata once after writing all nodes,
+  avoiding repeated traversal of the partially written tree (:issue:`9455`).
+- :py:meth:`map_blocks` distinguishes different closures and lambdas and avoids
+  loading disk-backed inputs or templates while constructing the task graph.
+- Weighted quantiles now avoid integer overflow and floating-point overflow or
+  underflow when calculating the effective sample size from large or small
+  weights. Proportional sampling weights produce consistent quantiles.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).

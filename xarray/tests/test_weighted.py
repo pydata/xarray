@@ -224,6 +224,59 @@ def test_weighted_quantile_no_nan(weights, expected):
     assert_allclose(expected, result)
 
 
+@pytest.mark.parametrize(
+    "dtype, scale",
+    [
+        (np.uint8, 100),
+        (np.int8, 50),
+        (np.uint64, 2**62),
+        (np.int64, 2**60),
+        (np.float16, 1e4),
+        (np.float32, 1e20),
+        (np.float32, 1e-30),
+        (np.float64, 1e200),
+        (np.float64, 1e-200),
+        (np.float64, np.finfo(np.float64).max / 2),
+        (np.float64, np.finfo(np.float64).smallest_subnormal),
+    ],
+)
+def test_weighted_quantile_weight_scale(dtype: Any, scale: float) -> None:
+    # Proportional sampling weights must give the same quantiles, including
+    # when squaring the original weights would overflow or underflow.
+    data = DataArray([1.0, 10.0, 100.0], dims="x")
+    weights = DataArray(np.array([2, 2, 1], dtype=dtype) * dtype(scale), dims="x")
+    original_weights = weights.copy(deep=True)
+    q = [0.0, 0.25, 0.5, 0.75, 1.0]
+    expected = DataArray([1.0, 4.0, 8.0, 20.0, 60.0], coords={"quantile": q})
+
+    with np.errstate(over="raise", divide="raise", invalid="raise"):
+        actual = data.weighted(weights).quantile(q)
+
+    assert_allclose(actual, expected)
+    assert_identical(weights, original_weights)
+
+
+@requires_dask
+@pytest.mark.parametrize("skipna", [True, False])
+def test_weighted_quantile_weight_scale_dask(skipna: bool) -> None:
+    data = DataArray(
+        [[1.0, 10.0, 100.0, np.nan], [1.0, 10.0, 100.0, 1000.0]],
+        dims=("sample", "x"),
+        coords={"sample": ["missing", "complete"]},
+        name="observations",
+    )
+    weights = DataArray([2.0, 2.0, 1.0, 0.0], dims="x")
+    q = [0.25, 0.5, 0.75]
+    expected = data.weighted(weights).quantile(q, dim="x", skipna=skipna)
+    chunked = data.to_dataset().chunk(sample=1, x=-1)
+    scaled_weights = (weights * 1e200).chunk(x=-1)
+
+    with raise_if_dask_computes():
+        actual = chunked.weighted(scaled_weights).quantile(q, dim="x", skipna=skipna)
+
+    assert_allclose(actual.compute(), expected.to_dataset())
+
+
 def test_weighted_quantile_zero_weights():
     da = DataArray([0, 1, 2, 3])
     weights = DataArray([1, 0, 1, 0])
