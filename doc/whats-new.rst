@@ -267,6 +267,12 @@ Bug Fixes
 - :py:meth:`DataArray.str.extract` with ``dim`` now supports NumPy ``StringDType`` arrays,
   and no longer fails if the first value does not match (:pull:`11793`).
   By `jdotc1 <https://github.com/jdotc1>`_.
+- :py:func:`broadcast`, :py:meth:`DataArray.broadcast_like` and
+  :py:meth:`Dataset.broadcast_like` now keep an index that spans several
+  coordinates instead of rebuilding its coordinates without it. An index that
+  uses an excluded dimension stays off outputs that lack that dimension, which
+  keep its other coordinates.
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
