@@ -219,6 +219,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:func:`map_blocks` raising an assertion error when chunking along a
+  pandas MultiIndex, preserving each block's index and level coordinates
+  (:issue:`8745`).
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
