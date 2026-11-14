@@ -557,6 +557,14 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- :py:func:`open_datatree` and :py:func:`open_groups` with the Zarr backend now
+  list the whole hierarchy at once and open its groups concurrently, which greatly
+  reduces the time to open large hierarchies from object storage. With a version
+  of Zarr that provides ``zarr.run``, the coordinates needed for default indexes
+  are also loaded concurrently. The new ``max_concurrency`` argument of
+  :py:func:`open_datatree` limits how many groups are opened at once
+  (:issue:`10579`, :pull:`10742`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
   engine now share a file handle while they remain open. The handle closes when
   the last dataset closes, so changes made on disk are only seen after all
