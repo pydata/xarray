@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from collections.abc import Set as AbstractSet
 from contextlib import suppress
@@ -29,6 +28,7 @@ from xarray.core.types import ResampleCompatible
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     is_scalar,
 )
 from xarray.namedarray._typing import DimType_co
@@ -888,11 +888,10 @@ class DataWithCoords(AttrAccessMixin):
         core.rolling_exp.RollingExp
         """
         if "keep_attrs" in window_kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
                 " ``keep_attrs`` directly to the applied function, e.g."
                 " ``rolling_exp(...).mean(keep_attrs=False)``.",
-                stacklevel=2,
             )
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")

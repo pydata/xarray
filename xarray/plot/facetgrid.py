@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import itertools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
@@ -10,6 +9,7 @@ import numpy as np
 
 from xarray.core.formatting import format_item
 from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
+from xarray.core.utils import emit_user_level_warning
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
@@ -214,8 +214,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn(
-                    "Ignoring col_wrap since both col and row were passed", stacklevel=2
+                emit_user_level_warning(
+                    "Ignoring col_wrap since both col and row were passed"
                 )
         elif row and not col:
             single_group = row

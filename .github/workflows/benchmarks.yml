@@ -22,7 +22,7 @@ jobs:
     steps:
       # We need the full repo to avoid this issue
       # https://github.com/actions/checkout/issues/23
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -35,7 +35,7 @@ jobs:
         run: echo "sha=$(git rev-parse "${GITHUB_SHA}^1")" >> "$GITHUB_OUTPUT"
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        uses: mamba-org/setup-micromamba@v3.2.1
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
@@ -147,7 +147,7 @@ jobs:
           cat comment/comment.md
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@v7.0.2
         if: always() && github.event_name == 'pull_request'
         with:
           name: asv-benchmark-comment
@@ -159,7 +159,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}
