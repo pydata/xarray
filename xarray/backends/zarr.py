@@ -42,6 +42,8 @@ from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
+    from zarr import AsyncArray
+
     from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -277,17 +279,14 @@ class ZarrArrayWrapper(BackendArray):
         return self._array[key]
 
     @property
-    def async_array(self):
+    def _async_array(self) -> AsyncArray[Any]:
+        # public since zarr 3.1.4
         if hasattr(self._array, "async_array"):
             return self._array.async_array
         return self._array._async_array
 
-    @property
-    def _async_array(self):
-        return self.async_array
-
     async def _async_getitem(self, key):
-        async_array = self.async_array
+        async_array = self._async_array
         return await async_array.getitem(key)
 
     async def _async_oindex(self, key):
@@ -296,7 +295,7 @@ class ZarrArrayWrapper(BackendArray):
                 "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
             )
 
-        async_array = self.async_array
+        async_array = self._async_array
         return await async_array.oindex.getitem(key)
 
     async def _async_vindex(self, key):
@@ -305,7 +304,7 @@ class ZarrArrayWrapper(BackendArray):
                 "For lazy vectorized async indexing with zarr, zarr-python=>v3.1.2 is required"
             )
 
-        async_array = self.async_array
+        async_array = self._async_array
         return await async_array.vindex.getitem(key)
 
     def __getitem__(self, key):
