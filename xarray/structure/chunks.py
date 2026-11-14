@@ -64,20 +64,21 @@ def _maybe_chunk(
     name: Hashable,
     var: Variable,
     chunks: Mapping[Any, T_ChunkDim],
-    token=None,
-    lock=None,
+    token: Any = None,
+    lock: Any = None,
     name_prefix: str = "xarray-",
     overwrite_encoded_chunks: bool = False,
     inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
-    from_array_kwargs=None,
-    just_use_token=False,
+    from_array_kwargs: Any = None,
+    just_use_token: bool = False,
+    chunk_scalar: bool = False,
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
     chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
-    if var.ndim:
+    if var.ndim or chunk_scalar:
         chunked_array_type = guess_chunkmanager(
             chunked_array_type
         )  # coerce string to ChunkManagerEntrypoint type
