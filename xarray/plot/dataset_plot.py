@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import functools
 import inspect
-import warnings
 from collections.abc import Callable, Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
+from xarray.core.utils import emit_user_level_warning
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
@@ -215,7 +215,7 @@ levels : int or array-like, optional
             if len(args) > 5:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 

@@ -197,7 +197,7 @@ def _ensure_padded_year(ref_date: str) -> str:
         "To remove this message, remove the ambiguity by padding your reference "
         "date strings with zeros."
     )
-    warnings.warn(warning_msg, SerializationWarning, stacklevel=2)
+    emit_user_level_warning(warning_msg, SerializationWarning)
 
     return ref_date_padded
 
