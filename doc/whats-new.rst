@@ -499,6 +499,10 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Added a documentation example on geospatial filtering and indexing
+  (:issue:`1861`).
+  By `Koussay Mehdouani <https://github.com/amkkoussay>`_.
+
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
   docstring. The ``apply_ufunc`` example notebook was removed in favor of the
   `apply_ufunc interpolation tutorial
