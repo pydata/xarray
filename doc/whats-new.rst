@@ -603,6 +603,11 @@ Performance
   many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
   :pull:`11687`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Opening a Zarr dataset with datetime-encoded coordinates no longer reads the
+  time chunk three times: the first and last values that are decoded to infer
+  the dtype are now read with a single vectorized request, instead of one
+  request each (:issue:`10560`).
+  By `PStarH <https://github.com/PStarH>`_.
 
 
 Internal Changes

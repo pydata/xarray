@@ -330,6 +330,14 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
+    # Whether a vectorized indexer is passed through to the backend as-is, so
+    # that only the requested values are loaded, instead of being decomposed
+    # into a bounding-box read (see ``indexing.decompose_indexer``). Backends
+    # that only support basic or outer indexing must leave this ``False``:
+    # reading e.g. the first and last values with a vectorized indexer would
+    # otherwise load the whole axis.
+    supports_vectorized_indexing: ClassVar[bool] = False
+
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 

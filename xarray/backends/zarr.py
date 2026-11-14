@@ -240,6 +240,10 @@ def has_zarr_async_index() -> bool:
 class ZarrArrayWrapper(BackendArray):
     __slots__ = ("_array", "dtype", "shape")
 
+    # zarr arrays support vectorized indexing natively (``array.vindex``), so
+    # only the chunks containing the requested values are read.
+    supports_vectorized_indexing = True
+
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
