@@ -1,6 +1,4 @@
-"""
-Property-based tests for roundtripping between xarray and pandas objects.
-"""
+"""Property-based tests for roundtripping between xarray and pandas objects."""
 
 from functools import partial
 from typing import cast
@@ -57,7 +55,7 @@ an_array = npst.arrays(
 
 @st.composite
 def datasets_1d_vars(draw) -> xr.Dataset:
-    """Generate datasets with only 1D variables
+    """Generate datasets with only 1D variables.
 
     Suitable for converting to pandas dataframes.
     """

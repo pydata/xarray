@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import itertools
 import sys
-import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
 from numbers import Number
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
 
 @lru_cache
 def module_available(module: str, minversion: str | None = None) -> bool:
-    """Checks whether a module is installed without importing it.
+    """Check whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
 
@@ -55,6 +54,9 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
     if minversion is not None:
         version = importlib.metadata.version(module)
+
+        if version is None:
+            return False
 
         return Version(version) >= Version(minversion)
 
@@ -109,8 +111,9 @@ def drop_missing_dims[DimType: Hashable](
     dims: Iterable[DimType],
     missing_dims: ErrorHandlingWithWarn,
 ) -> tuple[DimType | EllipsisType, ...]:
-    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
-    are not present in dims.
+    """Drop any dimensions from supplied_dims that are not present in dims.
+
+    Whether dimensions are dropped depends on the setting of missing_dims.
 
     Parameters
     ----------
@@ -118,6 +121,8 @@ def drop_missing_dims[DimType: Hashable](
     dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
+    from xarray.core.utils import emit_user_level_warning
+
     supplied_dims_tuple = tuple(supplied_dims)
     supplied_dims_set = {val for val in supplied_dims_tuple if val is not ...}
     dims_set = set(dims)
@@ -127,7 +132,7 @@ def drop_missing_dims[DimType: Hashable](
             msg = f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             if missing_dims == "raise":
                 raise ValueError(msg)
-            warnings.warn(msg, stacklevel=2)
+            emit_user_level_warning(msg)
 
         if missing_dims == "raise":
             return supplied_dims_tuple
@@ -145,9 +150,13 @@ def infix_dims[DimType: Hashable](
     dims_all: Iterable[DimType],
     missing_dims: ErrorHandlingWithWarn = "raise",
 ) -> Iterator[DimType]:
-    """
-    Resolves a supplied list containing an ellipsis representing other items, to
-    a generator with the 'realized' list of all items
+    """Resolve a supplied list containing an ellipsis representing other items.
+
+    Yields
+    ------
+    dim
+        The supplied dimensions, with the ellipsis replaced by all other
+        dimensions.
     """
     if ... in dims_supplied:
         dims_all_list = list(dims_all)
@@ -201,8 +210,9 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     preferred_chunks,
     dims=None,
 ) -> Mapping[Any, T_ChunkDim]:
-    """
-    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """Return map from each dim to chunk sizes.
+
+    The backend's preferred chunks are taken into account.
     """
     from xarray.core.common import _contains_cftime_datetimes
     from xarray.core.utils import emit_user_level_warning
@@ -261,19 +271,19 @@ def fake_target_chunksize(
     data: DuckArray[Any],
     limit: int,
 ) -> tuple[int, np.dtype[Any]]:
-    """
+    """Rescale the chunk size `limit` for use with `normalize_chunks`.
+
     The `normalize_chunks` algorithm takes a size `limit` in bytes, but will not
     work for object dtypes.  So we rescale the `limit` to an appropriate one based
     on `float64` dtype, and pass that to `normalize_chunks`.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     data : Variable or ChunkedArray
         The data for which we want to determine chunk sizes.
     limit : int
         The target chunk size in bytes. Passed to the chunk manager's `normalize_chunks` method.
     """
-
     # Short circuit for non-object dtypes
     from xarray.core.common import _contains_cftime_datetimes
 

@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any, Generic
+from typing import Any, Generic, Self
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Self
 from xarray.namedarray._typing import DimsLike, DimType_co
 
 
@@ -30,8 +29,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``count`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -82,8 +80,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``all`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -136,8 +133,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``any`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -192,8 +188,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -258,8 +253,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -324,8 +318,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -395,8 +388,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -479,8 +471,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -563,8 +554,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -644,8 +634,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -724,8 +713,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``median`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -794,8 +782,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -869,8 +856,7 @@ class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------

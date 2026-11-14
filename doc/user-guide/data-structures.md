@@ -485,13 +485,11 @@ simply calling it (e.g., `func(ds)`). This allows you to write pipelines for
 transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
-```{eval-rst}
-.. code-block:: python
-
-    # these lines are equivalent, but with pipe we can make the logic flow
-    # entirely from left to right
-    plt.plot((2 * ds.temperature.sel(loc=0)).mean("instrument"))
-    (ds.temperature.sel(loc=0).pipe(lambda x: 2 * x).mean("instrument").pipe(plt.plot))
+```python
+# these lines are equivalent, but with pipe we can make the logic flow
+# entirely from left to right
+plt.plot((2 * ds.temperature.sel(loc=0)).mean("instrument"))
+(ds.temperature.sel(loc=0).pipe(lambda x: 2 * x).mean("instrument").pipe(plt.plot))
 ```
 
 Both `pipe` and `assign` replicate the pandas methods of the same names

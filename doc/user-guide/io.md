@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (io)=
@@ -69,10 +69,9 @@ You can learn more about using and developing backends in the
 </style>
 ```
 
-```{eval-rst}
-.. mermaid::
-    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
-    :alt: Flowchart illustrating how to choose the right backend engine to read your data
+```{mermaid}
+:config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
+:alt: Flowchart illustrating how to choose the right backend engine to read your data
 
     flowchart LR
         built-in-eng["`**Is your data stored in one of these formats?**
@@ -90,7 +89,7 @@ You can learn more about using and developing backends in the
         installed-eng["""<b>One of these formats?</b>
             - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
             - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://vylor.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
             - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
@@ -155,65 +154,64 @@ xarray-compatible.
 
 ### Remote URL Resolution
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 50 10 10 10 10 10
+```{list-table}
+:header-rows: 1
+:widths: 50 10 10 10 10 10
 
-   * - URL
-     - :ref:`netcdf4 <io.netcdf>`
-     - :ref:`h5netcdf <io.hdf5>`
-     - :ref:`scipy <io.netcdf>`
-     - :ref:`pydap <io.opendap>`
-     - :ref:`zarr <io.zarr>`
-   * - ``https://example.com/store.zarr``
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-   * - ``https://example.com/data.nc``
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-     - ❌
-   * - ``http://example.com/data.nc?var=temp``
-     - ✅
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-   * - ``http://example.com/dap4/data.nc?var=x``
-     - ✅
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``dap2://opendap.nasa.gov/dataset``
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``https://example.com/DAP4/data``
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``http://test.opendap.org/dap4/file.nc4``
-     - ✅
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``https://example.com/DAP4/data.nc``
-     - ✅
-     - ✅
-     - ❌
-     - ✅
-     - ❌
+* - URL
+  - {ref}`netcdf4 <io.netcdf>`
+  - {ref}`h5netcdf <io.hdf5>`
+  - {ref}`scipy <io.netcdf>`
+  - {ref}`pydap <io.opendap>`
+  - {ref}`zarr <io.zarr>`
+* - `https://example.com/store.zarr`
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+* - `https://example.com/data.nc`
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+  - ❌
+* - `http://example.com/data.nc?var=temp`
+  - ✅
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - `http://example.com/dap4/data.nc?var=x`
+  - ✅
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `dap2://opendap.nasa.gov/dataset`
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `https://example.com/DAP4/data`
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `http://test.opendap.org/dap4/file.nc4`
+  - ✅
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `https://example.com/DAP4/data.nc`
+  - ✅
+  - ✅
+  - ❌
+  - ✅
+  - ❌
 ```
 
 ### Local File Resolution
@@ -223,65 +221,64 @@ If the magic number **cannot be read** (e.g., file doesn't exist, no permissions
 back to checking the file **extension**. If the magic number is readable but invalid, the
 backend returns False (does not fall back to extension).
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 40 20 10 10 10 10
+```{list-table}
+:header-rows: 1
+:widths: 40 20 10 10 10 10
 
-   * - File Path
-     - Magic Number
-     - :ref:`netcdf4 <io.netcdf>`
-     - :ref:`h5netcdf <io.hdf5>`
-     - :ref:`scipy <io.netcdf>`
-     - :ref:`zarr <io.zarr>`
-   * - ``/path/to/file.nc``
-     - ``CDF\x01`` (netCDF3)
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/file.nc4``
-     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-   * - ``/path/to/file.nc.gz``
-     - ``\x1f\x8b`` + ``CDF`` inside
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/store.zarr/``
-     - (directory)
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-   * - ``/path/to/file.nc``
-     - *(no magic number)*
-     - ✅
-     - ✅
-     - ✅
-     - ❌
-   * - ``/path/to/file.xyz``
-     - ``CDF\x01`` (netCDF3)
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/file.xyz``
-     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-   * - ``/path/to/file.xyz``
-     - *(no magic number)*
-     - ❌
-     - ❌
-     - ❌
-     - ❌
+* - File Path
+  - Magic Number
+  - {ref}`netcdf4 <io.netcdf>`
+  - {ref}`h5netcdf <io.hdf5>`
+  - {ref}`scipy <io.netcdf>`
+  - {ref}`zarr <io.zarr>`
+* - `/path/to/file.nc`
+  - `CDF\x01` (netCDF3)
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/file.nc4`
+  - `\x89HDF\r\n\x1a\n` (HDF5/netCDF4)
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+* - `/path/to/file.nc.gz`
+  - `\x1f\x8b` + `CDF` inside
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/store.zarr/`
+  - (directory)
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+* - `/path/to/file.nc`
+  - *(no magic number)*
+  - ✅
+  - ✅
+  - ✅
+  - ❌
+* - `/path/to/file.xyz`
+  - `CDF\x01` (netCDF3)
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/file.xyz`
+  - `\x89HDF\r\n\x1a\n` (HDF5/netCDF4)
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+* - `/path/to/file.xyz`
+  - *(no magic number)*
+  - ❌
+  - ❌
+  - ❌
+  - ❌
 ```
 
 ````{note}
@@ -436,6 +433,18 @@ netCDF file. However, it's often cleaner to use a `with` statement:
 # this automatically closes the dataset after use
 with xr.open_dataset(nc_filename) as ds:
     print(ds.keys())
+```
+
+```{warning}
+Lazily loaded datasets keep reading from their source until they are closed.
+Don't overwrite a file or store while a dataset opened from it, e.g. with
+{py:func}`open_dataset` or {py:func}`open_mfdataset`, is still in use.
+Depending on the backend, this either raises an error (e.g. netCDF4, h5netcdf)
+or silently changes the values of the open dataset (e.g. Zarr, scipy).
+
+To overwrite a source, first read it into memory with {py:func}`load_dataset`,
+which also closes the file, or call {py:meth}`Dataset.load` followed by
+{py:meth}`Dataset.close`, or use a `with` block.
 ```
 
 Although xarray provides reasonable support for incremental reads of files on
@@ -1340,7 +1349,10 @@ So you can set `fill_value` in `encoding` as usual.
 
 Note that at read-time, you can control whether `_FillValue` is masked using the
 `mask_and_scale` kwarg; and whether Zarr's `fill_value` is treated as synonymous
-with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`.
+with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`,
+{py:func}`xarray.open_dataset`, {py:func}`xarray.open_datatree` or {py:func}`xarray.open_groups`
+(where it applies to every group). By default (`None`), Zarr fill values are masked for format 2
+and are not masked for format 3.
 
 (io-kerchunk)=
 
@@ -1730,12 +1742,6 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of [IO tools].
 For CSV files, one might also consider [xarray_extras].
 
-## Third party libraries
-
-More formats are supported by extension libraries:
-
-- [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
-
 [amazon s3]: https://aws.amazon.com/s3/
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
@@ -1756,7 +1762,7 @@ More formats are supported by extension libraries:
 [obstore]: https://developmentseed.org/obstore/latest/
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
-[rioxarray]: https://corteva.github.io/rioxarray/stable/
+[rioxarray]: https://vylor.github.io/rioxarray/stable/
 [test files]: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 [xarray_extras]: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 [zarr]: https://zarr.readthedocs.io/

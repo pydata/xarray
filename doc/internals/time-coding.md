@@ -1,5 +1,7 @@
 ---
 file_format: mystnb
+mystnb:
+  execution_in_temp: true
 kernelspec:
   name: python3
 ---
@@ -210,9 +212,9 @@ except Exception as err:
 
 {py:class}`pandas.Timestamp` is used within xarray to wrap strings of CF encoding reference times and datetime.datetime.
 
-When arguments are numeric (not strings) "unit" can be anything from `'Y'`, `'W'`, `'D'`, `'h'`, `'m'`, `'s'`, `'ms'`, `'us'` or `'ns'`, though the returned resolution will be `"ns"`.
+When arguments are numeric (not strings) "unit" can be anything from `'Y'`, `'W'`, `'D'`, `'h'`, `'m'`, `'s'`, `'ms'`, `'us'` or `'ns'`. It only defines how the number is interpreted: since pandas 3.1 the returned resolution is `'us'`, or `'ns'` if the input needs nanosecond precision.
 
-In normal operation {py:class}`pandas.Timestamp` holds the timestamp in the provided resolution, but only one of `'s'`, `'ms'`, `'us'`, `'ns'`. Lower resolution input is automatically converted to `'s'`, higher resolution input is truncated to `'ns'`.
+{py:class}`pandas.Timestamp` holds the timestamp in one of `'s'`, `'ms'`, `'us'`, `'ns'`. Created from a {py:class}`numpy.datetime64` it keeps that resolution, lower resolution input is converted to `'s'`, higher resolution input is truncated to `'ns'`.
 
 The same conversion rules apply here as for {py:func}`pandas.to_timedelta` (see [to_timedelta]).
 Depending on the internal resolution Timestamps can be represented in the range:
@@ -220,7 +222,7 @@ Depending on the internal resolution Timestamps can be represented in the range:
 ```{code-cell}
 for unit in ["s", "ms", "us", "ns"]:
     print(
-        f"unit: {unit!r} time range ({pd.Timestamp(int64_min, unit=unit)}, {pd.Timestamp(int64_max, unit=unit)})"
+        f"unit: {unit!r} time range ({pd.Timestamp(np.datetime64(int64_min, unit))}, {pd.Timestamp(np.datetime64(int64_max, unit))})"
     )
 ```
 
@@ -463,20 +465,6 @@ datetimes1_filename = "test-datetimes1.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-# Ensure the file is located in a unique temporary directory
-# so that it doesn't conflict with parallel builds of the
-# documentation.
-
-import tempfile
-import os.path
-
-tempdir = tempfile.TemporaryDirectory()
-datetimes1_filename = os.path.join(tempdir.name, datetimes1_filename)
-```
-
-```{code-cell}
 attrs = {"units": "hours since 2000-01-01"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(datetimes1_filename)
@@ -499,12 +487,6 @@ datetimes2_filename = "test-datetimes2.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-datetimes2_filename = os.path.join(tempdir.name, datetimes2_filename)
-```
-
-```{code-cell}
 attrs = {"units": "milliseconds since 2000-01-01"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(datetimes2_filename)
@@ -522,12 +504,6 @@ Similar logic applies for decoding timedelta values. The default resolution is
 
 ```{code-cell}
 timedeltas1_filename = "test-timedeltas1.nc"
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-timedeltas1_filename = os.path.join(tempdir.name, timedeltas1_filename)
 ```
 
 ```{code-cell}
@@ -567,12 +543,6 @@ timedeltas2_filename = "test-timedeltas2.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-timedeltas2_filename = os.path.join(tempdir.name, timedeltas2_filename)
-```
-
-```{code-cell}
 attrs = {"units": "milliseconds"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(timedeltas2_filename)
@@ -594,13 +564,6 @@ xr.open_dataset(timedeltas2_filename, decode_timedelta=False)
 ```{note}
 Note that in the future the default value of `decode_timedelta` will be
 `False` rather than `None`.
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-# Cleanup
-tempdir.cleanup()
 ```
 
 [calendar]: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html#calendar

@@ -160,9 +160,7 @@ def type(request):
 
 @pytest.fixture(params=[1])
 def d(request, use_dask, type) -> DataArray | Dataset:
-    """
-    For tests which can test either a DataArray or a Dataset.
-    """
+    """For tests which can test either a DataArray or a Dataset."""
     result: DataArray | Dataset
     if request.param == 1:
         ds = Dataset(
@@ -193,8 +191,9 @@ def d(request, use_dask, type) -> DataArray | Dataset:
 
 @pytest.fixture(scope="module")
 def create_test_datatree():
-    """
-    Create a test datatree with this structure:
+    """Create a test datatree.
+
+    The datatree has this structure:
 
     <xarray.DataTree>
     Group: /
@@ -247,8 +246,7 @@ def create_test_datatree():
 
 @pytest.fixture(scope="module")
 def simple_datatree(create_test_datatree):
-    """
-    Invoke create_test_datatree fixture (callback).
+    """Invoke create_test_datatree fixture (callback).
 
     Returns a DataTree.
     """

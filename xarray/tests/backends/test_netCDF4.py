@@ -26,8 +26,6 @@ from xarray.tests import (
     requires_h5netcdf,
     requires_h5netcdf_or_netCDF4,
     requires_netCDF4,
-    requires_netCDF4_1_6_2_or_above,
-    requires_netCDF4_1_7_0_or_above,
 )
 from xarray.tests.backends.base import (
     ON_WINDOWS,
@@ -219,7 +217,6 @@ class TestNetCDF4Data(NetCDF4Base):
             ),
         ],
     )
-    @requires_netCDF4_1_6_2_or_above
     @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
     def test_compression_encoding(self, compression: str | None) -> None:
         data = create_test_data(dim_sizes=(20, 80, 10))
@@ -277,7 +274,6 @@ class TestNetCDF4Data(NetCDF4Base):
     def test_refresh_from_disk(self) -> None:
         super().test_refresh_from_disk()
 
-    @requires_netCDF4_1_7_0_or_above
     def test_roundtrip_complex(self):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         skwargs = dict(auto_complex=True)
@@ -543,6 +539,34 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     with open(path, "wb") as f:
         f.write(b"not-a-netcdf-file")
     assert not entrypoint.guess_can_open(path)
+
+
+@pytest.mark.parametrize(
+    "engine",
+    [
+        pytest.param("netcdf4", marks=requires_netCDF4),
+        pytest.param("h5netcdf", marks=requires_h5netcdf),
+    ],
+)
+@pytest.mark.parametrize("dtype", ["f8", "i4"])
+def test_roundtrip_non_native_endian_attrs(tmp_path: Path, engine, dtype) -> None:
+    """Test that non-native-endian numeric attribute values round-trip."""
+    values = np.array([1, 2], dtype=np.dtype(dtype).newbyteorder("S"))
+    assert not values.dtype.isnative
+    ds = xr.Dataset(
+        {
+            "x": xr.DataArray(
+                [1.0],
+                dims=("d",),
+                attrs={"valid_range": values},
+            )
+        },
+        attrs={"levels": values},
+    )
+    ds.to_netcdf(tmp_path / "test.nc", engine=engine)
+    with xr.open_dataset(tmp_path / "test.nc", engine=engine) as ds2:
+        assert_array_equal(ds2["x"].attrs["valid_range"], [1, 2])
+        assert_array_equal(ds2.attrs["levels"], [1, 2])
 
 
 def _dataset_with_metadata() -> Dataset:

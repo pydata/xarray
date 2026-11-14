@@ -147,7 +147,7 @@ class TestPydapOnline(TestPydap):
 @network
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
 def test_batchdap4_downloads(tmpdir, protocol) -> None:
-    """Test that in dap4, all dimensions are downloaded at once"""
+    """Test that in dap4, all dimensions are downloaded at once."""
     import pydap
     from pydap.net import create_session
 

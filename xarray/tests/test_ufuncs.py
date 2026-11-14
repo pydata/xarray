@@ -14,7 +14,6 @@ from xarray.tests import (
     assert_array_equal,
     mock,
     requires_dask,
-    requires_numpy_2,
 )
 from xarray.tests import assert_identical as assert_identical_
 
@@ -218,13 +217,7 @@ class TestXarrayUfuncs:
         self.xt = xr.DataArray(np.datetime64("2021-01-01", "ns"))
 
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    @pytest.mark.parametrize(
-        "name",
-        [
-            pytest.param(name, marks=() if hasattr(np, name) else requires_numpy_2)
-            for name in xu.__all__
-        ],
-    )
+    @pytest.mark.parametrize("name", xu.__all__)
     def test_ufuncs(self, name, request):
         xu_func = getattr(xu, name)
         np_func = getattr(np, name, None)

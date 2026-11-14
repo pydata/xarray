@@ -950,3 +950,16 @@ def test_apply_ufunc_check_meta_coherence():
     result = xr.apply_ufunc(lambda x: x, ac, dask="parallelized").data._meta
 
     assert_sparse_equal(result, sparse_meta)
+
+
+def test_apply_ufunc_transposes_sparse_input():
+    # regression test for GH9933: moving core dims to the end must work for
+    # sparse arrays, which expose ``permute_dims`` but not ``transpose``
+    data = np.arange(12).reshape(3, 4)
+    a = DataArray(sparse.COO.from_numpy(data), dims=("x", "y"))
+
+    result = xr.apply_ufunc(np.sum, a, input_core_dims=[["x"]], kwargs={"axis": -1})
+
+    assert isinstance(result.data, sparse.COO)
+    assert result.dims == ("y",)
+    np.testing.assert_equal(result.data.todense(), data.sum(axis=0))

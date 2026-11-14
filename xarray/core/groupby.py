@@ -3,14 +3,12 @@ from __future__ import annotations
 import copy
 import functools
 import itertools
-import warnings
-from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.computation import ops
 from xarray.computation.apply_ufunc import apply_ufunc
@@ -77,11 +75,32 @@ if TYPE_CHECKING:
     from xarray.groupers import EncodedGroups, Grouper
 
 
-def check_reduce_dims(reduce_dims, dimensions):
+def _raise_if_dims_not_found(
+    reduce_dims: Iterable[Hashable], obj_dims: Iterable[Hashable]
+) -> None:
+    """Raise if any of ``reduce_dims`` is not a dimension of the grouped object."""
+    obj_dims = tuple(obj_dims)
+    missing = tuple(dim for dim in reduce_dims if dim not in obj_dims)
+    if missing:
+        raise ValueError(
+            f"Dimensions {missing!r} not found in data dimensions {obj_dims!r}"
+        )
+
+
+def check_reduce_dims(
+    reduce_dims: Dims, dimensions: Iterable[Hashable], obj_dims: Iterable[Hashable]
+) -> None:
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
+        assert reduce_dims is not None
+        dimensions = tuple(dimensions)
+        _raise_if_dims_not_found(
+            (dim for dim in reduce_dims if dim not in dimensions), obj_dims
+        )
         if any(dim not in dimensions for dim in reduce_dims):
+            # The dimensions exist on the grouped object, but not on each group,
+            # e.g. because grouping by a multi-dimensional variable stacked them
             raise ValueError(
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
                 f"to reduce over all dimensions or one or more of {dimensions!r}. "
@@ -90,7 +109,7 @@ def check_reduce_dims(reduce_dims, dimensions):
 
 
 def _codes_to_group_indices(codes: np.ndarray, N: int) -> GroupIndices:
-    """Converts integer codes for groups to group indices."""
+    """Convert integer codes for groups to group indices."""
     assert codes.ndim == 1
     groups: GroupIndices = tuple([] for _ in range(N))
     for n, g in enumerate(codes):
@@ -248,7 +267,7 @@ class _DummyGroup[T_Xarray: (DataArray, Dataset)]:
         )
 
     def to_array(self) -> DataArray:
-        """Deprecated version of to_dataarray."""
+        """Convert to a DataArray (deprecated version of to_dataarray)."""
         return self.to_dataarray()
 
 
@@ -288,8 +307,7 @@ def _ensure_1d(
 
 @dataclass
 class ResolvedGrouper[T_DataWithCoords: DataWithCoords]:
-    """
-    Wrapper around a Grouper object.
+    """Wrapper around a Grouper object.
 
     The Grouper object represents an abstract instruction to group an object.
     The ResolvedGrouper object is a concrete version that contains all the common
@@ -381,7 +399,7 @@ class ResolvedGrouper[T_DataWithCoords: DataWithCoords]:
         return len(self)
 
     def __len__(self) -> int:
-        """Number of groups."""
+        """Return the number of groups."""
         return len(self.encoded.full_index)
 
 
@@ -512,8 +530,8 @@ def _resolve_group(
 
 @dataclass
 class ComposedGrouper:
-    """
-    Helper class for multi-variable GroupBy.
+    """Helper class for multi-variable GroupBy.
+
     This satisfies the Grouper interface, but is awkward to wrap in ResolvedGrouper.
     For one, it simply re-infers a new EncodedGroups using known information
     in existing ResolvedGroupers. So passing in a `group` (hard to define),
@@ -643,14 +661,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         groupers: tuple[ResolvedGrouper, ...],
         restore_coord_dims: bool = True,
     ) -> None:
-        """Create a GroupBy object
+        """Create a GroupBy object.
 
         Parameters
         ----------
         obj : Dataset or DataArray
             Object to group.
-        grouper : Grouper
-            Grouper object
+        groupers : tuple of ResolvedGrouper
+            The resolved groupers to group by.
         restore_coord_dims : bool, default: True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -713,9 +731,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
-        """
-        Sort or "shuffle" the underlying object.
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None) -> T_Xarray:
+        """Sort or "shuffle" the underlying object.
 
         "Shuffle" means the object is sorted so that all group members occur sequentially,
         in the same chunk. Multiple groups may occur in the same chunk.
@@ -732,6 +749,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         Returns
         -------
         DataArrayGroupBy or DatasetGroupBy
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
 
         Examples
         --------
@@ -755,17 +777,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         Coordinates:
           * x         (x) int64 32B 0 1 2 3
             quantile  float64 8B 0.5
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
         obj, _ = self._shuffle_obj(chunks)
         return obj
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+    def _shuffle_obj(
+        self, chunks: T_Chunks | None
+    ) -> tuple[T_Xarray, tuple[DataArray, ...]]:
         """Shuffle the object, so that all members of a group are in the same chunk.
 
         The codes of each grouper are shuffled along with it, so that they match
@@ -876,8 +895,9 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
     @property
     def groups(self) -> dict[GroupKey, GroupIndex]:
-        """
-        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """Mapping from group labels to indices.
+
+        The indices can be used to index the underlying object.
         """
         # provided to mimic pandas.groupby
         if self._groups is None:
@@ -891,9 +911,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return self._groups
 
     def __getitem__(self, key: GroupKey) -> T_Xarray:
-        """
-        Get DataArray or Dataset corresponding to a particular group label.
-        """
+        """Get DataArray or Dataset corresponding to a particular group label."""
         self._raise_if_by_is_chunked()
         return self._obj.isel({self._group_dim: self.groups[key]})
 
@@ -919,7 +937,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
-        """Iterate over each element in this group"""
+        """Iterate over each element in this group."""
         self._raise_if_by_is_chunked()
         for indices in self.encoded.group_indices:
             if indices:
@@ -1029,7 +1047,10 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         raise NotImplementedError
 
     def _maybe_reindex(self, combined):
-        """Reindexing is needed in two cases:
+        """Reindex the combined result if needed.
+
+        Reindexing is needed in two cases:
+
         1. Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
 
@@ -1055,8 +1076,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return combined
 
     def _maybe_unstack(self, obj):
-        """This gets called if we are applying on an array with a
-        multidimensional group."""
+        """Unstack the result if needed.
+
+        This gets called if we are applying on an array with a
+        multidimensional group.
+        """
         from xarray.groupers import UniqueGrouper
 
         stacked_dim = self._stacked_dim
@@ -1105,14 +1129,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in self._original_obj.dims
+        _raise_if_dims_not_found(
+            (
+                d
                 for d in parsed_dim
-            ):
-                # TODO: Not a helpful error, it's a sanity check that dim actually exist
-                # either in self.groupers or self._original_obj
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+                if any(d not in grouper.codes.dims for grouper in self.groupers)
+            ),
+            self._original_obj.dims,
+        )
 
         return parsed_dim
 
@@ -1123,16 +1147,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         **kwargs: Any,
     ) -> T_Xarray:
         """Adaptor function that translates our groupby API to that of flox."""
-        import flox
         from flox.xarray import xarray_reduce
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -1156,12 +1178,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-
-        if Version(flox.__version__) < Version("0.9") and not self._by_chunked:
-            # preserve current strategy (approximately) for dask groupby
-            # on older flox versions to prevent surprises.
-            # flox >=0.9 will choose this on its own.
-            kwargs.setdefault("method", "cohorts")
 
         midx_grouping_vars: tuple[Hashable, ...] = ()
         for grouper in self.groupers:
@@ -1246,7 +1262,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                     # all associated levels properly.
                     coordinates_from_variable(
                         IndexVariable(
-                            dims=grouper.name,
+                            dims=(grouper.name,),
                             data=output_index,
                             attrs=grouper.codes.attrs,
                         )
@@ -1363,10 +1379,10 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
-        """Compute the qth quantile over each array in the groups and
-        concatenate them together into a new array.
+        """Compute the qth quantile over each array in the groups.
+
+        The results are concatenated together into a new array.
 
         Parameters
         ----------
@@ -1427,6 +1443,12 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1474,12 +1496,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
         # Dataset.quantile does this, do it for flox to ensure same output.
         q = np.asarray(q, dtype=np.float64)
@@ -1488,7 +1504,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             method == "linear"
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
-            and module_available("flox", minversion="0.9.4")
+            and module_available("flox")
         ):
             result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
@@ -1505,7 +1521,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
-                interpolation=interpolation,
             )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:
@@ -1546,7 +1561,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         if (
-            module_available("flox", minversion="0.10.0")
+            module_available("flox")
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
         ):
@@ -1571,8 +1586,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
     def first(
         self, skipna: bool | None = None, keep_attrs: bool | None = None
     ) -> T_Xarray:
-        """
-        Return the first element of each group along the group dimension
+        """Return the first element of each group along the group dimension.
 
         Parameters
         ----------
@@ -1592,8 +1606,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
     def last(
         self, skipna: bool | None = None, keep_attrs: bool | None = None
     ) -> T_Xarray:
-        """
-        Return the last element of each group along the group dimension
+        """Return the last element of each group along the group dimension.
 
         Parameters
         ----------
@@ -1633,7 +1646,7 @@ def _maybe_reorder(xarray_obj, dim, positions, N: int | None):
 
 
 class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
-    """GroupBy object specialized to grouping DataArray objects"""
+    """GroupBy object specialized to grouping DataArray objects."""
 
     __slots__ = ()
     _dims: tuple[Hashable, ...] | None
@@ -1647,9 +1660,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self._dims
 
     def _iter_grouped_shortcut(self):
-        """Fast version of `_iter_grouped` that yields Variables without
-        metadata
-        """
+        """Fast version of `_iter_grouped` that yields Variables without metadata."""
         self._raise_if_by_is_chunked()
         var = self._obj.variable
         for _idx, indices in enumerate(self.encoded.group_indices):
@@ -1693,8 +1704,9 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         shortcut: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """Apply a function to each array in the group and concatenate them
-        together into a new array.
+        """Apply a function to each array in the group and concatenate the results.
+
+        The results are concatenated together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
         in this group.
@@ -1739,17 +1751,15 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self._combine(applied, shortcut=shortcut)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
-        """
-        Backward compatible implementation of ``map``
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
         DataArrayGroupBy.map
         """
-        warnings.warn(
-            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "GroupBy.apply is deprecated, use GroupBy.map instead.",
+            FutureWarning,
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
@@ -1791,8 +1801,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce the items in this group by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -1833,12 +1842,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -1852,7 +1860,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
                 **kwargs,
             )
 
-        check_reduce_dims(dim, self.dims)
+        check_reduce_dims(dim, self.dims, self._original_obj.dims)
 
         return self.map(reduce_array, shortcut=shortcut)
 
@@ -1886,8 +1894,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         shortcut: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function to each Dataset in the group and concatenate them
-        together into a new Dataset.
+        """Apply a function to each Dataset in the group and concatenate the results.
+
+        The results are concatenated together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
         in this group.
@@ -1920,18 +1929,15 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         return self._combine(applied)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
         DatasetGroupBy.map
         """
-
-        warnings.warn(
-            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "GroupBy.apply is deprecated, use GroupBy.map instead.",
+            FutureWarning,
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
@@ -1946,6 +1952,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             coords="different",
             compat="equals",
             join="outer",
+            # the index is created by assigning the group coordinates below, and
+            # creating it here warns if the group is a data variable (GH9890)
+            create_index_for_new_dim=False,
         )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord
@@ -1966,8 +1975,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce the items in this group by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -1995,7 +2003,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-
         if self._by_chunked:
             raise ValueError(
                 "This method is not supported when lazily grouping by a chunked array. "
@@ -2010,12 +2017,11 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -2029,7 +2035,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
                 **kwargs,
             )
 
-        check_reduce_dims(dim, self.dims)
+        check_reduce_dims(dim, self.dims, self._original_obj.dims)
 
         return self.map(reduce_dataset)
 

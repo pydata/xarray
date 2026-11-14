@@ -9,6 +9,7 @@ Usage:
 
 import textwrap
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 MODULE_PREAMBLE = '''\
@@ -186,8 +187,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         dim: {dim_type} = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -200,8 +200,7 @@ TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> {obj}:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -617,9 +616,7 @@ AGGREGATION_METHODS = (
         numeric_only=True,
     ),
     Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method(
-        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
-    ),
+    Method("median", extra_kwargs=(skipna,), numeric_only=True),
     # Scans:
     Method(
         "cumsum",
@@ -792,13 +789,10 @@ def write_methods(filepath, generators, preamble):
 
 
 if __name__ == "__main__":
-    import os
-    from pathlib import Path
+    # the xarray package, independent of the working directory and checkout name
+    p = Path(__file__).resolve().parents[1]
 
-    p = Path(os.getcwd())
-
-    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
+    filepath = p / "core" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[
@@ -814,8 +808,7 @@ if __name__ == "__main__":
     )
 
     # NamedArray:
-    filepath = p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py"
-    # filepath = p.parent / "namedarray" / "_aggregations.py"  # Run from script location
+    filepath = p / "namedarray" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[NAMED_ARRAY_GENERATOR],

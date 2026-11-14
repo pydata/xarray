@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
 from itertools import starmap
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
+import xarray as xr
 from xarray.backends import common, plugins
 from xarray.core.options import OPTIONS
 from xarray.tests import (
@@ -22,6 +25,23 @@ from xarray.tests import (
 )
 
 importlib_metadata_mock = "importlib.metadata"
+
+
+@requires_netCDF4
+@requires_zarr
+@pytest.mark.parametrize("zarr_format", [2, 3])
+@pytest.mark.parametrize("path_as_string", [False, True])
+def test_guess_engine_local_zarr_directory(
+    tmp_path: Path, zarr_format: int, path_as_string: bool
+) -> None:
+    expected = xr.Dataset({"temperature": ("time", [1.0, 2.0, 3.0])})
+    path = tmp_path / "example.zarr"
+    expected.to_zarr(path, zarr_format=zarr_format, consolidated=False)
+    store = str(path) if path_as_string else path
+
+    assert plugins.guess_engine(store) == "zarr"
+    with xr.open_dataset(store, consolidated=False) as actual:
+        xr.testing.assert_identical(actual, expected)
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -256,6 +276,16 @@ def test_guess_engine_file_not_found() -> None:
         plugins.guess_engine("https://example.com/missing.h5")
 
 
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+@pytest.mark.parametrize("paths", [["a.nc", "b.nc"], ("a.nc", "b.nc")])
+def test_guess_engine_sequence_of_paths(paths) -> None:
+    with pytest.raises(ValueError, match=r"Use open_mfdataset"):
+        plugins.guess_engine(paths)
+
+
 @pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
 def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
     """Test that built-in engines skip list_engines (fastpath)."""
@@ -362,12 +392,66 @@ def test_refresh_engines() -> None:
     refresh_engines()
 
 
+class DummyDescribedBackend(common.BackendEntrypoint):
+    description = "Open dummy files"
+    url = "https://example.com/dummy"
+    supports_groups = True
+
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
+        pass
+
+
+def test_show_backends() -> None:
+    from xarray.backends import list_engines, refresh_engines
+
+    dist = mock.MagicMock()
+    dist.name = "dummy-pkg"
+    dist.version = "1.2.3"
+    ep = mock.MagicMock()
+    ep.name = "dummy"
+    ep.dist = dist
+    ep.load.return_value = DummyDescribedBackend
+
+    text = io.StringIO()
+    md = io.StringIO()
+    with mock.patch(
+        "xarray.backends.plugins.entry_points", return_value=EntryPoints([ep])
+    ):
+        list_engines.cache_clear()
+        xr.show_backends(file=text)
+        xr.show_backends(file=md, markdown=True)
+    refresh_engines()
+
+    out = text.getvalue()
+    assert out.startswith("AVAILABLE BACKENDS\n------------------\n")
+    expected_dummy = (
+        "dummy: DummyDescribedBackend from dummy-pkg 1.2.3 (supports groups)\n"
+        "    Open dummy files\n"
+        "    https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    assert "store: StoreBackendEntrypoint from xarray\n" in out
+    # backends that are not installed are not listed
+    assert ("\nscipy: " in out) == has_scipy
+    if has_scipy:
+        assert "scipy: ScipyBackendEntrypoint from xarray (using scipy " in out
+
+    out = md.getvalue()
+    assert out.startswith("<details><summary>AVAILABLE BACKENDS</summary>\n\n")
+    expected_dummy = (
+        "- **dummy**: `DummyDescribedBackend` from dummy-pkg 1.2.3 (supports groups)\n"
+        "  - Open dummy files\n"
+        "  - https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    assert "- **store**: `StoreBackendEntrypoint` from xarray\n" in out
+
+
 @requires_h5netcdf
 @requires_netCDF4
 @requires_zarr
 def test_remote_url_backend_auto_detection() -> None:
-    """
-    Test that remote URLs are correctly selected by the backend resolution system.
+    """Test that remote URLs are correctly selected by the backend resolution system.
 
     This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
     claiming ALL remote URLs, preventing remote Zarr stores from being

@@ -1,5 +1,6 @@
-"""Xarray index objects for label-based selection and alignment of Dataset /
-DataArray objects.
+"""Xarray index objects for label-based selection and alignment.
+
+These indexes are used by Dataset / DataArray objects.
 
 """
 

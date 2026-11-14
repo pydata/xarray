@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Union, override
+from typing import TYPE_CHECKING, Any, Self, Union, override
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.types import Self
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
+    """Decode arrays on the fly from non-native to native endianness.
 
     This is useful for decoding arrays from netCDF3 files (which are all
     big endian) into native endianness, so they can be used with Cython
@@ -80,7 +79,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
+    """Decode arrays on the fly from integer to boolean datatype.
 
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.
@@ -189,22 +188,20 @@ def _check_fill_values(attrs, name, dtype):
         v = raw_fill_dict[k]
         kfill = {fv for fv in np.ravel(v) if not pd.isnull(fv)}
         if not kfill and np.issubdtype(dtype, np.integer):
-            warnings.warn(
+            emit_user_level_warning(
                 f"variable {name!r} has non-conforming {k!r} "
                 f"{v!r} defined, dropping {k!r} entirely.",
                 SerializationWarning,
-                stacklevel=3,
             )
             del raw_fill_dict[k]
         else:
             encoded_fill_values |= kfill
 
         if len(encoded_fill_values) > 1:
-            warnings.warn(
+            emit_user_level_warning(
                 f"variable {name!r} has multiple fill values "
                 f"{encoded_fill_values} defined, decoding all values to NaN.",
                 SerializationWarning,
-                stacklevel=3,
             )
 
     return raw_fill_dict, encoded_fill_values
@@ -237,11 +234,10 @@ def _convert_unsigned_fill_value(
                 encoded_fill_values.remove(raw_fill_value)
                 encoded_fill_values.add(new_fill)
     else:
-        warnings.warn(
+        emit_user_level_warning(
             f"variable {name!r} has _Unsigned attribute but is not "
             "of integer type. Ignoring attribute.",
             SerializationWarning,
-            stacklevel=3,
         )
     return data
 
@@ -260,12 +256,11 @@ def _encode_unsigned_fill_value(
         new_fill = encoded_dtype.type(fill_value)
     except OverflowError:
         encoded_kind_str = "signed" if encoded_dtype.kind == "i" else "unsigned"
-        warnings.warn(
+        emit_user_level_warning(
             f"variable {name!r} will be stored as {encoded_kind_str} integers "
             f"but _FillValue attribute can't be represented as a "
             f"{encoded_kind_str} integer.",
             SerializationWarning,
-            stacklevel=3,
         )
         # user probably provided the fill as the in-memory dtype,
         # convert to on-disk type to match CF standard
@@ -654,7 +649,11 @@ class NonStringCoder(VariableCoder):
         ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = np.dtype(encoding.pop("dtype"))
-            if dtype != variable.dtype:
+            # Fixed-width string itemsize is not meaningful for netCDF values.
+            # Matching kinds (S or U) stay compatible when only the width
+            # differs, so a stale narrower encoding cannot truncate data.
+            same_string_kind = dtype.kind in "SU" and dtype.kind == variable.dtype.kind
+            if dtype != variable.dtype and not same_string_kind:
                 if np.issubdtype(dtype, np.integer):
                     # CF coordinate variables are not allowed to have missing values, so
                     # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.
@@ -665,12 +664,11 @@ class NonStringCoder(VariableCoder):
                         and "missing_value" not in variable.attrs
                         and dims != (name,)
                     ):
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"saving variable {name} with floating "
                             "point data as an integer dtype without "
                             "any _FillValue to use for NaNs",
                             SerializationWarning,
-                            stacklevel=10,
                         )
                     data = duck_array_ops.round(data)
                 data = duck_array_ops.astype(data, dtype=dtype)
