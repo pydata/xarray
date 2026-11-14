@@ -495,6 +495,11 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Weighted reductions (e.g. :py:meth:`DataArray.weighted` ``.mean()``,
+  ``.sum()`` and ``.sum_of_weights()``) no longer overflow with bool or small
+  integer dtypes, e.g. ``uint8`` weights summing past 255. They now promote
+  like ``sum`` does (:issue:`11867`).
+  By `Pranav Somalraju <https://github.com/THEpranavsomalraju>`_.
 
 
 Documentation

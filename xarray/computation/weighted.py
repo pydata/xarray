@@ -220,6 +220,14 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
             da = da.fillna(0.0)
 
+        # `dot` accumulates in the input dtype, so promote bool and small
+        # integers like `sum` does; else e.g. uint8 weights overflow (GH11867)
+        dtype = np.result_type(da.dtype, weights.dtype)
+        if dtype.kind in "biu" and dtype.itemsize < 8:
+            dtype = np.dtype(np.uint64 if dtype.kind == "u" else np.int64)
+            da = da.astype(dtype)
+            weights = weights.astype(dtype)
+
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
         return dot(da, weights, dim=dim)

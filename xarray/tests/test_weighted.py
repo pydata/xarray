@@ -386,6 +386,38 @@ def test_weighted_mean_bool():
     assert_equal(expected, result)
 
 
+@pytest.mark.parametrize("dtype", ["uint8", "int8", "bool"])
+@pytest.mark.parametrize("n", [255, 256, 300])
+def test_weighted_small_int_weights_no_overflow(
+    dtype: str, n: int, use_dask: bool
+) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.ones(n), dims="x")
+    weights = DataArray(np.ones(n, dtype=dtype), dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum_of_weights(), DataArray(n))
+    assert_equal(weighted.mean(), DataArray(1))
+
+
+def test_weighted_small_int_data_no_overflow(use_dask: bool) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.array([100, 200], dtype="uint8"), dims="x")
+    weights = DataArray([True, True], dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum(), DataArray(300))
+    assert_equal(weighted.mean(), DataArray(150))
+
+
 @pytest.mark.parametrize(
     ("weights", "expected"),
     (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
