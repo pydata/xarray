@@ -163,7 +163,7 @@ def subset_dataset_to_block(
     graph: dict,
     gname: str,
     dataset: Dataset,
-    input_chunk_bounds: Mapping[Hashable, Sequence[int]],
+    input_chunk_bounds: Mapping[Any, np.ndarray],
     chunk_index: Mapping[Hashable, int],
 ) -> tuple[Any, ...]:
     """Create a task that subsets an xarray dataset to a block determined by chunk_index.
@@ -238,7 +238,7 @@ def subset_dataset_to_block(
     ):
         return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
 
-    index_tasks = []
+    index_tasks: list[list[Hashable]] = []
     for index, index_vars in dataset.xindexes.group_by_index():
         index_dims = {dim for var in index_vars.values() for dim in var.dims}
         indexers = {
