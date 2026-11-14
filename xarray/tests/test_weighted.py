@@ -5,6 +5,7 @@ from types import EllipsisType
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -27,6 +28,147 @@ def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
         data.weighted([1, 2])  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "operation",
+    ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std", "quantile"),
+)
+@pytest.mark.parametrize("include_numeric", (True, False))
+def test_dataset_weighted_non_numeric(
+    operation: str, include_numeric: bool, use_dask: bool
+) -> None:
+    data = Dataset(
+        {
+            "text": ("x", ["a", "b"]),
+            "bytes": ("x", [b"a", b"b"]),
+            "objects": ("x", np.array(["a", None], dtype=object)),
+        },
+        coords={"x": [0, 1], "label": ("other", ["p", "q"]), "scalar": 42},
+        attrs={"description": "mixed dataset"},
+    )
+    numeric = DataArray([1.0, 3.0], dims="x", coords={"x": [0, 1]})
+    if include_numeric:
+        data["numeric"] = numeric
+    weights = DataArray([1.0, 2.0], dims="x", coords={"x": [0, 1]})
+    if use_dask:
+        data = data.chunk({"x": -1})
+        weights = weights.chunk({"x": -1})
+    original = data.copy(deep=True)
+    kwargs: dict[str, Any] = {"dim": "x", "keep_attrs": True}
+    if operation == "quantile":
+        kwargs["q"] = 0.5
+
+    result = getattr(data.weighted(weights), operation)(**kwargs)
+
+    expected = Dataset(
+        coords={"label": ("other", ["p", "q"]), "scalar": 42}, attrs=data.attrs
+    )
+    if include_numeric:
+        expected["numeric"] = getattr(numeric.weighted(weights), operation)(**kwargs)
+    if operation == "sum_of_weights":
+        expected = expected.assign(
+            text=3.0,
+            bytes=3.0,
+            objects=(
+                data["objects"].weighted(weights).sum_of_weights(**kwargs)
+                if use_dask
+                else 1.0
+            ),
+        )
+    assert_identical(result, expected)
+    assert_identical(data, original)
+
+
+@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("use_opt_einsum", (False, True))
+@pytest.mark.parametrize(
+    "values",
+    (
+        np.array(["2000-01-01", "2000-01-02"], dtype="datetime64[ns]"),
+        np.array([1, 3], dtype="timedelta64[ns]"),
+        pd.array([1, 3], dtype="Int64"),
+    ),
+)
+def test_dataset_weighted_retains_aggregatable_dtypes(
+    values: Any, operation: str, use_opt_einsum: bool
+) -> None:
+    data = DataArray(values, dims="x", name="data")
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    with xr.set_options(use_opt_einsum=use_opt_einsum):
+        try:
+            expected = getattr(data.weighted(weights), operation)().to_dataset()
+        except np.exceptions.DTypePromotionError as expected_error:
+            with pytest.raises(np.exceptions.DTypePromotionError) as actual_error:
+                getattr(data.to_dataset().weighted(weights), operation)()
+            assert str(actual_error.value) == str(expected_error)
+        else:
+            result = getattr(data.to_dataset().weighted(weights), operation)()
+            assert_identical(result, expected)
+
+
+def test_dataset_weighted_timedelta_quantile(use_dask: bool) -> None:
+    data = Dataset({"duration": ("x", np.array([1, 3], dtype="timedelta64[ns]"))})
+    if use_dask:
+        data = data.chunk({"x": -1})
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = data.weighted(weights).quantile(0.5)
+
+    expected = Dataset({"duration": 2.0}, coords={"quantile": 0.5})
+    assert_identical(result, expected)
+
+
+@requires_cftime
+def test_dataset_weighted_cftime_sum_of_weights() -> None:
+    data = DataArray(
+        xr.date_range("2000", periods=2, use_cftime=True), dims="x", name="dates"
+    )
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = data.to_dataset().weighted(weights).sum_of_weights()
+
+    assert_identical(result, Dataset({"dates": 3.0}))
+
+
+@requires_cftime
+def test_dataset_weighted_cftime_missing_first_sum_of_weights(use_dask: bool) -> None:
+    date = xr.date_range("2000", periods=1, use_cftime=True)[0]
+    data = Dataset({"dates": ("x", [None, date])})
+    if use_dask:
+        data = data.chunk({"x": 1})
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = data.weighted(weights).sum_of_weights()
+
+    expected = data["dates"].weighted(weights).sum_of_weights().to_dataset()
+    assert_identical(result, expected)
+    if not use_dask:
+        assert_identical(result, Dataset({"dates": 2.0}))
+
+
+@requires_cftime
+@requires_dask
+def test_dataset_weighted_cftime_sum_of_weights_lazy() -> None:
+    data = Dataset(
+        {"dates": ("x", xr.date_range("2000", periods=2, use_cftime=True))}
+    ).chunk({"x": 1})
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    with raise_if_dask_computes():
+        result = data.weighted(weights).sum_of_weights()
+
+    assert_identical(result, Dataset({"dates": 3.0}))
+
+
+def test_dataset_weighted_timezone_sum_of_weights() -> None:
+    data = DataArray(pd.date_range("2000", periods=2, tz="UTC"), dims="x", name="dates")
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = data.to_dataset().weighted(weights).sum_of_weights()
+
+    assert_identical(result, Dataset({"dates": 3.0}))
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))

@@ -219,6 +219,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dataset weighted arithmetic reductions now skip nonnumeric data variables
+  (:issue:`9322`).
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
