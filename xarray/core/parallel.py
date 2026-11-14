@@ -11,7 +11,7 @@ import numpy as np
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import Index
+from xarray.core.indexes import Index, PandasMultiIndex
 from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
 from xarray.structure.alignment import align
@@ -160,8 +160,12 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 
 
 def subset_dataset_to_block(
-    graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
-):
+    graph: dict,
+    gname: str,
+    dataset: Dataset,
+    input_chunk_bounds: Mapping[Hashable, Sequence[int]],
+    chunk_index: Mapping[Hashable, int],
+) -> tuple[Any, ...]:
     """Create a task that subsets an xarray dataset to a block determined by chunk_index.
 
     Block extents are determined by input_chunk_bounds.
@@ -194,7 +198,11 @@ def subset_dataset_to_block(
                 [variable.dims, chunk, variable.attrs],
             )
         else:
-            assert name in dataset.dims or variable.ndim == 0
+            assert (
+                name in dataset.dims
+                or variable.ndim == 0
+                or isinstance(dataset.xindexes.get(name), PandasMultiIndex)
+            )
 
             # non-dask array possibly with dimensions chunked on other variables
             # index into variable appropriately
@@ -225,7 +233,29 @@ def subset_dataset_to_block(
         else:
             data_vars.append([name, chunk_variable_task])
 
-    return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
+    if not any(
+        isinstance(index, PandasMultiIndex) for index in dataset.xindexes.values()
+    ):
+        return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
+
+    index_tasks = []
+    for index, index_vars in dataset.xindexes.group_by_index():
+        index_dims = {dim for var in index_vars.values() for dim in var.dims}
+        indexers = {
+            dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
+            for dim in index_dims
+        }
+        index_task = (f"ind-{dask.base.tokenize(index, indexers)}",)
+        if index_task not in graph:
+            graph[index_task] = index.isel(indexers)
+        if graph[index_task] is not None:
+            index_tasks.extend([name, index_task] for name in index_vars)
+    return (
+        Dataset,
+        (dict, data_vars),
+        (Coordinates, (dict, coords), (dict, index_tasks)),
+        dataset.attrs,
+    )
 
 
 def map_blocks(
