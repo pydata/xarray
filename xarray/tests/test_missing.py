@@ -435,6 +435,79 @@ def test_interpolate_dask_expected_dtype(dtype, method):
     assert da.dtype == da.compute().dtype
 
 
+@requires_dask
+@pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.parametrize("coord_dtype", [np.float64, np.float32])
+def test_interp_chunked_matches_unchunked(method, coord_dtype):
+    rs = np.random.default_rng(0)
+    ds = xr.Dataset(
+        {"v": (("t", "x", "y"), rs.normal(size=(10, 20, 20)))},
+        coords={
+            "t": np.arange(10.0),
+            "x": np.linspace(0.0, 1.0, 20, dtype=coord_dtype),
+            "y": np.linspace(0.0, 1.0, 20, dtype=coord_dtype),
+        },
+    )
+    chunked = ds.chunk({"t": 5, "x": 5, "y": 5})
+
+    # points outside the source range and a NaN are filled with NaN.
+    # x and y differ, so a path that reused one coordinate for both axes
+    # would not match.
+    xs = xr.DataArray([0.1, 0.95, -0.5, 1.5, np.nan], dims="z", name="x")
+    ys = xr.DataArray([0.2, 0.5, 0.5, 0.5, 0.5], dims="z", name="y")
+
+    actual = chunked.v.interp(x=xs, y=ys, method=method)
+    expected = ds.v.interp(x=xs, y=ys, method=method)
+    assert isinstance(actual.data, dask_array_type)
+    assert_equal(actual.compute(), expected)
+
+
+@requires_dask
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_interp_chunked_preserves_dtype_and_attrs(dtype):
+    da = xr.DataArray(
+        np.arange(20).astype(dtype),
+        dims="x",
+        coords={"x": np.linspace(0.0, 1.0, 20)},
+        attrs={"units": "m"},
+    ).chunk({"x": 5})
+    actual = da.interp(x=[0.1, 0.5, 2.0]).compute()
+    expected = da.compute().interp(x=[0.1, 0.5, 2.0])
+    assert actual.dtype == expected.dtype
+    assert actual.attrs == expected.attrs
+    assert_allclose(actual, expected)
+
+
+@requires_dask
+def test_interp_chunked_reads_only_required_chunks():
+    import dask.array as da
+
+    reads: list[tuple[int, ...]] = []
+
+    def spy(block, block_info=None):
+        assert block_info is not None
+        reads.append(tuple(block_info[None]["chunk-location"]))
+        return block
+
+    n = 40
+    chunk = 10
+    values = np.arange(n * n, dtype=float).reshape(n, n)
+    arr = da.from_array(values, chunks=(chunk, chunk)).map_blocks(spy, dtype=float)
+    obj = xr.DataArray(
+        arr, dims=("x", "y"), coords={"x": np.arange(n), "y": np.arange(n)}
+    )
+
+    # the destination points are far apart, so the whole array cannot be
+    # subset upfront; only the chunks that contain them should be read
+    xdest = xr.DataArray([2.5, 37.5], dims="z", name="x")
+    ydest = xr.DataArray([7.5, 32.5], dims="z", name="y")
+    actual = obj.interp(x=xdest, y=ydest).compute()
+
+    assert actual.shape == (2,)
+    assert set(reads) == {(0, 0), (3, 3)}
+    assert_equal(actual, obj.compute().interp(x=xdest, y=ydest))
+
+
 @requires_numbagg_or_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")

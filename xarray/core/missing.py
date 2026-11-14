@@ -682,6 +682,354 @@ def interp(
     return result
 
 
+def _nearest_indices(src: np.ndarray, dest: np.ndarray) -> np.ndarray:
+    """Return indices of the nearest source point, as ``interp1d(kind="nearest")``.
+
+    ``scipy`` compares each destination with the midpoints between source points
+    and rounds exact midpoints down. ``nan`` destinations sort after every
+    midpoint and therefore select the last source point, which is what
+    ``interp1d`` returns for them.
+    """
+    midpoints = src / 2.0
+    midpoints = midpoints[1:] + midpoints[:-1]
+    return np.clip(np.searchsorted(midpoints, dest, side="left"), 0, src.size - 1)
+
+
+def _linear_bracket(
+    src: np.ndarray, dest: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Source bracket and weights, as ``interp1d._call_linear`` computes them.
+
+    The interval is located with a ``searchsorted`` that defaults to side
+    ``"left"`` and is clipped to ``[1, len(x) - 1]``, so a destination that
+    exactly matches a source point uses the interval to its right. Each weight
+    is computed with its own division, and they are multiplied with the values
+    before being added up.
+    """
+    upper = np.clip(np.searchsorted(src, dest, side="left"), 1, src.size - 1)
+    lower = upper - 1
+    span = src[upper] - src[lower]
+    return lower, upper, (src[upper] - dest) / span, (dest - src[lower]) / span
+
+
+def _grid_bracket(
+    src: np.ndarray, dest: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Source bracket and normalized distance used by ``RegularGridInterpolator``.
+
+    ``_find_indices`` searches with side ``"right"`` and clips to
+    ``[0, len(x) - 2]``; the weight of the lower point is ``1 - norm``.
+    """
+    lower = np.clip(np.searchsorted(src, dest, side="right") - 1, 0, src.size - 2)
+    upper = lower + 1
+    return lower, upper, (dest - src[lower]) / (src[upper] - src[lower])
+
+
+def _outside(src: np.ndarray, dest: np.ndarray) -> np.ndarray:
+    """Destinations outside the source range, which ``scipy`` fills with ``nan``."""
+    return (dest < src[0]) | (dest > src[-1])
+
+
+def _unwrap_in_memory(obj: Any, depth: int = 0) -> np.ndarray | None:
+    """Return a numpy array held directly by an indexing wrapper, or None."""
+    if depth > 5:
+        return None
+    if isinstance(obj, np.ndarray):
+        return obj
+    if isinstance(obj, pd.Index):
+        return obj.to_numpy()
+    inner = getattr(obj, "array", None)
+    if inner is not None and inner is not obj:
+        return _unwrap_in_memory(inner, depth + 1)
+    return None
+
+
+def _in_memory_array(var: Variable) -> np.ndarray | None:
+    """Values of a coordinate that is already in memory.
+
+    ``Dataset.interp`` chunks coordinates when any data variable is chunked
+    (GH4739), but the chunk is a view of the in-memory index. Reading it must
+    not schedule a dask compute: callers build the interpolation graph lazily.
+    Returns None when the values live behind a real chunked read.
+    """
+    data = var._data
+    if isinstance(data, np.ndarray):
+        return data
+    if not is_chunked_array(data):
+        try:
+            return np.asarray(data)
+        except (TypeError, ValueError):
+            return None
+    chunks = getattr(data, "chunks", None)
+    layers = getattr(getattr(data, "dask", None), "layers", None)
+    if not chunks or layers is None or any(len(c) != 1 for c in chunks):
+        return None
+    for layer in layers.values():
+        mapping = getattr(layer, "mapping", None)
+        if not mapping or len(mapping) != 1:
+            continue
+        array = _unwrap_in_memory(next(iter(mapping.values())))
+        if array is not None and array.shape == data.shape:
+            return np.asarray(array)
+    return None
+
+
+def _rgi_uses_compiled_linear(var: Variable) -> bool:
+    """Whether ``RegularGridInterpolator`` evaluates 2D linear interp in Cython.
+
+    Integer values are cast to ``float64`` first, so they take the compiled path
+    too. That kernel's rounding depends on how SciPy was compiled, so it has to
+    be called rather than reimplemented.
+    """
+    if var.ndim != 2:
+        return False
+    if var.dtype == np.dtype(np.float64):
+        return var.dtype.byteorder == "="
+    return var.dtype.kind in "iu"
+
+
+def _compiled_linear_2d(
+    var: Variable,
+    dims: list[Hashable],
+    dest: Variable,
+    brackets: list[tuple[np.ndarray, np.ndarray]],
+    weights: list[tuple[np.ndarray, np.ndarray]],
+    sources: list[np.ndarray],
+) -> Variable | None:
+    """Evaluate 2D linear interpolation with SciPy's compiled kernel.
+
+    Corners are gathered first, so a chunked array only loads the chunks that
+    contain destination points. The kernel indexes one shared grid, so the
+    corners are packed into a grid whose rows are those points.
+    """
+    try:
+        from scipy.interpolate._rgi_cython import evaluate_linear_2d
+    except ImportError:
+        return None
+
+    dim_0, dim_1 = dims
+    pieces = [
+        var.isel(
+            {
+                dim_0: Variable(dest.dims, brackets[0][first]),
+                dim_1: Variable(dest.dims, brackets[1][second]),
+            }
+        )._data
+        for first, second in ((0, 0), (0, 1), (1, 0), (1, 1))
+    ]
+    # The upper weight is the normalized distance the kernel consumes.
+    norms = np.vstack((np.ravel(weights[0][1]), np.ravel(weights[1][1])))
+
+    def evaluate(v00, v01, v10, v11):
+        corners = [
+            np.ravel(np.asarray(piece, dtype=np.float64))
+            for piece in (v00, v01, v10, v11)
+        ]
+        n = corners[0].size
+        values = np.empty((2 * n, 2), dtype=np.float64)
+        values[0::2, 0] = corners[0]
+        values[0::2, 1] = corners[1]
+        values[1::2, 0] = corners[2]
+        values[1::2, 1] = corners[3]
+        indices = np.zeros((2, n), dtype=np.intp)
+        indices[0] = np.arange(0, 2 * n, 2)
+        out = np.empty(n, dtype=np.float64)
+        evaluated = evaluate_linear_2d(values, indices, norms, tuple(sources), out)
+        return np.reshape(evaluated, dest.shape)
+
+    try:
+        if any(is_chunked_array(piece) for piece in pieces):
+            import dask.array as dask_array
+
+            from xarray.namedarray.utils import is_duck_dask_array
+
+            if not all(is_duck_dask_array(piece) for piece in pieces):
+                return None
+            arrays = [dask_array.asarray(piece).rechunk(-1) for piece in pieces]
+            evaluated = dask_array.map_blocks(
+                evaluate, *arrays, dtype=np.float64, chunks=arrays[0].chunks
+            )
+        else:
+            evaluated = evaluate(*pieces)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    return Variable(dest.dims, evaluated)
+
+
+def _interp_sparse(
+    var: Variable,
+    indexes_coords: SourceDest,
+    *,
+    method: InterpOptions,
+    kwargs: dict[str, Any],
+) -> Variable | None:
+    """Linear/nearest interpolation that loads only the chunks it needs.
+
+    ``apply_ufunc(..., allow_rechunk=True)`` merges every chunked interpolation
+    dimension into a single chunk, so interpolating at a few points scattered
+    over a large array loads the whole array (:issue:`6799`). Looking up the
+    neighbouring source points up front and indexing with them touches only the
+    chunks that contain destination points.
+
+    The arithmetic mirrors the interpolators xarray picks for these methods --
+    ``scipy.interpolate.interp1d`` for one interpolation dimension and
+    ``scipy.interpolate.interpn`` (``RegularGridInterpolator``) for two -- so the
+    result matches the general path.
+
+    Returns None when the inputs do not meet the requirements of this path.
+    """
+    if method not in ("linear", "nearest") or kwargs:
+        return None
+    if not is_chunked_array(var._data):
+        return None
+    if not 1 <= len(indexes_coords) <= 2:
+        return None
+    if var.dtype.kind not in "iuf":
+        return None
+
+    dims = list(indexes_coords)
+    # ``interp`` transposes the variable so that the interpolated dimensions come
+    # last, in the order of ``indexes_coords``.
+    if tuple(var.dims[-len(dims) :]) != tuple(dims):
+        return None
+    broadcast_dims = var.dims[: -len(dims)]
+
+    sources: list[np.ndarray] = []
+    dests: list[Variable] = []
+    for dim in dims:
+        src, dest = indexes_coords[dim]
+        if src.ndim != 1 or src.dims != (dim,):
+            return None
+        if src.dtype.kind not in "iuf" or dest.dtype.kind not in "iuf":
+            return None
+        if src.size < 2:
+            return None
+        if dest.ndim == 0:
+            # A single destination point is already cheap: ``_localize`` narrows
+            # the source to a few points before the interpolator runs.
+            return None
+        if dest.chunks is not None and any(len(c) > 1 for c in dest.chunks):
+            # A destination that is split over several chunks is loaded lazily by
+            # the general path; keep that behaviour instead of materializing it.
+            return None
+        if not set(dest.dims).isdisjoint(broadcast_dims):
+            # The destination is vectorized over a non-interpolated dimension of
+            # the variable; leave that broadcasting to ``apply_ufunc``.
+            return None
+        # Dataset.interp chunks coordinates when any data variable is chunked
+        # (GH4739). They are still in memory; scheduling a compute here would
+        # break callers that build a lazy graph.
+        src_values = _in_memory_array(src)
+        if src_values is None:
+            return None
+        if not np.all(src_values[1:] > src_values[:-1]):
+            return None
+        sources.append(src_values)
+        dests.append(dest)
+
+    if any(dest.dims != dests[0].dims for dest in dests[1:]):
+        return None
+
+    if method == "linear" and len(dims) == 1 and var.ndim == 1:
+        # ``interp1d`` delegates 1D linear interpolation on these dtypes to the
+        # compiled ``np.interp``, whose rounding cannot be reproduced with the
+        # numpy expressions used here.
+        source_dtype = np.dtype(sources[0].dtype)
+        if source_dtype in (np.dtype(np.float64), np.dtype(np.intp)) and (
+            var.dtype == np.dtype(np.float64) or var.dtype.kind in "iu"
+        ):
+            return None
+
+    dest = dests[0]
+    # ``RegularGridInterpolator`` casts the grid and the sample points to
+    # float64. ``interp1d`` keeps the coordinate dtype, so only the 2D path casts.
+    queried = []
+    for one in dests:
+        values = _in_memory_array(one)
+        if values is None:
+            return None
+        queried.append(values)
+    if len(dims) == 2:
+        sources = [np.ascontiguousarray(src, dtype=np.float64) for src in sources]
+        queried = [np.asarray(values, dtype=np.float64) for values in queried]
+    else:
+        queried = [np.asarray(values) for values in queried]
+
+    outside = np.zeros(dest.shape, dtype=bool)
+    for src_values, dest_values in zip(sources, queried, strict=True):
+        outside |= _outside(src_values, dest_values)
+    if len(dims) > 1:
+        # A NaN on any axis becomes NaN. ``interp1d`` instead sorts a NaN sample
+        # last and returns the last source value, so the 1D path leaves it.
+        for dest_values in queried:
+            if dest_values.dtype.kind == "f":
+                outside |= np.isnan(dest_values)
+    if method == "nearest":
+        indexers: dict[Hashable, Variable] = {}
+        for dim, src_values, dest_values in zip(dims, sources, queried, strict=True):
+            if len(dims) == 1:
+                indices = _nearest_indices(src_values, dest_values)
+            else:
+                lower, upper, norm = _grid_bracket(src_values, dest_values)
+                indices = np.where(norm <= 0.5, lower, upper)
+            indexers[dim] = Variable(dest.dims, indices)
+        result = var.isel(indexers)
+    else:
+        brackets: list[tuple[np.ndarray, np.ndarray]] = []
+        weights: list[tuple[np.ndarray, np.ndarray]] = []
+        for src_values, dest_values in zip(sources, queried, strict=True):
+            if len(dims) == 1:
+                lower, upper, weight_lo, weight_hi = _linear_bracket(
+                    src_values, dest_values
+                )
+            else:
+                lower, upper, norm = _grid_bracket(src_values, dest_values)
+                weight_lo, weight_hi = 1 - norm, norm
+            brackets.append((lower, upper))
+            weights.append((weight_lo, weight_hi))
+
+        if len(dims) == 1:
+            (dim,) = dims
+            lower, upper = brackets[0]
+            weight_lo, weight_hi = weights[0]
+            y_lo = var.isel({dim: Variable(dest.dims, lower)})
+            y_hi = var.isel({dim: Variable(dest.dims, upper)})
+            result = y_hi * Variable(dest.dims, weight_hi) + y_lo * Variable(
+                dest.dims, weight_lo
+            )
+        elif _rgi_uses_compiled_linear(var):
+            result = _compiled_linear_2d(var, dims, dest, brackets, weights, sources)
+            if result is None:
+                return None
+        else:
+            # ``_evaluate_linear`` multiplies the weights together before the
+            # values and sums the corners left to right. A broadcast dimension
+            # takes this path; the compiled kernel is only used for a bare 2D array.
+            dim_0, dim_1 = dims
+            result = None
+            for first, second in itertools.product((0, 1), repeat=2):
+                corner = var.isel(
+                    {
+                        dim_0: Variable(dest.dims, brackets[0][first]),
+                        dim_1: Variable(dest.dims, brackets[1][second]),
+                    }
+                )
+                weight = Variable(dest.dims, weights[0][first]) * Variable(
+                    dest.dims, weights[1][second]
+                )
+                term = corner * weight
+                result = term if result is None else result + term
+            assert result is not None
+
+    result = result.where(~Variable(dest.dims, outside))
+    # Interpolators upcast integer data to float.
+    dtype = np.dtype(float) if not issubclass(var.dtype.type, np.inexact) else var.dtype
+    if result.dtype != dtype:
+        result = result.astype(dtype)
+    result.attrs = var.attrs
+    return result
+
+
 def interpolate_variable(
     var: Variable,
     indexes_coords: SourceDest,
@@ -692,6 +1040,10 @@ def interpolate_variable(
     """Core routine that returns the interpolated variable."""
     if not indexes_coords:
         return var.copy()
+
+    sparse_result = _interp_sparse(var, indexes_coords, method=method, kwargs=kwargs)
+    if sparse_result is not None:
+        return sparse_result
 
     if len(indexes_coords) == 1:
         func, kwargs = _get_interpolator(method, vectorizeable_only=True, **kwargs)
