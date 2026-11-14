@@ -447,8 +447,10 @@ def update_gallery(app: Sphinx):
 
             .. image:: {item['thumbnail']}
                 :alt: {item['title']}
-            +++
-            {item['title']}
+
+            .. card-footer::
+
+                {item['title']}
             """
             for item in gallery[key]
         ]
@@ -482,8 +484,10 @@ def update_videos(app: Sphinx):
     .. raw:: html
 
         {video['src']}
-    +++
-    {authors}
+
+    .. card-footer::
+
+        {authors}
         """
         items.append(item)
 
