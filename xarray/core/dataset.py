@@ -8,7 +8,6 @@ import datetime
 import io
 import math
 import sys
-import warnings
 from collections import defaultdict
 from collections.abc import (
     Callable,
@@ -31,6 +30,7 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload, override
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DatasetExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
@@ -234,6 +234,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
+    DatasetExternalAccessorMixin,
     Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
@@ -4497,12 +4498,11 @@ class Dataset(
                     create_dim_coord = True
 
             if create_dim_coord:
-                warnings.warn(
+                emit_user_level_warning(
                     f"rename {k!r} to {name_dict[k]!r} does not create an index "
                     "anymore. Try using swap_dims instead or use set_index "
                     "after rename to create an indexed coordinate.",
                     UserWarning,
-                    stacklevel=3,
                 )
 
         variables, coord_names, dims, indexes = self._rename_all(
@@ -4963,11 +4963,10 @@ class Dataset(
                     variables.update(index_vars)
                 else:
                     if create_index_for_new_dim:
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"No index created for dimension {k} because variable {k} is not a coordinate. "
                             f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
                             UserWarning,
-                            stacklevel=2,
                         )
 
                     # create 1D variable without creating a new index
@@ -6307,11 +6306,10 @@ class Dataset(
                 labels = [labels]
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
-            warnings.warn(
+            emit_user_level_warning(
                 "dropping labels using list-like labels is deprecated; using "
                 "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
                 FutureWarning,
-                stacklevel=2,
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
@@ -9869,13 +9867,12 @@ class Dataset(
             student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
         """
         if dim is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
-                stacklevel=2,
             )
         if (
             dim is None
@@ -9961,13 +9958,12 @@ class Dataset(
 
         """
         if dim is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Once the behaviour of DataArray.argmax() and Variable.argmax() without "
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmax() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
-                stacklevel=2,
             )
         if (
             dim is None

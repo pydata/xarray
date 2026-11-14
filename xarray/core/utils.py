@@ -959,9 +959,8 @@ def drop_dims_from_indexers(
 
         invalid = indexers.keys() - set(dims)
         if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
-                stacklevel=2,
+            emit_user_level_warning(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
         for key in invalid:
             indexers.pop(key)
