@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import functools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
 
-from xarray.core.utils import attempt_import
+from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _CYCLE_PROPS,
@@ -17,6 +16,7 @@ from xarray.plot.utils import (
     _add_colorbar,
     _add_legend,
     _assert_valid_xy,
+    _check_col_wrap,
     _determine_guide,
     _ensure_plottable,
     _group_hue_values,
@@ -288,6 +288,8 @@ def plot(
     --------
     xarray.DataArray.squeeze
     """
+    _check_col_wrap(col_wrap, row, col)
+
     darray = darray.squeeze(
         d for d, s in darray.sizes.items() if s == 1 and d not in (row, col, hue)
     ).compute()
@@ -926,6 +928,8 @@ artist :
         if subplot_kws is None:
             subplot_kws = dict()
 
+        _check_col_wrap(col_wrap, row, col)
+
         # Handle facetgrids first
         if row or col:
             if z is not None:
@@ -965,7 +969,7 @@ artist :
             if len(args) > 4:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 
@@ -1652,7 +1656,7 @@ artist :
             if len(args) > 2:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 
@@ -1686,6 +1690,8 @@ artist :
             # In facet grids, shared axis labels don't make sense for surface plots
             sharex = False
             sharey = False
+
+        _check_col_wrap(col_wrap, row, col)
 
         # Handle facetgrids first
         if row or col:

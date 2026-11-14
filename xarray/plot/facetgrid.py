@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import itertools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
@@ -10,10 +9,12 @@ import numpy as np
 
 from xarray.core.formatting import format_item
 from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
+from xarray.core.utils import emit_user_level_warning
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
+    _check_col_wrap,
     _determine_guide,
     _get_nice_quiver_magnitude,
     _group_hue_values,
@@ -194,6 +195,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         """
         import matplotlib.pyplot as plt
 
+        _check_col_wrap(col_wrap, row, col)
+
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
         rep_row = row is not None and not data[row].to_index().is_unique
@@ -211,8 +214,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn(
-                    "Ignoring col_wrap since both col and row were passed", stacklevel=2
+                emit_user_level_warning(
+                    "Ignoring col_wrap since both col and row were passed"
                 )
         elif row and not col:
             single_group = row
