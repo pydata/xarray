@@ -219,6 +219,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Unary operations such as ``~`` on :py:class:`Variable`, :py:class:`DataArray`
+  and :py:class:`Dataset` now raise a ``TypeError`` when the underlying duck
+  array returns ``NotImplemented``, e.g. ``~`` on dask arrays with float data,
+  instead of a misleading ``ValueError`` about dimensions (:issue:`6427`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).

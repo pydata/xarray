@@ -65,6 +65,7 @@ from xarray.core.utils import (
 from xarray.core.variable import (
     IndexVariable,
     Variable,
+    _check_unary_op_result,
     as_compatible_data,
     as_variable,
 )
@@ -5156,7 +5157,9 @@ class DataArray(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             with np.errstate(all="ignore"):
-                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                data = self.variable.data
+                result = _check_unary_op_result(f(data, *args, **kwargs), f, data)
+                da = self.__array_wrap__(result)
             if keep_attrs:
                 da.attrs = self.attrs
             return da
