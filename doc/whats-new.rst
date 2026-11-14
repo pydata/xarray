@@ -554,6 +554,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` with
+  ``method="linear"`` or ``method="nearest"`` no longer merge every chunk of
+  the interpolated dimensions when a dask-backed array is sampled at a modest
+  number of points along one or two dimensions. Only the chunks that contain
+  those points are loaded (:issue:`6799`).
+  By `PStarH <https://github.com/PStarH>`_.
 - Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
   engine now share a file handle while they remain open. The handle closes when
   the last dataset closes, so changes made on disk are only seen after all
