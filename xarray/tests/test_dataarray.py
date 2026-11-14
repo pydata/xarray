@@ -3759,6 +3759,19 @@ class TestDataArray:
         assert_identical(exp_x, x_bc)
         assert_identical(exp_y, y_bc)
 
+    @pytest.mark.parametrize("other", [1, np.array([1, 2]), "a"])
+    def test_broadcast_non_xarray_input_raises(self, other) -> None:
+        # regression test for GH7459
+        da = DataArray([5, 4], dims="x")
+        with pytest.raises(
+            ValueError, match=r"all input must be Dataset or DataArray objects"
+        ):
+            broadcast(da, other)
+        with pytest.raises(
+            ValueError, match=r"all input must be Dataset or DataArray objects"
+        ):
+            broadcast(other)
+
     def test_to_pandas(self) -> None:
         # 0d
         actual_xr = DataArray(42).to_pandas()
