@@ -1384,6 +1384,33 @@ class DataWithCoords(AttrAccessMixin):
             # equal to any element, so convert it to a sequence first
             test_elements = list(test_elements)
         elif isinstance(test_elements, Variable | DataArray):
+            # pandas' Index.isin is much faster than np.isin on object arrays,
+            # so use it for 1D CFTimeIndex-backed coordinates (GH6230).
+            if (
+                isinstance(self, DataArray)
+                and self.ndim == 1
+                and self.chunks is None
+                and test_elements.ndim == 1
+                and test_elements.chunks is None
+            ):
+                from xarray.coding.cftimeindex import CFTimeIndex
+                from xarray.core.variable import IndexVariable
+
+                self_var = self.variable
+                test_var = (
+                    test_elements.variable
+                    if isinstance(test_elements, DataArray)
+                    else test_elements
+                )
+                if isinstance(self_var, IndexVariable) and isinstance(
+                    test_var, IndexVariable
+                ):
+                    self_index = self_var.to_index()
+                    test_index = test_var.to_index()
+                    if isinstance(self_index, CFTimeIndex) and isinstance(
+                        test_index, CFTimeIndex
+                    ):
+                        return self.copy(data=self_index.isin(test_index))
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data

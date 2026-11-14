@@ -554,6 +554,10 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- :py:meth:`DataArray.isin` now uses the fast ``CFTimeIndex.isin`` path for 1D
+  cftime-backed coordinates instead of ``numpy.isin`` on object arrays, which
+  is orders of magnitude slower (:issue:`6230`).
+  By `PStarH <https://github.com/PStarH>`_.
 - Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
   engine now share a file handle while they remain open. The handle closes when
   the last dataset closes, so changes made on disk are only seen after all

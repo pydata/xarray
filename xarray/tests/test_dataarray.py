@@ -50,6 +50,7 @@ from xarray.tests import (
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
+    requires_cftime,
     requires_cupy,
     requires_dask,
     requires_iris,
@@ -7447,6 +7448,22 @@ def test_isin(da) -> None:
 
     result = da.isin({2: "a", 3: "b"}.keys()).sel(y=list("de"), z=0)
     assert_equal(result, expected)
+
+
+@requires_cftime
+def test_isin_cftimeindex() -> None:
+    n = 10
+    left = xr.date_range("2000-01-01", periods=n, freq="MS", use_cftime=True)
+    right = xr.date_range("2000-01-01", periods=n, freq="3MS", use_cftime=True)
+    da = DataArray(np.arange(n), dims="x", coords={"x": left})
+    other = DataArray(np.arange(n), dims="y", coords={"y": right})
+
+    result = da.x.isin(other.y)
+
+    expected = da.x.copy(data=np.array([value in right for value in left]))
+    assert_identical(result, expected)
+    # the test elements do not have to be a DataArray
+    assert_identical(da.x.isin(other.y.variable), expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
