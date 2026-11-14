@@ -5,7 +5,7 @@ from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, Self, override
 
-from xarray.core.utils import Frozen, is_dict_like
+from xarray.core.utils import Frozen, emit_user_level_warning, is_dict_like
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -306,26 +306,20 @@ class TreeNode:
 
     def iter_lineage(self) -> tuple[Self, ...]:
         """Iterate up the tree, starting from the current node."""
-        from warnings import warn
-
-        warn(
+        emit_user_level_warning(
             "`iter_lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
             FutureWarning,
-            stacklevel=2,
         )
         return (self, *self.parents)
 
     @property
     def lineage(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the closest."""
-        from warnings import warn
-
-        warn(
+        emit_user_level_warning(
             "`lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
             FutureWarning,
-            stacklevel=2,
         )
         return (self, *self.parents)
 
@@ -337,13 +331,10 @@ class TreeNode:
     @property
     def ancestors(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the most distant."""
-        from warnings import warn
-
-        warn(
+        emit_user_level_warning(
             "`ancestors` has been deprecated, and in the future will raise an error."
             "Please use `parents`. Example: `tuple(reversed(node.parents))`",
             FutureWarning,
-            stacklevel=2,
         )
         return (*reversed(self.parents), self)
 
