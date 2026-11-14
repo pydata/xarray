@@ -32,7 +32,6 @@
 
 
 import inspect
-import warnings
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, Self, TypeVar
@@ -100,13 +99,12 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
             if n_extra_args > 0:
                 extra_args = ", ".join(kwonly_args[:n_extra_args])
 
-                warnings.warn(
+                emit_user_level_warning(
                     f"Passing '{extra_args}' as positional argument(s) to {name} "
                     f"was deprecated in version {version} and will raise an error two "
                     "releases later. Please pass them as keyword arguments."
                     "",
                     FutureWarning,
-                    stacklevel=2,
                 )
 
                 zip_args = zip(

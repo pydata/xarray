@@ -2743,13 +2743,12 @@ class Variable(
         isel.
         """
         if dim is None and axis is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Behaviour of argmin/argmax with neither dim nor axis argument will "
                 "change to return a dict of indices of each dimension. To get a "
                 "single, flat index, please use np.argmin(da.data) or "
                 "np.argmax(da.data) instead of da.argmin() or da.argmax().",
                 FutureWarning,
-                stacklevel=3,
             )
 
         argminmax_func = getattr(duck_array_ops, argminmax)

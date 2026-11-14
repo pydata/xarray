@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import itertools
 import math
-import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, TypeVar, override
 
@@ -15,6 +14,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.core.utils import (
     either_dict_or_kwargs,
+    emit_user_level_warning,
     is_duck_dask_array,
     module_available,
 )
@@ -209,12 +209,11 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
             if "keepdims" in kwargs:
-                warnings.warn(
+                emit_user_level_warning(
                     "Reductions are applied along the rolling dimension. "
                     "Passing the 'keepdims' kwarg to reduction is not "
                     "supported and will be ignored.",
                     FutureWarning,
-                    stacklevel=3,
                 )
                 del kwargs["keepdims"]
 
@@ -796,12 +795,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         **kwargs,
     ):
         if "dim" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 f"Reductions are applied along the rolling dimension(s) "
                 f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
                 f"operations has no effect.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["dim"]
 
