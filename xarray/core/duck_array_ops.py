@@ -409,6 +409,13 @@ def where(condition, x, y):
     xp = get_array_namespace(condition, x, y)
 
     dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+    if isinstance(
+        condition, pd.api.extensions.ExtensionArray
+    ) and pd.api.types.is_bool_dtype(condition.dtype):
+        # pandas nullable booleans can contain <NA>, which cannot be cast
+        # directly to bool. For masking semantics, treat missing condition
+        # values as False.
+        condition = condition.fillna(False)
     if not is_duck_array(condition):
         condition = asarray(condition, dtype=dtype, xp=xp)
     else:
