@@ -932,9 +932,9 @@ mda = xr.DataArray(np.random.rand(4), coords={"spec": midx}, dims="spec")
 mda
 ```
 
-Multi-index levels are also directly accessible as coordinates. Each level is
-backed by the multi-index and is marked by `*` when printing a dataset or data
-array, like the multi-index coordinate itself:
+Each multi-index level is also a coordinate. Like `spec` itself, the level
+coordinates are indexed coordinates, marked by `*` when printing a dataset or
+data array:
 
 ```{code-cell}
 mda["band"]
@@ -947,13 +947,19 @@ mda.wn
 Indexing with multi-index levels is also possible using the `sel` method
 (see {ref}`multi-level-indexing`).
 
-The level coordinates are part of the `coords` attribute of `DataArray` and
-`Dataset` objects, but they share the multi-index with the `spec` coordinate.
-A single level can't be replaced on its own.
+All of these coordinates share the same multi-index, so a single level can't
+be replaced on its own. Instead, assign a new multi-index:
 
-Because in a `DataArray` or `Dataset` object each multi-index level is
-accessible as a coordinate, its name must not conflict with the names
-of the other levels, coordinates and data variables of the same object.
+```{code-cell}
+new_midx = pd.MultiIndex.from_arrays(
+    [["R", "R", "V", "V"], [0.15, 0.25, 0.75, 0.95]], names=("band", "wn")
+)
+mda.assign_coords(xr.Coordinates.from_pandas_multiindex(new_midx, "spec"))
+```
+
+Because each multi-index level is a coordinate, its name must not conflict
+with the names of the other levels, coordinates and data variables of the same
+object.
 Even though xarray sets default names for multi-indexes with unnamed levels,
 it is recommended that you explicitly set the names of the levels.
 
