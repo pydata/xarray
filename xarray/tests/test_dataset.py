@@ -4742,6 +4742,59 @@ class TestDataset:
             expected_stacked_variable.variable,
         )
 
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            "int32",
+            "int64",
+            "uint64",
+            "float32",
+            "float64",
+            "bool",
+            "datetime64[ns]",
+            "timedelta64[ns]",
+            "object",
+        ],
+    )
+    def test_to_stacked_array_preserves_padded_index_dtype(
+        self, dtype: str, use_dask: bool
+    ) -> None:
+        data = xr.Dataset(
+            {"a": (("sample", "x"), [[1, 2]]), "b": ("sample", [3])},
+            coords={"sample": [0], "x": np.array([1, 0]).astype(dtype)},
+        )
+        data["x"].attrs["long_name"] = "feature coordinate"
+        if use_dask:
+            data = data.chunk()
+        original = data.copy(deep=True)
+
+        with raise_if_dask_computes():
+            stacked = data.to_stacked_array("features", sample_dims=["sample"])
+            actual = stacked.to_unstacked_dataset("features")
+
+        assert stacked.indexes["features"].levels[1].dtype == data.indexes["x"].dtype
+        assert actual["x"].dtype == data["x"].dtype
+        assert_identical(actual, data)
+        assert_identical(data, original)
+        if use_dask:
+            assert all(var.chunks is not None for var in actual.data_vars.values())
+
+    @pytest.mark.parametrize("x", [[0.2, 0.7], [0.5, 1.5]])
+    def test_to_stacked_array_padded_non_indexed_coord(self, x: list[float]) -> None:
+        # the level dtype must come from the stacked coordinate, not get_index(),
+        # which falls back to an integer range for non-indexed dimensions
+        data = xr.Dataset(
+            {"a": (("sample", "x"), [[1, 2]]), "b": ("sample", [3])},
+            coords={"sample": [0], "x": x},
+        ).drop_indexes("x")
+
+        stacked = data.to_stacked_array("features", sample_dims=["sample"])
+
+        level = stacked.indexes["features"].levels[1]
+        assert level.dtype == data["x"].dtype
+        np.testing.assert_array_equal(level, data["x"].values)
+        assert_identical(stacked.to_unstacked_dataset("features"), data.set_xindex("x"))
+
     def test_to_stacked_array_transposed(self) -> None:
         # test that to_stacked_array uses updated dim order after transposition
         ds = xr.Dataset(
