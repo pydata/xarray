@@ -510,7 +510,8 @@ Bug Fixes
   returned a :py:class:`DataArray` with duplicate dimension names, or silently
   replaced the existing coordinate. :py:meth:`Dataset.where` and
   :py:meth:`DataArray.where` with ``drop=True`` and a :py:class:`Dataset`
-  condition no longer fail when a dimension is named ``"variable"``.
+  condition no longer fail when a dimension is named ``"variable"``
+  (:pull:`11889`).
   By `Yuen Li <https://github.com/yuenlii>`_.
 
 
