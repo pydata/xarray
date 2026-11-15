@@ -539,9 +539,9 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     def get(self, key: K, /) -> V | None: ...
 
     @overload
-    def get(self, key: K, /, default: V | T) -> V | T: ...
+    def get[T](self, key: K, /, default: V | T) -> V | T: ...
 
-    def get(self, key: K, default: T | None = None) -> V | T | None:
+    def get[T](self, key: K, default: T | None = None) -> V | T | None:
         self._warn()
         return super().get(key, default)
 
@@ -959,9 +959,8 @@ def drop_dims_from_indexers(
 
         invalid = indexers.keys() - set(dims)
         if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
-                stacklevel=2,
+            emit_user_level_warning(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
         for key in invalid:
             indexers.pop(key)

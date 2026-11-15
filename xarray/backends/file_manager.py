@@ -3,11 +3,11 @@ from __future__ import annotations
 import atexit
 import threading
 import uuid
-import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
 from contextlib import AbstractContextManager, contextmanager, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
+from xarray.backends.common import _get_mtime
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
@@ -396,11 +396,10 @@ class CachingFileManager(FileManager[T_File]):
                         ).start()
 
         if has_file and OPTIONS["warn_for_unclosed_files"]:
-            warnings.warn(
+            utils.emit_user_level_warning(
                 f"deallocating {self}, but file is not already closed. "
                 "This may indicate a bug.",
                 RuntimeWarning,
-                stacklevel=2,
             )
 
     def __getstate__(self):
@@ -429,6 +428,31 @@ class CachingFileManager(FileManager[T_File]):
             lock=lock,
             manager_id=manager_id,
             share=share,
+        )
+
+    def __dask_tokenize__(self) -> object:
+        """Token for dask so arrays with the same token are treated as the same data.
+
+        A file opened for reading is identified by what is opened (the opener,
+        its arguments, the mode, and the keyword arguments) and by the
+        modification time of a local file, so that managers opening the same
+        file the same way get the same token. The
+        manager id and the lock are left out, as they don't change the data
+        (GH11814).
+
+        Files opened in any other mode, and instances of subclasses of
+        ``CachingFileManager``, get a random token: a file opened for writing
+        may change at any time, and a subclass may have state that changes the
+        data.
+
+        """
+        from dask.base import normalize_token
+
+        if type(self) is not CachingFileManager or self._mode != "r":
+            return uuid.uuid4().hex
+        mtime = _get_mtime(self._args[0]) if self._args else None
+        return normalize_token(
+            (type(self), self._opener, self._args, self._mode, self._kwargs, mtime)
         )
 
     def __repr__(self) -> str:
@@ -558,11 +582,10 @@ class PickleableFileManager(FileManager[T_File]):
             self.close()
 
             if OPTIONS["warn_for_unclosed_files"]:
-                warnings.warn(
+                utils.emit_user_level_warning(
                     f"deallocating {self}, but file is not already closed. "
                     "This may indicate a bug.",
                     RuntimeWarning,
-                    stacklevel=2,
                 )
 
     def __getstate__(self):

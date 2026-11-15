@@ -35,11 +35,11 @@ scipy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-ni
 matplotlib = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
 pandas = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
 pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+numcodecs = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
 
 dask = { git = "https://github.com/dask/dask" }
 distributed = { git = "https://github.com/dask/distributed" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
-numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
 cftime = { git = "https://github.com/Unidata/cftime" }
 # packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
 pint = { git = "https://github.com/hgrecco/pint" }
