@@ -509,7 +509,7 @@ Bug Fixes
   without some of the reduced dimensions: such variables are treated as if
   they had size 1 along them, without broadcasting their data against the
   weights. Non-numeric variables are skipped, except by ``sum_of_weights``
-  (:issue:`7027`, :issue:`8679`, :issue:`9322`).
+  (:issue:`7027`, :issue:`8679`, :issue:`9322`, :pull:`11895`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
@@ -568,7 +568,7 @@ Documentation
   resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Note in the docstrings of the weighted reductions and in the user guide that
-  the weights are not normalized.
+  the weights are not normalized (:pull:`11895`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
