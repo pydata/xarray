@@ -172,6 +172,17 @@ class H5NetCDFStore(WritableCFDataStore):
             autoclose=self.autoclose,
         )
 
+    def __dask_tokenize__(self) -> object:
+        """Token for dask, identifying the data by the type, file manager, and group.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager, self._group))
+
     @classmethod
     def open(
         cls,
@@ -190,6 +201,10 @@ class H5NetCDFStore(WritableCFDataStore):
         open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
+
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode

@@ -222,6 +222,9 @@ Bug Fixes
 - Fix :py:func:`map_blocks` raising an assertion error when chunking along a
   pandas MultiIndex, preserving each block's index and level coordinates
   (:issue:`8745`).
+- The HTML representation of a :py:class:`Dataset` no longer fails when a data
+  variable has non-string dimension names, e.g. tuples (:issue:`10613`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
@@ -498,6 +501,13 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- :py:func:`open_dataset` now gives deterministic dask names for a
+  :py:class:`~xarray.backends.NetCDF4DataStore`,
+  :py:class:`~xarray.backends.H5NetCDFStore`, or
+  :py:class:`~xarray.backends.ScipyDataStore` opened for reading, like for a
+  file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
+  of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
@@ -606,6 +616,11 @@ Performance
   many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
   :pull:`11687`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Speed up creating variables from object arrays of strings when pandas infers
+  the ``str`` dtype (the default since pandas 3.0). Missing values (``None``,
+  ``pd.NA``) in such arrays are no longer converted to ``NaN``
+  (:issue:`11470`, :pull:`11484`).
+  By `Florian Knappers <https://github.com/JJFlorian>`_.
 
 
 Internal Changes

@@ -26,6 +26,7 @@ from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
+from xarray.compat.pdcompat import pandas_infers_string_dtype
 from xarray.computation import ops
 from xarray.computation.arithmetic import VariableArithmetic
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
@@ -264,12 +265,39 @@ def _possibly_convert_objects(values):
     3.0.0 pandas, object dtype inputs are cast to strings by `pandas.Series`
     but we output them as object dtype with the input metadata preserved as well.
 
-
     * datetime.datetime
     * datetime.timedelta
     * pd.Timestamp
     * pd.Timedelta
+
+    When pandas string inference is enabled, building that ``pd.Series`` is
+    expensive for string data (GH11470). So if ``pd.api.types.infer_dtype``
+    labels the values as a type the roundtrip never converts, they are returned
+    unchanged. Anything datetime-like, as well as "mixed" and "empty" (which may
+    hide datetime-likes), still goes through the roundtrip.
     """
+    not_converted_by_pandas = {
+        "string",
+        "bytes",
+        "integer",
+        "floating",
+        "mixed-integer",
+        "mixed-integer-float",
+        "decimal",
+        "complex",
+        "boolean",
+        "date",
+        "time",
+        "period",
+        "interval",
+    }
+    if (
+        pandas_infers_string_dtype()
+        and pd.api.types.infer_dtype(values.ravel(), skipna=True)
+        in not_converted_by_pandas
+    ):
+        return values
+
     as_series = pd.Series(values.ravel(), copy=False)
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:

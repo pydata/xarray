@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Union, override
+from typing import TYPE_CHECKING, Any, Self, Union, override
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,6 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.types import Self
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
