@@ -505,6 +505,14 @@ Bug Fixes
   file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
   of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
+- :py:meth:`Dataset.to_dataarray` now raises a ``ValueError`` when ``dim`` is
+  the name of an existing dimension or non-scalar coordinate. Previously it
+  returned a :py:class:`DataArray` with duplicate dimension names, or silently
+  replaced the existing coordinate. :py:meth:`Dataset.where` and
+  :py:meth:`DataArray.where` with ``drop=True`` and a :py:class:`Dataset`
+  condition no longer fail when a dimension is named ``"variable"``
+  (:pull:`11889`).
+  By `Yuen Li <https://github.com/yuenlii>`_.
 
 
 Documentation

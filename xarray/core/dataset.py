@@ -7467,7 +7467,8 @@ class Dataset(
         Parameters
         ----------
         dim : Hashable, default: "variable"
-            Name of the new dimension.
+            Name of the new dimension. Must not be the name of an existing
+            dimension or non-scalar coordinate.
         name : Hashable or None, optional
             Name of the new data array.
 
@@ -7476,6 +7477,17 @@ class Dataset(
         array : xarray.DataArray
         """
         from xarray.core.dataarray import DataArray
+
+        if dim in self.dims:
+            raise ValueError(
+                f"Dimension {dim!r} already exists. Use the `dim` argument to "
+                "choose a different name for the new dimension."
+            )
+        if dim in self._coord_names and not utils.is_scalar(self._variables[dim]):
+            raise ValueError(
+                f"{dim!r} already exists as a coordinate. Use the `dim` argument "
+                "to choose a different name for the new dimension."
+            )
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*_as_shared_dtype(data_vars))

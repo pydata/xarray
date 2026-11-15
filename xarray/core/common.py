@@ -27,6 +27,7 @@ from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
     emit_user_level_warning,
+    get_temp_dimname,
     is_scalar,
 )
 from xarray.namedarray._typing import DimType_co
@@ -1211,7 +1212,9 @@ class DataWithCoords(AttrAccessMixin):
                     var for var in cond if dim not in cond[var].dims
                 )
                 keepany = cond_wdim.any(dim=(d for d in cond.dims if d != dim))
-                return keepany.to_dataarray().any("variable")
+                # the stacking dimension must not clash with an existing name
+                stack_dim = get_temp_dimname(keepany.variables, "variable")
+                return keepany.to_dataarray(dim=stack_dim).any(stack_dim)
 
             _get_indexer = (
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer

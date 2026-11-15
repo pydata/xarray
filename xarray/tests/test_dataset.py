@@ -5508,6 +5508,19 @@ class TestDataset:
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
 
+    def test_to_dataarray_existing_name(self) -> None:
+        ds = Dataset(
+            {"a": ("x", [1, 2, 3]), "b": ("x", [4, 5, 6])},
+            coords={"x": [10, 20, 30], "y": ("x", [0, 1, 2]), "t": ("t", [0, 1])},
+        )
+        with pytest.raises(ValueError, match=r"Dimension 'x' already exists"):
+            ds.to_dataarray(dim="x")
+        # a dimension that is only used by a coordinate
+        with pytest.raises(ValueError, match=r"Dimension 't' already exists"):
+            ds.to_dataarray(dim="t")
+        with pytest.raises(ValueError, match=r"'y' already exists as a coordinate"):
+            ds.to_dataarray(dim="y")
+
     def test_to_and_from_dataframe(self) -> None:
         x = np.random.randn(10)
         y = np.random.randn(10)
@@ -6466,6 +6479,30 @@ class TestDataset:
         ds = Dataset({"foo": ("x", [0.0, 1.0])})
         expected = Dataset({"foo": ("x", [1.0])})
         actual = ds.where(ds == 1, drop=True)
+        assert_identical(expected, actual)
+
+    def test_where_drop_variable_name(self) -> None:
+        # "variable" is the default name of the dimension that
+        # Dataset.to_dataarray creates
+        ds = Dataset(
+            {"foo": (("variable", "y"), [[0.0, 1.0], [2.0, 3.0]])},
+            coords={"variable": ["a", "b"]},
+        )
+        expected = Dataset(
+            {"foo": (("variable", "y"), [[2.0, 3.0]])}, coords={"variable": ["b"]}
+        )
+        actual = ds.where(ds > 1, drop=True)
+        assert_identical(expected, actual)
+
+        ds = Dataset(
+            {"foo": (("x", "y"), [[0.0, 1.0], [2.0, 3.0]])},
+            coords={"variable": ("y", ["a", "b"])},
+        )
+        expected = Dataset(
+            {"foo": (("x", "y"), [[2.0, 3.0]])},
+            coords={"variable": ("y", ["a", "b"])},
+        )
+        actual = ds.where(ds > 1, drop=True)
         assert_identical(expected, actual)
 
     def test_reduce(self) -> None:
