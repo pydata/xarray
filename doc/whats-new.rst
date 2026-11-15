@@ -219,6 +219,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.weighted` and :py:meth:`Dataset.weighted` now warn when
+  ``weights`` share no dimension with the weighted object. The weights were
+  silently broadcast and had no effect, so the result was an unweighted
+  reduction (:issue:`6952`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
