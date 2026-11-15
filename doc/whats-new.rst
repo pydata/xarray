@@ -505,6 +505,12 @@ Bug Fixes
   file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
   of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Weighted reductions of a :py:class:`Dataset` no longer raise for variables
+  without some of the reduced dimensions: such variables are treated as if
+  they had size 1 along them, without broadcasting their data against the
+  weights. Non-numeric variables are skipped, except by ``sum_of_weights``
+  (:issue:`7027`, :issue:`8679`, :issue:`9322`, :pull:`11895`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Documentation
@@ -560,6 +566,9 @@ Documentation
   moved or removed pages get a redirect (:issue:`11790`, :pull:`11794`).
 - Fix the time coding docs for pandas 3.1, which now gives microsecond
   resolution for numeric input with any ``unit`` (:pull:`11796`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Note in the docstrings of the weighted reductions and in the user guide that
+  the weights are not normalized (:pull:`11895`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance

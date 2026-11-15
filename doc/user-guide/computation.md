@@ -450,6 +450,21 @@ weighted_std = np.sqrt(weighted_var)
 weighted_std
 ```
 
+The weights are not normalized: `sum` scales with them, whereas `mean`, `var`,
+`std` and `quantile` don't depend on their scale.
+
+Data without some of the reduced dimensions is treated as if it had size 1
+along them, i.e. it is broadcast against the weights. For a {py:class}`Dataset`,
+the weighted mean of such a variable is the variable itself, and its weighted
+sum is multiplied by the sum of the weights:
+
+```{code-cell}
+ds = xr.Dataset({"a": ("month", [1.0, 2.0, 3.0]), "b": 4.0}, coords=coords)
+ds.weighted(weights).sum("month")
+```
+
+Data variables that are not numeric are skipped, except by `sum_of_weights`.
+
 However, the functions also take missing values in the data into account:
 
 ```{code-cell}
