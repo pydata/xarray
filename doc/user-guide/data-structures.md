@@ -932,8 +932,9 @@ mda = xr.DataArray(np.random.rand(4), coords={"spec": midx}, dims="spec")
 mda
 ```
 
-For convenience multi-index levels are directly accessible as "virtual" or
-"derived" coordinates (marked by `-` when printing a dataset or data array):
+Multi-index levels are also directly accessible as coordinates. Each level is
+backed by the multi-index and is marked by `*` when printing a dataset or data
+array, like the multi-index coordinate itself:
 
 ```{code-cell}
 mda["band"]
@@ -946,14 +947,12 @@ mda.wn
 Indexing with multi-index levels is also possible using the `sel` method
 (see {ref}`multi-level-indexing`).
 
-Unlike other coordinates, "virtual" level coordinates are not stored in
-the `coords` attribute of `DataArray` and `Dataset` objects
-(although they are shown when printing the `coords` attribute).
-Consequently, most of the coordinates related methods don't apply for them.
-It also can't be used to replace one particular level.
+The level coordinates are part of the `coords` attribute of `DataArray` and
+`Dataset` objects, but they share the multi-index with the `spec` coordinate.
+A single level can't be replaced on its own.
 
 Because in a `DataArray` or `Dataset` object each multi-index level is
-accessible as a "virtual" coordinate, its name must not conflict with the names
+accessible as a coordinate, its name must not conflict with the names
 of the other levels, coordinates and data variables of the same object.
 Even though xarray sets default names for multi-indexes with unnamed levels,
 it is recommended that you explicitly set the names of the levels.

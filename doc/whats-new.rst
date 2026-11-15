@@ -509,6 +509,9 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Fix the user guide on multi-index levels: they are regular coordinates
+  marked by ``*`` when printing, not "virtual" coordinates marked by ``-``
+  (:issue:`8071`).
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
   docstring. The ``apply_ufunc`` example notebook was removed in favor of the
   `apply_ufunc interpolation tutorial
