@@ -93,10 +93,31 @@ def encode_nc3_attr_value(value):
     elif isinstance(value, str):
         value = value.encode(STRING_ENCODING)
     else:
-        value = coerce_nc3_dtype(np.atleast_1d(value))
+        value = np.atleast_1d(value)
+        if _is_string_array(value):
+            # netCDF-3 stores text attributes as a single char array, so only a
+            # single string can be written
+            if value.size != 1:
+                raise ValueError(
+                    "netCDF-3 files cannot store attributes that are lists of "
+                    f"strings, got {value.tolist()!r}. Join them into a single "
+                    "string, or write a netCDF-4 file instead."
+                )
+            return encode_nc3_attr_value(value.item())
+        value = coerce_nc3_dtype(value)
         if value.ndim > 1:
             raise ValueError("netCDF attributes must be 1-dimensional")
     return value
+
+
+def _is_string_array(value: np.ndarray) -> bool:
+    if value.dtype.kind in "SU":
+        return True
+    return (
+        value.dtype.kind == "O"
+        and value.size > 0
+        and all(isinstance(v, str | bytes) for v in value.flat)
+    )
 
 
 def encode_nc3_attrs(attrs):

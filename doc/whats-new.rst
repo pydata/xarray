@@ -219,6 +219,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Writing a list of strings as an attribute to a netCDF-3 file now raises a
+  clear ``ValueError``, instead of a ``KeyError`` from scipy, an ``OSError``
+  from netCDF4, or (for lists of bytes with scipy) silently keeping only the
+  first value. A list with a single string is written as that string
+  (:issue:`7608`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
