@@ -4,7 +4,7 @@ import base64
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Collection, Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, override
 
 import numpy as np
@@ -42,6 +42,7 @@ from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
+    from xarray.backends.common import ArrayWriter
     from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -698,10 +699,28 @@ def _validate_and_transpose_existing_dims(
     return new_var
 
 
+def _validate_zarr_attrs(attrs: Mapping[str, Any]) -> None:
+    """Check attributes before creating their array or group metadata."""
+    try:
+        json.dumps(attrs)
+    except TypeError as e:
+        raise TypeError("Invalid attribute in Dataset.attrs.") from e
+
+
 def _put_attrs(zarr_obj, attrs):
     """Raise a more informative error message for invalid attrs."""
     try:
-        zarr_obj.attrs.put(attrs)
+        # Attribute updates rewrite the complete metadata document in Zarr 3.
+        # Avoid a second write when these attributes were supplied at creation,
+        # including on stores such as ZipStore which cannot replace a key.
+        # Round-trip first so JSON-coercible mapping keys and tuple values
+        # compare as stored; sorting then ignores mapping insertion order.
+        current = json.dumps(
+            json.loads(json.dumps(zarr_obj.attrs.asdict())), sort_keys=True
+        )
+        updated = json.dumps(json.loads(json.dumps(attrs)), sort_keys=True)
+        if current != updated:
+            zarr_obj.attrs.put(attrs)
     except TypeError as e:
         raise TypeError("Invalid attribute in Dataset.attrs.") from e
     return zarr_obj
@@ -807,6 +826,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
         cache_members: bool = True,
+        attributes: dict[str, Any] | None = None,
     ):
         (
             zarr_group,
@@ -822,6 +842,7 @@ class ZarrStore(AbstractWritableDataStore):
             storage_options=storage_options,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
+            attributes=attributes,
         )
 
         return cls(
@@ -884,8 +905,23 @@ class ZarrStore(AbstractWritableDataStore):
             self._members = self._fetch_members()
 
     @override
-    def get_child_store(self, group: str) -> Self:
-        zarr_group = self.zarr_group.require_group(group)
+    def get_child_store(
+        self, group: str, *, attributes: dict[str, Any] | None = None
+    ) -> Self:
+        if attributes is None:
+            zarr_group = self.zarr_group.require_group(group)
+        else:
+            from zarr import Group
+
+            try:
+                zarr_group = self.zarr_group[group]
+            except KeyError:
+                zarr_group = self.zarr_group.create_group(group, attributes=attributes)
+            else:
+                if not isinstance(zarr_group, Group):
+                    raise TypeError(
+                        f"Incompatible object ({type(zarr_group).__name__}) already exists"
+                    )
         return type(self)(
             zarr_group=zarr_group,
             mode=self._mode,
@@ -1083,11 +1119,6 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        if TYPE_CHECKING:
-            import zarr
-        else:
-            zarr = attempt_import("zarr")
-
         if self._mode == "w":
             # always overwrite, so we don't care about existing names,
             # and consistency of encoding
@@ -1182,10 +1213,15 @@ class ZarrStore(AbstractWritableDataStore):
             variables_to_set, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(
-                self.zarr_group.store,
-                zarr_format=self.zarr_group.metadata.zarr_format,
-            )
+            self.consolidate_metadata()
+
+    def consolidate_metadata(self) -> None:
+        import zarr
+
+        zarr.consolidate_metadata(
+            self.zarr_group.store,
+            zarr_format=self.zarr_group.metadata.zarr_format,
+        )
 
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
@@ -1224,6 +1260,7 @@ class ZarrStore(AbstractWritableDataStore):
     def _create_new_array(
         self, *, name, shape, dtype, fill_value, encoding, attrs
     ) -> ZarrArray:
+        _validate_zarr_attrs(attrs)
         if coding.strings.check_vlen_dtype(dtype) is str:
             dtype = str
 
@@ -1253,19 +1290,19 @@ class ZarrStore(AbstractWritableDataStore):
             shape=shape,
             dtype=dtype,
             fill_value=fill_value,
+            attributes=attrs,
             **encoding,
         )
-        zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
 
     @override
     def set_variables(
         self,
         variables: dict[str, Variable],
-        check_encoding_set,
-        writer,
-        unlimited_dims=None,
-    ):
+        check_encoding_set: Collection[Hashable],
+        writer: ArrayWriter,
+        unlimited_dims: Iterable[Hashable] | None = None,
+    ) -> None:
         """Set the variables on the data store.
 
         This provides a centralized method to set the variables on the data
@@ -1356,11 +1393,41 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_shape = zarr_array.shape
             region = tuple(write_region[dim] for dim in dims)
 
+            new_variable = self._mode == "w" or name not in existing_keys
+            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
+            resolve_write_chunks = (
+                new_variable
+                and not isinstance(effective_write_chunks, tuple)
+                and (self._safe_chunks or self._align_chunks)
+            )
+
+            if new_variable:
+                # new variable
+                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
+                # the magic for storing the hidden dimension data
+                if is_zarr_v3_format:
+                    encoding["dimension_names"] = dims
+                else:
+                    encoded_attrs[DIMENSION_KEY] = dims
+
+                encoding["overwrite"] = self._mode == "w"
+
+            if resolve_write_chunks:
+                # Automatic shard shapes are chosen by Zarr when the array is
+                # created. Create only its metadata before validating the write.
+                zarr_array = self._create_new_array(
+                    name=name,
+                    dtype=dtype,
+                    shape=shape,
+                    fill_value=fill_value,
+                    encoding=encoding,
+                    attrs=encoded_attrs,
+                )
+                effective_write_chunks = zarr_array.shards or zarr_array.chunks
+
             # When shards are specified, dask chunks must align with shard boundaries
             # (not just zarr chunk boundaries) to avoid data corruption during
             # parallel writes. See https://github.com/pydata/xarray/issues/10831
-            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
-
             if self._align_chunks and isinstance(effective_write_chunks, tuple):
                 v = grid_rechunk(
                     v=v,
@@ -1389,17 +1456,7 @@ class ZarrStore(AbstractWritableDataStore):
                     backend_shape=shape,
                 )
 
-            if self._mode == "w" or name not in existing_keys:
-                # new variable
-                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
-                # the magic for storing the hidden dimension data
-                if is_zarr_v3_format:
-                    encoding["dimension_names"] = dims
-                else:
-                    encoded_attrs[DIMENSION_KEY] = dims
-
-                encoding["overwrite"] = self._mode == "w"
-
+            if new_variable and not resolve_write_chunks:
                 zarr_array = self._create_new_array(
                     name=name,
                     dtype=dtype,
@@ -1926,6 +1983,7 @@ def _get_open_params(
     storage_options,
     use_zarr_fill_value_as_mask,
     zarr_format,
+    attributes: dict[str, Any] | None = None,
 ):
     if TYPE_CHECKING:
         import zarr
@@ -1993,6 +2051,10 @@ def _get_open_params(
         # we have determined that we don't want to use consolidated metadata
         # so we set that to False to avoid trying to read it
         open_kwargs["use_consolidated"] = False
+        if mode not in ("r", "r+") and attributes is not None:
+            # Zarr uses these only if it creates the group. Existing groups
+            # still have their attributes updated by set_attributes().
+            open_kwargs["attributes"] = attributes
         zarr_group = zarr.open_group(store, **open_kwargs)
 
     close_store_on_close = zarr_group.store is not store
