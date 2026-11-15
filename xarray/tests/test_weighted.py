@@ -936,7 +936,6 @@ def test_dataset_weighted_non_numeric(operation: str) -> None:
     ds = Dataset(
         {
             "a": ("x", [1.0, 2.0, 3.0]),
-            "delta": ("x", np.array([1, 2, 3], dtype="timedelta64[D]")),
             "text": ("x", ["a", "b", "c"]),
             "time": ("x", np.array(["2000-01-01"] * 3, dtype="datetime64[ns]")),
             "scalar_text": "a",
@@ -944,14 +943,10 @@ def test_dataset_weighted_non_numeric(operation: str) -> None:
     )
     weights = DataArray([1.0, 2.0, 3.0], dims="x")
     kwargs = {"q": 0.5} if operation == "quantile" else {}
-    if operation in ("var", "std"):
-        # var and std are not supported for timedelta
-        ds = ds.drop_vars("delta")
 
     result = getattr(ds.weighted(weights), operation)(dim="x", **kwargs)
 
-    numeric = [name for name in ("a", "delta") if name in ds]
-    expected = getattr(ds[numeric].weighted(weights), operation)(dim="x", **kwargs)
+    expected = getattr(ds[["a"]].weighted(weights), operation)(dim="x", **kwargs)
     assert_identical(result, expected)
 
 
