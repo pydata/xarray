@@ -26,6 +26,7 @@ from xarray.core.indexing import (
     ImplicitToExplicitIndexingAdapter,
     OuterIndexer,
 )
+from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     DimType_co,
@@ -623,13 +624,12 @@ class NamedArray(
             )
         if len(set(dims_tuple)) < len(dims_tuple):
             repeated_dims = {d for d in dims_tuple if dims_tuple.count(d) > 1}
-            warnings.warn(
+            emit_user_level_warning(
                 f"Duplicate dimension names present: dimensions {repeated_dims} appear more than once in dims={dims_tuple}. "
                 "We do not yet support duplicate dimension names, but we do allow initial construction of the object. "
                 "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
                 "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
                 UserWarning,
-                stacklevel=2,
             )
         return dims_tuple
 
@@ -1063,9 +1063,7 @@ class NamedArray(
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims, data, attrs=self._attrs)
 
-    def _nonzero[T_NamedArrayInteger: _NamedArray[np.integer[Any], Any]](
-        self: T_NamedArrayInteger,
-    ) -> tuple[T_NamedArrayInteger, ...]:
+    def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
@@ -1073,7 +1071,7 @@ class NamedArray(
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
+            cast("Self", self._new((dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
@@ -1281,11 +1279,6 @@ class NamedArray(
         from xarray.namedarray._array_api import expand_dims
 
         return expand_dims(self, dim=dim)
-
-
-type _NamedArray[ScalarType: np.generic, DimType: Hashable] = NamedArray[
-    Any, np.dtype[ScalarType], DimType
-]
 
 
 def _raise_if_any_duplicate_dimensions[DimType_co: Hashable](

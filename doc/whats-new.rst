@@ -75,6 +75,14 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add static type hints for the accessors of popular external packages:
+  ``.cf`` (cf-xarray), ``.hvplot`` (hvplot), ``.metpy`` (MetPy), ``.odc``
+  (odc-geo), ``.pint`` (pint-xarray), ``.plotly`` (xarray-plotly), ``.rio``
+  (rioxarray), ``.vz`` (VirtualiZarr), ``.xrs`` (xarray-spatial) and ``.xvec``
+  (xvec). If the package is installed, type checkers and IDEs know the
+  accessor's methods. These packages are not new
+  dependencies (:issue:`11078`, :pull:`11087`).
+  By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -211,6 +219,30 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- The HTML representation of a :py:class:`Dataset` no longer fails when a data
+  variable has non-string dimension names, e.g. tuples (:issue:`10613`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
+  ``ValueError: cannot convert float NaN to integer``
+  (:pull:`11860`).
+  By `Wei-Lun Li <https://github.com/b84330808>`_.
+- Reducing a groupby or resample object over a dimension that does not exist,
+  e.g. ``da.groupby("time").mean("longitude")``, now raises
+  ``ValueError: Dimensions ('longitude',) not found in data dimensions (...)``,
+  like reductions on :py:class:`DataArray` and :py:class:`Dataset`, with or
+  without ``flox``. The suggestion to install ``flox`` is only shown when it
+  would help (:issue:`10875`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
+- Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
+  ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
+  ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
+  ``row`` raises a ``ValueError`` instead of being silently ignored
+  (:issue:`5614`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:func:`apply_ufunc` no longer fails on :py:mod:`sparse` arrays when it
+  needs to move core dimensions to the end. The internal ``transpose`` duck
+  array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
@@ -419,6 +451,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`Dataset.isel`, :py:meth:`Dataset.sel`, :py:meth:`DataArray.isel` and
+  :py:meth:`DataArray.sel` now honor ``drop=True`` when a custom index preserves
+  selected coordinates as scalars. They now raise when only some of an index's
+  coordinates would be dropped, instead of silently keeping them (:pull:`11617`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
   :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
   instead of the inner chunk sizes, so the default dask chunks align with the
@@ -464,6 +501,13 @@ Bug Fixes
 - :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
+  By `David Hoese <https://github.com/djhoese>`_.
+- :py:func:`open_dataset` now gives deterministic dask names for a
+  :py:class:`~xarray.backends.NetCDF4DataStore`,
+  :py:class:`~xarray.backends.H5NetCDFStore`, or
+  :py:class:`~xarray.backends.ScipyDataStore` opened for reading, like for a
+  file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
+  of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
 
 
@@ -524,6 +568,11 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
+  engine now share a file handle while they remain open. The handle closes when
+  the last dataset closes, so changes made on disk are only seen after all
+  datasets using that HDF5 file have closed (:issue:`11581`, :pull:`11809`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - The string accessor uses the vectorized functions of ``np.strings`` for
   ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
   ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
@@ -568,6 +617,11 @@ Performance
   many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
   :pull:`11687`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Speed up creating variables from object arrays of strings when pandas infers
+  the ``str`` dtype (the default since pandas 3.0). Missing values (``None``,
+  ``pd.NA``) in such arrays are no longer converted to ``NaN``
+  (:issue:`11470`, :pull:`11484`).
+  By `Florian Knappers <https://github.com/JJFlorian>`_.
 
 
 Internal Changes
@@ -605,6 +659,9 @@ Internal Changes
 - Convert structured arrays to object arrays of tuples before creating a
   :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
   By `glaziermag <https://github.com/glaziermag>`_.
+- Use the public ``zarr.Array.async_array`` of zarr 3.1.4 and later instead of
+  the private ``_async_array`` (:issue:`11259`, :pull:`11684`).
+  By `rutabaga <https://github.com/0xrutabaga>`_.
 
 
 .. _whats-new.2026.09.0:

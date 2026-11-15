@@ -18,12 +18,12 @@ from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.duck_array_ops import (
     astype,
     datetime_to_numeric,
+    permute_dims,
     push,
     ravel,
     reshape,
     stack,
     timedelta_to_numeric,
-    transpose,
 )
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpnOptions, InterpOptions
@@ -864,13 +864,13 @@ def _interpnd(
         )
 
     # move the interpolation axes to the start position
-    data = transpose(var._data, range(-len(x), var.ndim - len(x)))
+    data = permute_dims(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
     xi = stack([ravel(x1.data) for x1 in new_x], axis=-1)
     rslt: np.ndarray = interp_func(x, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
-    rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
+    rslt = permute_dims(rslt, range(-rslt.ndim + 1, 1))
     rslt = reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
     return astype(rslt, dtype, copy=False)
 

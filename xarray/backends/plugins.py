@@ -4,7 +4,6 @@ import functools
 import inspect
 import itertools
 import os
-import warnings
 from collections.abc import Callable
 from html import escape
 from importlib.metadata import entry_points
@@ -12,7 +11,7 @@ from typing import TYPE_CHECKING, TextIO
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_remote_uri, module_available
+from xarray.core.utils import emit_user_level_warning, is_remote_uri, module_available
 from xarray.util._report import package_version, show_report
 
 if TYPE_CHECKING:
@@ -35,12 +34,11 @@ def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
         if matches_len > 1:
             all_module_names = [e.value.split(":")[0] for e in matches]
             selected_module_name = all_module_names[0]
-            warnings.warn(
+            emit_user_level_warning(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n "
                 f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
-                stacklevel=2,
             )
     return unique_entrypoints
 
@@ -73,8 +71,8 @@ def backends_dict_from_pkg(
             backend = entrypoint.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
-            warnings.warn(
-                f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning, stacklevel=2
+            emit_user_level_warning(
+                f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning
             )
     return backend_entrypoints
 
@@ -228,9 +226,7 @@ def guess_engine(
         except PermissionError:
             raise
         except Exception:
-            warnings.warn(
-                f"{engine!r} fails while guessing", RuntimeWarning, stacklevel=2
-            )
+            emit_user_level_warning(f"{engine!r} fails while guessing", RuntimeWarning)
 
     compatible_engines = []
     for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
@@ -241,9 +237,7 @@ def guess_engine(
             if backend.guess_can_open(store_spec):
                 compatible_engines.append(engine)
         except Exception:
-            warnings.warn(
-                f"{engine!r} fails while guessing", RuntimeWarning, stacklevel=2
-            )
+            emit_user_level_warning(f"{engine!r} fails while guessing", RuntimeWarning)
 
     installed_engines = [k for k in engines if k != "store"]
     if not compatible_engines:
