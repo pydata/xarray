@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any, Generic
+from typing import Any, Generic, Self
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Self
 from xarray.namedarray._typing import DimsLike, DimType_co
 
 
