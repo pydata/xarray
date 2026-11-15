@@ -4727,6 +4727,13 @@ class Dataset(
                     indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                     coord_names.update(index_vars)
+            elif current_name in self._indexes and not any(
+                dim in dims_dict for dim in current_variable.dims
+            ):
+                # keep indexed non-dimension coordinates (e.g. multi-index
+                # levels) whose dimensions are not swapped
+                indexes[current_name] = self._indexes[current_name]
+                variables[current_name] = current_variable
             else:
                 var = current_variable.to_base_variable()
                 var.dims = dims

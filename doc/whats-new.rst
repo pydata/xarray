@@ -219,6 +219,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` no longer
+  drop the index of indexed non-dimension coordinates, such as multi-index
+  levels, whose dimensions are not being swapped (:issue:`8914`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
