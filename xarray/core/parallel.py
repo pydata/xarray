@@ -622,7 +622,7 @@ def map_blocks(
             if not is_dask_collection(variable.data)
         }
         if isxr
-        else None
+        else {}
         for isxr, arg in zip(is_xarray, npargs, strict=True)
     ]
 
