@@ -877,3 +877,88 @@ def test_dataset_weighted_none_ellipsis_equiv(coords: dict[str, Any]) -> None:
     result_ellipsis = data.weighted(weights).quantile(0.5, dim=...)
 
     assert_identical(result_none, result_ellipsis)
+
+
+def expand_to_size_one(var: DataArray, weights: DataArray, dims: list) -> DataArray:
+    """Give ``var`` the reduced dimensions it lacks, broadcast against the weights."""
+    for d in dims:
+        if d not in var.dims:
+            var = var.expand_dims({d: weights.sizes.get(d, 1)})
+    return var
+
+
+@pytest.mark.parametrize(
+    "operation",
+    ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std", "quantile"),
+)
+@pytest.mark.parametrize(
+    "dim", ("x", "y", "z", ["x", "y"], ["y", "z"], ["x", "y", "z"], None)
+)
+def test_dataset_weighted_variables_without_reduced_dims(
+    operation: str, dim: str | list[str] | None
+) -> None:
+    # GH7027, GH8583, GH8679: variables are reduced as if they had size 1 along
+    # the reduced dimensions they don't have
+    ds = Dataset(
+        {
+            "a": (("x", "y"), np.arange(6.0).reshape(2, 3)),
+            "b": ("y", [1.0, np.nan, 3.0]),
+            "i": ("y", [1, 2, 3]),
+            "c": 5.0,
+        }
+    )
+    # the weights sum to zero along x for z=0
+    weights = DataArray([[0.0, 1.0], [0.0, 2.0]], dims=("x", "z"))
+    kwargs = {"q": 0.5} if operation == "quantile" else {}
+
+    result = getattr(ds.weighted(weights), operation)(dim=dim, **kwargs)
+
+    dims = ["x", "y", "z"] if dim is None else [dim] if isinstance(dim, str) else dim
+    for name, var in ds.data_vars.items():
+        expanded = expand_to_size_one(var, weights, dims)
+        expected = getattr(expanded.weighted(weights), operation)(dim=dims, **kwargs)
+        assert_allclose(result[name], expected.transpose(*result[name].dims))
+
+
+def test_dataset_weighted_mean_without_reduced_dims_is_exact() -> None:
+    ds = Dataset({"a": ("x", [1.0, 2.0]), "b": ("y", [0.1, 0.7]), "i": ("y", [1, 2])})
+    weights = DataArray([1.0, 3.0], dims="x")
+
+    result = ds.weighted(weights).mean("x")
+
+    assert_identical(result.b, ds.b)
+    assert_identical(result.i, ds.i.astype(float))
+
+
+@pytest.mark.parametrize("operation", ("sum", "mean", "var", "std", "quantile"))
+def test_dataset_weighted_non_numeric(operation: str) -> None:
+    # GH9322
+    ds = Dataset(
+        {
+            "a": ("x", [1.0, 2.0, 3.0]),
+            "delta": ("x", np.array([1, 2, 3], dtype="timedelta64[D]")),
+            "text": ("x", ["a", "b", "c"]),
+            "time": ("x", np.array(["2000-01-01"] * 3, dtype="datetime64[ns]")),
+            "scalar_text": "a",
+        }
+    )
+    weights = DataArray([1.0, 2.0, 3.0], dims="x")
+    kwargs = {"q": 0.5} if operation == "quantile" else {}
+    if operation in ("var", "std"):
+        # var and std are not supported for timedelta
+        ds = ds.drop_vars("delta")
+
+    result = getattr(ds.weighted(weights), operation)(dim="x", **kwargs)
+
+    numeric = [name for name in ("a", "delta") if name in ds]
+    expected = getattr(ds[numeric].weighted(weights), operation)(dim="x", **kwargs)
+    assert_identical(result, expected)
+
+
+def test_dataset_weighted_non_numeric_sum_of_weights() -> None:
+    ds = Dataset({"a": ("x", [1.0, np.nan]), "text": ("x", ["a", "b"])})
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = ds.weighted(weights).sum_of_weights("x")
+
+    assert_identical(result, Dataset({"a": 1.0, "text": 3.0}))

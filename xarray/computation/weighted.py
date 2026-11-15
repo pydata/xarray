@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, cast, override
+import copy
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -48,8 +49,14 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
 
     Notes
     -----
-        Returns {on_zero} if the ``weights`` sum to 0.0 along the reduced
-        dimension(s).
+    Returns {on_zero} if the ``weights`` sum to 0.0 along the reduced
+    dimension(s).
+
+    The ``weights`` are not normalized: ``sum`` and ``sum_of_squares`` scale
+    with them, whereas ``mean``, ``var`` and ``std`` don't depend on their scale.
+
+    Data without some of the reduced dimensions is treated as if it had size 1
+    along them, i.e. it is broadcast against the ``weights``.
     """
 
 _SUM_OF_WEIGHTS_DOCSTRING = """
@@ -437,6 +444,51 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         result = result.assign_coords(quantile=q).squeeze()
         return result
 
+    def _map(
+        self,
+        func: Callable[..., DataArray],
+        dataset: Dataset,
+        dim: Dims,
+        **kwargs: Any,
+    ) -> Dataset:
+        """Apply ``func`` to each data variable of ``dataset``.
+
+        A variable is treated as if it had size 1 along the reduced dimensions
+        it doesn't have, i.e. it is broadcast against the weights along them.
+        Instead of broadcasting the data, the weights are summed along these
+        dimensions, which gives the same result.
+        """
+        all_dims = set(self.obj.dims) | set(self.weights.dims)
+        reduce_dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+        keep_attrs = kwargs.pop("keep_attrs", None)
+
+        def reduce(da: DataArray) -> DataArray:
+            data_dims = [d for d in da.dims if d in reduce_dims]
+            weight_dims = [
+                d for d in self.weights.dims if d in reduce_dims and d not in da.dims
+            ]
+
+            if func == self._weighted_quantile:
+                # the effective sample size depends on the individual weights,
+                # so the data has to be broadcast against them
+                return func(da, dim=data_dims + weight_dims, **kwargs)
+
+            weighted = self
+            if weight_dims:
+                # summing valid weights can't introduce missing values
+                weighted = copy.copy(self)
+                weighted.weights = self.weights.sum(weight_dims)
+
+            if func == self._weighted_mean and not data_dims:
+                # the mean along size-1 dimensions is the value itself
+                if da.dtype.kind in "biu":
+                    da = da.astype(float)
+                return da.where(weighted.weights != 0)
+
+            return getattr(weighted, func.__name__)(da, dim=data_dims, **kwargs)
+
+        return dataset.map(reduce, keep_attrs=keep_attrs)
+
     def _implementation(self, func, dim, **kwargs):
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
@@ -529,8 +581,7 @@ class DataArrayWeighted(Weighted["DataArray"]):
     def _implementation(self, func, dim, **kwargs) -> DataArray:
         self._check_dim(dim)
 
-        dataset = self.obj._to_temp_dataset()
-        dataset = dataset.map(func, dim=dim, **kwargs)
+        dataset = self._map(func, self.obj._to_temp_dataset(), dim, **kwargs)
         result = self.obj._from_temp_dataset(dataset)
 
         # Clear attrs when keep_attrs is explicitly False
@@ -563,7 +614,17 @@ class DatasetWeighted(Weighted["Dataset"]):
     @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        result = self.obj.map(func, dim=dim, **kwargs)
+        dataset = self.obj
+        if func != self._sum_of_weights:
+            # like ``numeric_only`` of the unweighted reductions
+            dataset = dataset[
+                [
+                    name
+                    for name, var in dataset.data_vars.items()
+                    if var.dtype.kind in "biufcm"
+                ]
+            ]
+        result = self._map(func, dataset, dim, **kwargs)
         result = self._restore_coords(dim, result)
 
         # Clear attrs when keep_attrs is explicitly False
