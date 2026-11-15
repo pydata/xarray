@@ -3365,7 +3365,15 @@ class DataArray(
             data = self.sel(selectors, drop=True)
             if dim in data.dims and isinstance(data.indexes[dim], pd.MultiIndex):
                 data = data.unstack([dim])
-            data_dict[k] = data
+            # the stacked levels are object arrays padded with NaN, the indexes
+            # have the original dtype
+            data_dict[k] = data.assign_coords(
+                {
+                    d: data[d].copy(data=data.indexes[d])
+                    for d in data.dims
+                    if d not in self.dims
+                }
+            )
 
         return Dataset(data_dict)
 

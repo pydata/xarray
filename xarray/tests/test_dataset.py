@@ -4633,6 +4633,9 @@ class TestDataset:
             actual = stacked.to_unstacked_dataset("features", level=level)
 
         assert_identical(actual, data)
+        assert {k: v.dtype for k, v in actual.coords.items()} == {
+            k: v.dtype for k, v in data.coords.items()
+        }
         assert_identical(stacked, original)
         if use_dask:
             assert all(var.chunks is not None for var in actual.data_vars.values())
