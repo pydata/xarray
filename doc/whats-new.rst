@@ -219,6 +219,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Assigning to a :py:class:`DataArray` with a ``(dims, data)`` tuple indexer,
+  e.g. ``da[("b", [0, 1, 0]),] += 1``, now works like indexing with the same
+  key, instead of raising a ``ValueError`` from NumPy (:issue:`10387`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.

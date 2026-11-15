@@ -986,6 +986,19 @@ class TestDataArray:
         )
         da[dict(x=ind)] = value  # should not raise
 
+    def test_setitem_tuple_indexer(self) -> None:
+        # regression test for GH10387: (dims, data) tuples work in __getitem__
+        # and should work the same way in __setitem__
+        indexer = np.array([0, 1, 0])
+        actual = DataArray(np.zeros((2, 3)), dims=("a", "b"))
+        actual[("b", indexer),] += 1
+
+        expected = DataArray(np.zeros((2, 3)), dims=("a", "b"))
+        expected[Variable("b", indexer),] += 1
+
+        assert_identical(actual, expected)
+        np.testing.assert_array_equal(actual.values, [[1, 0, 1], [0, 1, 0]])
+
     def test_setitem_vectorized(self) -> None:
         # Regression test for GH:7030
         # Positional indexing

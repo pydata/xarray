@@ -1021,9 +1021,16 @@ class DataArray(
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
                 value = value.variable
-            # DataArray key -> Variable key
+            # DataArray key -> Variable key. Tuples are (dims, data) indexers,
+            # converted to Variables as in isel and __getitem__.
             key = {
-                k: v.variable if isinstance(v, DataArray) else v
+                k: (
+                    v.variable
+                    if isinstance(v, DataArray)
+                    else as_variable(v)
+                    if isinstance(v, tuple)
+                    else v
+                )
                 for k, v in self._item_key_to_dict(key).items()
             }
             self.variable[key] = value
