@@ -9,7 +9,6 @@ from numpy.typing import ArrayLike
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.computation import dot
 from xarray.core import duck_array_ops, utils
-from xarray.core.common import _is_numeric_aggregatable_dtype
 from xarray.core.types import Dims, T_DataArray, T_Xarray
 from xarray.namedarray.utils import is_duck_dask_array
 from xarray.structure.alignment import align, broadcast
@@ -574,12 +573,8 @@ class DatasetWeighted(Weighted["Dataset"]):
         if func != self._sum_of_weights:
             numeric_vars = [
                 name
-                for name, var in self.obj.data_vars.items()
-                if var.dtype.kind in "biufcmM"
-                or (
-                    not utils.is_allowed_extension_array_dtype(var.dtype)
-                    and _is_numeric_aggregatable_dtype(var.variable)
-                )
+                for name, var in dataset.data_vars.items()
+                if var.dtype.kind in "biufcm"
             ]
             dataset = dataset[numeric_vars]
         result = dataset.map(func, dim=dim, **kwargs)

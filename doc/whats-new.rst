@@ -219,7 +219,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Dataset weighted arithmetic reductions now skip nonnumeric data variables
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
   (:issue:`9322`).
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
