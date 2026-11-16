@@ -695,6 +695,20 @@ def _nearest_indices(src: np.ndarray, dest: np.ndarray) -> np.ndarray:
     return np.clip(np.searchsorted(midpoints, dest, side="left"), 0, src.size - 1)
 
 
+def _linear_uses_weighted_sum() -> bool:
+    """Whether ``interp1d._call_linear`` forms a weighted sum.
+
+    SciPy 1.18 changed the 1D linear kernel from
+    ``slope * (x_new - x_lo) + y_lo`` to a two-weight sum. The two forms are
+    algebraically equal but not bitwise equal, and xarray's tests compare the
+    chunked and in-memory results exactly, so mirror the installed version.
+    """
+    import scipy
+    from packaging.version import Version
+
+    return Version(scipy.__version__) >= Version("1.18.0")
+
+
 def _linear_bracket(
     src: np.ndarray, dest: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -992,12 +1006,26 @@ def _interp_sparse(
         if len(dims) == 1:
             (dim,) = dims
             lower, upper = brackets[0]
-            weight_lo, weight_hi = weights[0]
+            src_values = sources[0]
+            dest_values = queried[0]
             y_lo = var.isel({dim: Variable(dest.dims, lower)})
             y_hi = var.isel({dim: Variable(dest.dims, upper)})
-            result = y_hi * Variable(dest.dims, weight_hi) + y_lo * Variable(
-                dest.dims, weight_lo
-            )
+            if _linear_uses_weighted_sum():
+                weight_lo, weight_hi = weights[0]
+                result = y_hi * Variable(dest.dims, weight_hi) + y_lo * Variable(
+                    dest.dims, weight_lo
+                )
+            else:
+                # SciPy < 1.18 forms a slope and evaluates
+                # ``slope * (x_new - x_lo) + y_lo`` rather than a weighted sum.
+                # The two are algebraically equal but not bitwise equal; the
+                # tests compare chunked and in-memory results exactly.
+                slope = (y_hi - y_lo) / Variable(
+                    dest.dims, src_values[upper] - src_values[lower]
+                )
+                result = (
+                    slope * Variable(dest.dims, dest_values - src_values[lower]) + y_lo
+                )
         elif _rgi_uses_compiled_linear(var):
             result = _compiled_linear_2d(var, dims, dest, brackets, weights, sources)
             if result is None:
