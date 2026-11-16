@@ -6212,6 +6212,9 @@ class Dataset(
         ValueError: These variables cannot be found in this dataset: ['pressure']
 
         """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         if callable(names):
             names = names(self)
         # the Iterable check is required for mypy
@@ -6270,6 +6273,9 @@ class Dataset(
             A new dataset with dropped indexes.
 
         """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         # the Iterable check is required for mypy
         if is_scalar(coord_names) or not isinstance(coord_names, Iterable):
             coord_names = {coord_names}

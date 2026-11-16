@@ -3106,6 +3106,18 @@ class TestDataset:
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("method", ["drop_vars", "drop_indexes"])
+    @pytest.mark.parametrize("names", ["x", "missing", []])
+    @pytest.mark.parametrize("errors", ["raises", None])
+    def test_drop_invalid_errors(
+        self, method: str, names: str | list[str], errors: str | None
+    ) -> None:
+        ds = Dataset(coords={"x": [0, 1]})
+        with pytest.raises(
+            ValueError, match='errors must be either "raise" or "ignore"'
+        ):
+            getattr(ds, method)(names, errors=errors)
+
     def test_drop_multiindex_level(self) -> None:
         data = create_test_multiindex()
         expected = data.drop_vars(["x", "level_1", "level_2"])
