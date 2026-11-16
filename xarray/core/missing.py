@@ -964,6 +964,7 @@ def _interp_sparse(
         for dest_values in queried:
             if dest_values.dtype.kind == "f":
                 outside |= np.isnan(dest_values)
+    result: Variable | None
     if method == "nearest":
         indexers: dict[Hashable, Variable] = {}
         for dim, src_values, dest_values in zip(dims, sources, queried, strict=True):
@@ -1021,6 +1022,7 @@ def _interp_sparse(
                 result = term if result is None else result + term
             assert result is not None
 
+    assert result is not None
     result = result.where(~Variable(dest.dims, outside))
     # Interpolators upcast integer data to float.
     dtype = np.dtype(float) if not issubclass(var.dtype.type, np.inexact) else var.dtype
