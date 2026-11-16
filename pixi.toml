@@ -85,6 +85,7 @@ seaborn = "*"
 sparse = "*"
 pint = "*"
 array-api-strict = "*"
+marray-python = "*"
 
 # algorithms
 scipy = "*"
