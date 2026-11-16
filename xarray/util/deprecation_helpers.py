@@ -32,15 +32,12 @@
 
 
 import inspect
-import warnings
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Self, TypeVar
+from typing import Any, Self
 
 from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
-
-T = TypeVar("T", bound=Callable)
 
 POSITIONAL_OR_KEYWORD = inspect.Parameter.POSITIONAL_OR_KEYWORD
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY
@@ -48,7 +45,7 @@ POSITIONAL_ONLY = inspect.Parameter.POSITIONAL_ONLY
 EMPTY = inspect.Parameter.empty
 
 
-def _deprecate_positional_args(version) -> Callable[[T], T]:
+def _deprecate_positional_args[T: Callable](version) -> Callable[[T], T]:
     """Decorate methods to issue warnings for positional arguments.
 
     Using the keyword-only argument syntax in pep 3102, arguments after the
@@ -100,13 +97,12 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
             if n_extra_args > 0:
                 extra_args = ", ".join(kwonly_args[:n_extra_args])
 
-                warnings.warn(
+                emit_user_level_warning(
                     f"Passing '{extra_args}' as positional argument(s) to {name} "
                     f"was deprecated in version {version} and will raise an error two "
                     "releases later. Please pass them as keyword arguments."
                     "",
                     FutureWarning,
-                    stacklevel=2,
                 )
 
                 zip_args = zip(
