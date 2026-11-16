@@ -661,6 +661,9 @@ Internal Changes
 - Convert structured arrays to object arrays of tuples before creating a
   :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
   By `glaziermag <https://github.com/glaziermag>`_.
+- Use the public ``zarr.Array.async_array`` of zarr 3.1.4 and later instead of
+  the private ``_async_array`` (:issue:`11259`, :pull:`11684`).
+  By `rutabaga <https://github.com/0xrutabaga>`_.
 
 
 .. _whats-new.2026.09.0:
