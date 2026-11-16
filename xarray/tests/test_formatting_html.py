@@ -319,6 +319,15 @@ def test_repr_of_nonstr_dataset(dataset: xr.Dataset) -> None:
     assert "<div class='xr-var-name'><span>2</span>" in formatted
 
 
+def test_repr_of_dataset_with_nonstr_dims() -> None:
+    ds = xr.Dataset({"var": ((("a", "b"), 10), np.zeros((2, 3)))})
+    formatted = fh.dataset_repr(ds)
+    assert (
+        "<div class='xr-var-dims'>((&#x27;a&#x27;, &#x27;b&#x27;), 10)</div>"
+        in formatted
+    )
+
+
 def test_repr_of_nonstr_dataarray(dataarray: xr.DataArray) -> None:
     da = dataarray.rename(dim_0=15)
     da.attrs[1] = "value"
