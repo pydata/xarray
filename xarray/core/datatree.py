@@ -1226,6 +1226,9 @@ class DataTree(
         dropped : DataTree
             A copy of the node with the specified children dropped.
         """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         # the Iterable check is required for mypy
         if isinstance(names, str) or not isinstance(names, Iterable):
             names = {names}

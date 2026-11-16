@@ -1834,6 +1834,17 @@ class TestInheritance:
 
 
 class TestRestructuring:
+    @pytest.mark.parametrize("names", ["child", "missing", []])
+    @pytest.mark.parametrize("errors", ["raises", None])
+    def test_drop_nodes_invalid_errors(
+        self, names: str | list[str], errors: str | None
+    ) -> None:
+        tree = DataTree.from_dict({"child": None})
+        with pytest.raises(
+            ValueError, match='errors must be either "raise" or "ignore"'
+        ):
+            tree.drop_nodes(names, errors=errors)  # type: ignore[arg-type]
+
     def test_drop_nodes(self) -> None:
         sue = DataTree.from_dict({"Mary": None, "Kate": None, "Ashley": None})
 
