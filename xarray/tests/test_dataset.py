@@ -5785,7 +5785,7 @@ class TestDataset:
         )
         ser = pd.Series(1, index=cat)
         ds = ser.to_xarray()
-                assert ds.coords.dtypes["index"] == ser.index.dtype
+        assert ds.coords.dtypes["index"] == ser.index.dtype
 
     def test_from_dataframe_categorical_index_interval_categories(self) -> None:
         # Regression test for GH4307: a DataFrame with a CategoricalIndex
