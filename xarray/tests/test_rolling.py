@@ -62,9 +62,12 @@ def test_cumulative_argminmax(func) -> None:
         ("argmin", np.array([2**63 - 1] * 2 + [0, 2**63 - 1], dtype="int64")),
         ("argmax", np.array([-(2**63)] * 2 + [0, -(2**63)], dtype="int64")),
     ],
+    ids=["bool-argmin", "float-argmin", "float-argmax", "int-argmin", "int-argmax"],
 )
 @pytest.mark.parametrize("use_numbagg", [True, False])
-def test_rolling_argminmax_ties_with_padding(func, data, use_numbagg: bool) -> None:
+def test_rolling_argminmax_ties_with_padding(
+    func: str, data: list | np.ndarray, use_numbagg: bool
+) -> None:
     # GH11899: real values equal to the padding sentinel must not give negative indices
     da = DataArray(data, dims="t")
     with set_options(use_numbagg=use_numbagg, use_bottleneck=False):
