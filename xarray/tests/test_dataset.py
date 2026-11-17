@@ -5797,7 +5797,7 @@ class TestDataset:
         df["age_group"] = pd.cut(df["age"], bins=5)
         df = df.set_index(["name", "age_group"])
         assert isinstance(df.index, pd.MultiIndex)
-        
+
         for ds in [df.to_xarray(), Dataset.from_dataframe(df)]:
             assert ds.coords.dtypes["age_group"] == df.index.levels[1].dtype
             assert list(ds.coords["age_group"].values) == list(df.index.levels[1])
