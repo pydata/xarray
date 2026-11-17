@@ -575,6 +575,11 @@ Documentation
 - Fix the time coding docs for pandas 3.1, which now gives microsecond
   resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Clarify in the :py:meth:`Dataset.to_zarr` and :py:meth:`DataArray.to_zarr`
+  docstrings and the Zarr user guide that explicit ``region`` slices are
+  positional and do not check coordinate labels, while ``region="auto"`` does
+  (:issue:`10891`).
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 
 Performance
 ~~~~~~~~~~~
