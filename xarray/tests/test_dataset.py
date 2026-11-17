@@ -5796,7 +5796,8 @@ class TestDataset:
         df = pd.DataFrame({"name": list("abcdefghijk"), "age": range(11)})
         df["age_group"] = pd.cut(df["age"], bins=5)
         df = df.set_index(["name", "age_group"])
-
+        assert isinstance(df.index, pd.MultiIndex)
+        
         for ds in [df.to_xarray(), Dataset.from_dataframe(df)]:
             assert ds.coords.dtypes["age_group"] == df.index.levels[1].dtype
             assert list(ds.coords["age_group"].values) == list(df.index.levels[1])
@@ -5811,7 +5812,9 @@ class TestDataset:
         ds = df.to_xarray()
         assert ds.coords.dtypes["index"] == cat.dtype
         assert list(ds.coords["index"].values) == list(cat)
-        assert list(ds.coords["index"].dtype.categories) == list(cat.categories)
+        index_dtype = ds.coords["index"].dtype
+        assert isinstance(index_dtype, pd.CategoricalDtype)
+        assert list(index_dtype.categories) == list(cat.categories)
         df.index.name = (
             "index"  # restored gets the name because it has the coord with the name
         )
