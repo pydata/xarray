@@ -219,6 +219,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Selecting a single element of a timezone-aware datetime index with
+  :py:meth:`Dataset.isel` no longer drops the timezone (:issue:`9307`).
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
