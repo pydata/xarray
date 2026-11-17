@@ -53,6 +53,27 @@ def test_cumulative_argminmax(func) -> None:
     np.testing.assert_array_equal(result["a"].values, expected)
 
 
+@pytest.mark.parametrize(
+    "func, data",
+    [
+        ("argmin", [True, True, False, True]),
+        ("argmin", [np.inf, np.inf, 0.0, np.inf]),
+        ("argmax", [-np.inf, -np.inf, 0.0, -np.inf]),
+        ("argmin", np.array([2**63 - 1] * 2 + [0, 2**63 - 1], dtype="int64")),
+        ("argmax", np.array([-(2**63)] * 2 + [0, -(2**63)], dtype="int64")),
+    ],
+)
+@pytest.mark.parametrize("use_numbagg", [True, False])
+def test_rolling_argminmax_ties_with_padding(func, data, use_numbagg: bool) -> None:
+    # GH11899: real values equal to the padding sentinel must not give negative indices
+    da = DataArray(data, dims="t")
+    with set_options(use_numbagg=use_numbagg, use_bottleneck=False):
+        for obj in (da.rolling(t=3, min_periods=1), da.cumulative("t")):
+            result = getattr(obj, func)()
+            expected = [getattr(window, func)("t").item() for _, window in obj]
+            np.testing.assert_array_equal(result.values, expected)
+
+
 def test_cumulative_vs_cum(d) -> None:
     result = d.cumulative("z").sum()
     expected = d.cumsum("z")
