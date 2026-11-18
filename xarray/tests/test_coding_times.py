@@ -1113,6 +1113,55 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
         assert encoded.dtype == np.float64
 
 
+_ENCODING_UNITS_FINER_THAN_DATA = [
+    ("s", "milliseconds"),
+    ("s", "microseconds"),
+    ("s", "nanoseconds"),
+    ("ms", "microseconds"),
+    ("ms", "nanoseconds"),
+    ("us", "nanoseconds"),
+]
+
+
+@pytest.mark.parametrize(
+    ["data_unit", "encoding_units"], _ENCODING_UNITS_FINER_THAN_DATA
+)
+@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
+def test_encode_cf_datetime_units_finer_than_data(
+    data_unit: PDDatetimeUnitOptions, encoding_units: str, dtype: np.dtype | None
+) -> None:
+    times = np.array(["2000-01-02T00:00:01", "NaT"], dtype=f"datetime64[{data_unit}]")
+    units = f"{encoding_units} since 2000-01-01"
+    numpy_timeunit = _netcdf_to_numpy_timeunit(encoding_units)
+    expected = np.timedelta64(86401, "s") // np.timedelta64(1, numpy_timeunit)
+
+    encoded, encoded_units, calendar = encode_cf_datetime(times, units, dtype=dtype)
+
+    assert encoded_units == units
+    assert encoded[0] == expected
+    decoded = decode_cf_datetime(encoded, units, calendar, time_unit=data_unit)
+    assert_array_equal(times, decoded)
+
+
+@pytest.mark.parametrize(
+    ["data_unit", "encoding_units"], _ENCODING_UNITS_FINER_THAN_DATA
+)
+@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
+def test_encode_cf_timedelta_units_finer_than_data(
+    data_unit: PDDatetimeUnitOptions, encoding_units: str, dtype: np.dtype | None
+) -> None:
+    timedeltas = np.array([86401, "NaT"], dtype=f"timedelta64[{data_unit}]")
+    numpy_timeunit = _netcdf_to_numpy_timeunit(encoding_units)
+    expected = np.timedelta64(86401, data_unit) // np.timedelta64(1, numpy_timeunit)
+
+    encoded, encoded_units = encode_cf_timedelta(timedeltas, encoding_units, dtype)
+
+    assert encoded_units == encoding_units
+    assert encoded[0] == expected
+    decoded = decode_cf_timedelta(encoded, encoding_units, time_unit=data_unit)
+    assert_array_equal(timedeltas, decoded)
+
+
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 def test_encode_decode_roundtrip_datetime64(
     freq, time_unit: PDDatetimeUnitOptions

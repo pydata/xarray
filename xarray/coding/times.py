@@ -1070,6 +1070,19 @@ def cast_to_int_if_safe(num) -> np.ndarray:
     return num
 
 
+def _cast_to_finer_unit(
+    time_deltas: pd.TimedeltaIndex, time_delta: np.timedelta64
+) -> pd.TimedeltaIndex:
+    """Cast time_deltas to the unit of time_delta, if that unit is finer.
+
+    Otherwise time_delta is truncated to zero in the unit of time_deltas.
+    """
+    if time_delta < np.timedelta64(1, time_deltas.unit):
+        unit, _ = np.datetime_data(time_delta.dtype)
+        time_deltas = time_deltas.as_unit(cast(PDDatetimeUnitOptions, unit))
+    return time_deltas
+
+
 def _division(deltas, delta, floor):
     if floor:
         # calculate int64 floor division
@@ -1201,6 +1214,7 @@ def _eagerly_encode_cf_datetime(
 
         # get resolution of TimedeltaIndex and align time_delta
         # todo: check, if this works in any case
+        time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
         num = _division(
             time_deltas, time_delta.astype(f"=m8[{time_deltas.unit}]"), floor_division
         )
@@ -1332,6 +1346,7 @@ def _eagerly_encode_cf_timedelta(
 
     time_delta = _unit_timedelta_numpy(units)
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
+    time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
     # get resolution of TimedeltaIndex and align time_delta
     deltas_unit = time_deltas.unit
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")

@@ -498,6 +498,11 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Encoding ``datetime64`` and ``timedelta64`` values with ``units`` finer than
+  the resolution of the data, e.g. ``datetime64[s]`` values with
+  ``"milliseconds since 2000-01-01"``, no longer encodes every value as ``NaT``,
+  or as ``inf`` for a floating point ``dtype`` (:pull:`XXXXX`).
+  By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 - :py:func:`open_dataset` now gives deterministic dask names for a
   :py:class:`~xarray.backends.NetCDF4DataStore`,
   :py:class:`~xarray.backends.H5NetCDFStore`, or
