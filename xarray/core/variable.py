@@ -4,6 +4,7 @@ import copy
 import itertools
 import math
 import numbers
+import operator
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from functools import partial
@@ -2695,9 +2696,27 @@ class Variable(
             return result
 
     @override
-    def _binary_op(self, other, f, reflexive=False):
+    def _binary_op(
+        self, other: Any, f: Callable, reflexive: bool = False
+    ) -> Variable[Shape, Any, DimType_co]:
         if isinstance(other, xr.DataTree | xr.DataArray | xr.Dataset):
             return NotImplemented
+        other_mask = None
+        if (
+            isinstance(other, np.ma.MaskedArray)
+            and other.dtype.fields is None
+            and f
+            in (
+                operator.lt,
+                operator.le,
+                operator.gt,
+                operator.ge,
+                nputils.array_eq,
+                nputils.array_ne,
+            )
+        ):
+            other_mask = np.ma.getmaskarray(other)
+            other = other.data
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
@@ -2717,6 +2736,10 @@ class Variable(
             new_data = (
                 f(self_data, other_data) if not reflexive else f(other_data, self_data)
             )
+        if other_mask is not None:
+            # Comparisons with missing values are False, except for !=. Apply
+            # the mask to the result to avoid promoting integer operands to float.
+            new_data = duck_array_ops.where(other_mask, f is nputils.array_ne, new_data)
         result = Variable(dims, new_data, attrs=attrs)
         return result
 
