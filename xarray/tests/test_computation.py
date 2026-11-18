@@ -124,6 +124,24 @@ def test_apply_identity() -> None:
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
 
 
+def test_apply_dataarray_with_keys_coordinate_or_attribute() -> None:
+    # a DataArray with a coordinate or attribute named "keys" is not dict-like
+    array = np.arange(3)
+    with_coord = xr.DataArray(array, dims="x", coords={"keys": ("x", array)})
+    with_attr = xr.DataArray(array, dims="x", attrs={"keys": 1})
+    dataset = xr.Dataset({"y": ("x", array)})
+
+    for data_array in [with_coord, with_attr]:
+        assert_identical(data_array, apply_ufunc(identity, data_array))
+        assert_identical(data_array, np.abs(data_array))
+        assert_identical(data_array, data_array + 0)
+
+    expected = xr.Dataset({"y": ("x", 2 * array)}, coords={"keys": ("x", array)})
+    assert_identical(expected, apply_ufunc(operator.add, dataset, with_coord))
+    assert_identical(expected, dataset + with_coord)
+    assert_identical(expected, with_coord + dataset)
+
+
 def test_apply_identity_datatree() -> None:
     tree = xr.DataTree.from_dict(
         {
@@ -359,6 +377,29 @@ def test_apply_two_outputs() -> None:
     out0, out1 = twice(dataset.groupby("x"))
     assert_identical(out0, dataset)
     assert_identical(out1, dataset)
+
+
+def test_apply_dataset_error_mentions_variable_name() -> None:
+    # GH2078
+    ds_a = xr.Dataset({"status": (("x", "y"), np.zeros((2, 3)))})
+    ds_b = xr.Dataset({"status": ("y", np.zeros(3))})
+
+    # broadcast_compat_data only sees the Variable, the note adds its name
+    with pytest.raises(ValueError, match="unexpected dimensions") as excinfo:
+        apply_ufunc(lambda a, b: a, ds_a, ds_b, input_core_dims=[[], ["y"]])
+    assert "Raised while applying function to variable 'status'" in (
+        excinfo.value.__notes__
+    )
+
+    # errors from the applied function itself keep their type
+    def fail(x: np.ndarray) -> np.ndarray:
+        raise KeyError("boom")
+
+    with pytest.raises(KeyError, match="boom") as excinfo_key:
+        apply_ufunc(fail, ds_a)
+    assert "Raised while applying function to variable 'status'" in (
+        excinfo_key.value.__notes__
+    )
 
 
 def test_apply_missing_dims() -> None:

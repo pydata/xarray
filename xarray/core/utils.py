@@ -539,9 +539,9 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     def get(self, key: K, /) -> V | None: ...
 
     @overload
-    def get(self, key: K, /, default: V | T) -> V | T: ...
+    def get[T](self, key: K, /, default: V | T) -> V | T: ...
 
-    def get(self, key: K, default: T | None = None) -> V | T | None:
+    def get[T](self, key: K, default: T | None = None) -> V | T | None:
         self._warn()
         return super().get(key, default)
 
@@ -777,16 +777,20 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     return magic_number
 
 
-def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
+def try_read_magic_number_from_path(pathlike: Any, count: int = 8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
+        if os.path.isdir(path):
+            # directories (e.g. zarr stores) have no magic number; on Windows,
+            # opening one raises PermissionError instead of IsADirectoryError
+            return None
         try:
             # Open unbuffered: a buffered reader fills its whole buffer, whose size
             # follows the filesystem block size and can be several MB on parallel
             # filesystems, effectively reading entire small files (GH7697).
             with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, IsADirectoryError, TypeError):
+        except (FileNotFoundError, TypeError):
             pass
     return None
 
@@ -955,9 +959,8 @@ def drop_dims_from_indexers(
 
         invalid = indexers.keys() - set(dims)
         if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
-                stacklevel=2,
+            emit_user_level_warning(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
         for key in invalid:
             indexers.pop(key)

@@ -22,8 +22,7 @@ from typing import (
     Concatenate,
     Literal,
     NoReturn,
-    ParamSpec,
-    TypeVar,
+    Self,
     Union,
     overload,
     override,
@@ -31,6 +30,7 @@ from typing import (
 
 import numpy as np
 
+from xarray.accessors import DataTreeExternalAccessorMixin
 from xarray.core import dtypes, utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
@@ -55,7 +55,6 @@ from xarray.core.indexes import Index, Indexes
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.options import _get_keep_attrs
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
-from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
     FilteredMapping,
@@ -123,8 +122,6 @@ if TYPE_CHECKING:
 
 
 T_Path = Union[str, NodePath]
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -486,6 +483,7 @@ class DataTree(
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
+    DataTreeExternalAccessorMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
     """A tree-like hierarchical collection of xarray objects.
@@ -1886,7 +1884,7 @@ class DataTree(
         return map_over_datasets(func, self, *args, kwargs=kwargs)  # type: ignore[arg-type]
 
     @overload
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T],
         *args: P.args,
@@ -1894,14 +1892,14 @@ class DataTree(
     ) -> T: ...
 
     @overload
-    def pipe(
+    def pipe[T](
         self,
         func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
     ) -> T: ...
 
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
         *args: Any,

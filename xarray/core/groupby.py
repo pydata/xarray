@@ -3,8 +3,7 @@ from __future__ import annotations
 import copy
 import functools
 import itertools
-import warnings
-from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
@@ -76,11 +75,32 @@ if TYPE_CHECKING:
     from xarray.groupers import EncodedGroups, Grouper
 
 
-def check_reduce_dims(reduce_dims, dimensions):
+def _raise_if_dims_not_found(
+    reduce_dims: Iterable[Hashable], obj_dims: Iterable[Hashable]
+) -> None:
+    """Raise if any of ``reduce_dims`` is not a dimension of the grouped object."""
+    obj_dims = tuple(obj_dims)
+    missing = tuple(dim for dim in reduce_dims if dim not in obj_dims)
+    if missing:
+        raise ValueError(
+            f"Dimensions {missing!r} not found in data dimensions {obj_dims!r}"
+        )
+
+
+def check_reduce_dims(
+    reduce_dims: Dims, dimensions: Iterable[Hashable], obj_dims: Iterable[Hashable]
+) -> None:
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
+        assert reduce_dims is not None
+        dimensions = tuple(dimensions)
+        _raise_if_dims_not_found(
+            (dim for dim in reduce_dims if dim not in dimensions), obj_dims
+        )
         if any(dim not in dimensions for dim in reduce_dims):
+            # The dimensions exist on the grouped object, but not on each group,
+            # e.g. because grouping by a multi-dimensional variable stacked them
             raise ValueError(
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
                 f"to reduce over all dimensions or one or more of {dimensions!r}. "
@@ -1109,14 +1129,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in self._original_obj.dims
+        _raise_if_dims_not_found(
+            (
+                d
                 for d in parsed_dim
-            ):
-                # TODO: Not a helpful error, it's a sanity check that dim actually exist
-                # either in self.groupers or self._original_obj
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+                if any(d not in grouper.codes.dims for grouper in self.groupers)
+            ),
+            self._original_obj.dims,
+        )
 
         return parsed_dim
 
@@ -1130,12 +1150,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         from flox.xarray import xarray_reduce
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -1823,12 +1842,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -1842,7 +1860,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
                 **kwargs,
             )
 
-        check_reduce_dims(dim, self.dims)
+        check_reduce_dims(dim, self.dims, self._original_obj.dims)
 
         return self.map(reduce_array, shortcut=shortcut)
 
@@ -1999,12 +2017,11 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -2018,7 +2035,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
                 **kwargs,
             )
 
-        check_reduce_dims(dim, self.dims)
+        check_reduce_dims(dim, self.dims, self._original_obj.dims)
 
         return self.map(reduce_dataset)
 

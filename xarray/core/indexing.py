@@ -41,9 +41,10 @@ from xarray.namedarray.pycompat import (
 )
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from xarray.core.extension_array import PandasExtensionArray
     from xarray.core.indexes import Index
-    from xarray.core.types import Self
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
