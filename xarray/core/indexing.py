@@ -2076,6 +2076,9 @@ class PandasIndexingAdapter(IndexingAdapter):
             item = item.to_numpy()
         elif isinstance(item, timedelta):
             item = np.timedelta64(item)
+        elif isinstance(item, pd.Timestamp) and item.tzinfo is not None:
+            # keep the timezone: datetime64 cannot represent it
+            item = np.asarray(item, dtype=object)
         elif isinstance(item, pd.Timestamp):
             # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
