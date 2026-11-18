@@ -219,6 +219,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- The error raised when plotting coordinates of an unsupported type now lists
+  every supported type, including ``numpy.timedelta64`` and strings, and
+  explains that ``pandas.Interval`` values are plotted at their midpoints or
+  bounds, which must themselves be plottable (:issue:`4378`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
