@@ -39,6 +39,19 @@ def test_range_index_arange(args, kwargs) -> None:
     assert_equal(actual, expected, check_default_indexes=False)
 
 
+@pytest.mark.parametrize(
+    ("start", "stop", "step"),
+    [(0.0, 3.0, -1.0), (3.0, 0.0, 1.0)],
+)
+def test_range_index_arange_empty(start, stop, step) -> None:
+    index = RangeIndex.arange(start, stop, step, dim="x")
+    coords = xr.Coordinates.from_xindex(index)
+
+    assert index.size == np.arange(start, stop, step).size == 0
+    assert coords.sizes == {"x": 0}
+    assert xr.DataArray([], dims="x", coords=coords).sizes == {"x": 0}
+
+
 def test_range_index_arange_error() -> None:
     with pytest.raises(TypeError, match=r".*requires stop to be specified"):
         RangeIndex.arange(dim="x")
@@ -98,6 +111,11 @@ def test_range_index_linspace() -> None:
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=1)})
     assert_equal(actual, expected, check_default_indexes=False)
+
+
+def test_range_index_linspace_negative_num() -> None:
+    with pytest.raises(ValueError, match="must be non-negative"):
+        RangeIndex.linspace(0.0, 1.0, num=-1, dim="x")
 
 
 def test_range_index_dtype() -> None:

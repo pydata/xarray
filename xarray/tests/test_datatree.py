@@ -122,6 +122,15 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
+    def test_child_names_cannot_contain_slashes(self) -> None:
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            DataTree(children={"folder/data": DataTree()})
+
+        tree = DataTree(children={"a": DataTree()})
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            tree.children = {"folder/data": DataTree()}
+        assert list(tree.children) == ["a"]
+
     def test_dataset_containing_slashes(self) -> None:
         xda: xr.DataArray = xr.DataArray(
             [[1, 2]],
@@ -210,6 +219,17 @@ class TestStoreDatasets:
 
         with pytest.raises(TypeError):
             john.dataset = "junk"  # type: ignore[assignment]
+
+    def test_ds_deprecated(self) -> None:
+        john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
+        with pytest.warns(FutureWarning, match=r"DataTree\.ds is deprecated"):
+            actual = john.ds
+        assert_identical(actual, john.dataset)
+
+        dat = xr.Dataset({"a": 1})
+        with pytest.warns(FutureWarning, match=r"DataTree\.ds is deprecated"):
+            john.ds = dat  # type: ignore[assignment,unused-ignore]
+        assert_identical(john.to_dataset(), dat)
 
     def test_has_data(self) -> None:
         john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
@@ -336,6 +356,13 @@ class TestGetItem:
         with pytest.raises(KeyError):
             results["pressure"]
 
+    def test_getitem_path_past_variable(self) -> None:
+        dt = DataTree.from_dict({"/results": xr.Dataset({"temp": ("x", [0, 50])})})
+        with pytest.raises(KeyError):
+            dt["results/temp/x"]
+        with pytest.raises(KeyError):
+            dt["results/temp/.."]
+
     @pytest.mark.xfail(reason="Should be deprecated in favour of .subset")
     def test_getitem_multiple_data_variables(self) -> None:
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
@@ -349,6 +376,61 @@ class TestGetItem:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", dataset=data)
         assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
+
+
+class TestContains:
+    @pytest.fixture
+    def tree(self) -> DataTree:
+        return DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/a/b": xr.Dataset({"v": ("x", [0, 1])}),
+                "/c": None,
+            }
+        )
+
+    @pytest.mark.parametrize(
+        "key",
+        ["a", "c", "x", "a/b", "/a/b", "./a", "a/", "a//b", "c/../a", "a/b/v", "a/x"],
+    )
+    def test_contains_path(self, tree: DataTree, key: str) -> None:
+        assert key in tree
+        tree[key]
+
+    @pytest.mark.parametrize("key", [".", "/", ""])
+    def test_contains_self(self, tree: DataTree, key: str) -> None:
+        assert key in tree
+        assert tree[key] is tree
+
+    @pytest.mark.parametrize(
+        "key", ["b", "v", "a/v", "zz/q", "..", "nope/..", "a/b/v/x", "a/b/v/.."]
+    )
+    def test_not_contains_path(self, tree: DataTree, key: str) -> None:
+        assert key not in tree
+        with pytest.raises(KeyError):
+            tree[key]
+
+    def test_contains_double_leading_slash(self, tree: DataTree) -> None:
+        # "//" is a separate root in POSIX, but means "/" in a tree like "///"
+        assert "//a" in tree
+        assert tree["//a"] is tree["/a"]
+        assert "//" in tree
+        assert tree["//"] is tree
+        assert "//zz" not in tree
+
+    def test_contains_relative_to_child(self, tree: DataTree) -> None:
+        b = tree["a/b"]
+        for key in ["v", "x", "..", "../..", "../b", "/a", "/c"]:
+            assert key in b
+        assert "../../.." not in b
+
+    def test_contains_non_string_keys(self) -> None:
+        tree = DataTree(xr.Dataset({0: ("x", [1]), ("a", "b"): ("x", [2])}))
+        assert 0 in tree
+        assert ("a", "b") in tree
+        assert 1 not in tree
+        with pytest.raises(TypeError):
+            ["x"] in tree  # noqa: B015
 
 
 class TestUpdate:
@@ -1331,7 +1413,7 @@ class TestRepr:
         tree_dict = {}
         for f in range(number_of_files):
             for g in range(number_of_groups):
-                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": np.int64(f * g)})
 
         tree = DataTree.from_dict(tree_dict)
         with xr.set_options(display_max_children=3):
@@ -1444,8 +1526,8 @@ class TestRepr:
         stations = xr.DataArray(
             data=np.array(list("abcdef"), dtype="<U1"), dims="station"
         )
-        lon = [-100, -80, -60]
-        lat = [10, 20, 30]
+        lon = np.array([-100, -80, -60], dtype=np.int64)
+        lat = np.array([10, 20, 30], dtype=np.int64)
         # Set up fake data
         wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
         pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
@@ -2777,10 +2859,27 @@ class TestDask:
         assert actual.chunksizes == expected.chunksizes
 
         with pytest.raises(TypeError, match="invalid type"):
-            tree.chunk(None)
+            tree.chunk(None)  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match="invalid type"):
-            tree.chunk((1, 2))
+            tree.chunk((1, 2))  # type: ignore[arg-type]
 
         with pytest.raises(ValueError, match="not found in data dimensions"):
             tree.chunk({"u": 2})
+
+    @pytest.mark.parametrize("chunks", ["auto", 5, "20B"])
+    def test_chunk_single_spec(self, chunks: str | int) -> None:
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(6))})
+
+        tree = xr.DataTree.from_dict({"/": ds1, "/group1": ds2})
+        actual = tree.chunk(chunks)
+
+        expected = xr.DataTree.from_dict(
+            {"/": ds1.chunk(chunks), "/group1": ds2.chunk(chunks)}
+        )
+
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected.chunksizes
+        assert set(actual.chunksizes["/"]) == {"x"}
+        assert set(actual.chunksizes["/group1"]) == {"y"}

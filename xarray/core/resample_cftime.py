@@ -65,9 +65,12 @@ if typing.TYPE_CHECKING:
 
 
 class CFTimeGrouper:
-    """This is a simple container for the grouping parameters that implements a
-    single method, the only one required for resampling in xarray.  It cannot
-    be used in a call to groupby like a pandas.Grouper object can."""
+    """A simple container for the grouping parameters.
+
+    It implements a single method, the only one required for resampling in
+    xarray.  It cannot be used in a call to groupby like a pandas.Grouper object
+    can.
+    """
 
     freq: BaseCFTimeOffset
     closed: SideOptions
@@ -143,7 +146,9 @@ class CFTimeGrouper:
             self.offset = None
 
     def first_items(self, index: CFTimeIndex):
-        """Meant to reproduce the results of the following
+        """Get the first item of each resampling bin.
+
+        Meant to reproduce the results of the following
 
         grouper = pandas.Grouper(...)
         first_items = pd.Series(np.arange(len(index)),
@@ -151,7 +156,6 @@ class CFTimeGrouper:
 
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
-
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
@@ -218,7 +222,6 @@ def _get_time_bins(
     labels : CFTimeIndex
         Define what the user actually sees the bins labeled as.
     """
-
     if not isinstance(index, CFTimeIndex):
         raise TypeError(
             "index must be a CFTimeIndex, but got "
@@ -254,7 +257,9 @@ def _adjust_bin_edges(
     index: CFTimeIndex,
     labels: CFTimeIndex,
 ) -> tuple[CFTimeIndex, CFTimeIndex]:
-    """This is required for determining the bin edges resampling with
+    """Adjust the bin edges for resampling with end-of-period frequencies.
+
+    This is required for determining the bin edges resampling with
     month end, quarter end, and year end frequencies.
 
     Consider the following example.  Let's say you want to downsample the
@@ -302,8 +307,7 @@ def _get_range_edges(
     origin: str | CFTimeDatetime = "start_day",
     offset: datetime.timedelta | None = None,
 ):
-    """Get the correct starting and ending datetimes for the resampled
-    CFTimeIndex range.
+    """Get the correct starting and ending datetimes for the resampled CFTimeIndex.
 
     Parameters
     ----------
@@ -363,7 +367,9 @@ def _adjust_dates_anchored(
     origin: str | CFTimeDatetime = "start_day",
     offset: datetime.timedelta | None = None,
 ):
-    """First and last offsets should be calculated from the start day to fix
+    """Adjust the first and last dates, anchored at the origin.
+
+    First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
     not a multiple of the frequency.
     See https://github.com/pandas-dev/pandas/issues/8683
@@ -455,7 +461,7 @@ def _adjust_dates_anchored(
 
 
 def exact_cftime_datetime_difference(a: CFTimeDatetime, b: CFTimeDatetime):
-    """Exact computation of b - a
+    """Compute b - a exactly.
 
     Assumes:
 

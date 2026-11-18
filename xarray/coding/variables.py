@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Self, Union, override
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.types import Self
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
+    """Decode arrays on the fly from non-native to native endianness.
 
     This is useful for decoding arrays from netCDF3 files (which are all
     big endian) into native endianness, so they can be used with Cython
@@ -54,19 +53,24 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
+    @override
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key])
 
+    @override
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key])
 
+    @override
     def __getitem__(self, key) -> Self:
         return type(self)(self.array[key])
 
+    @override
     def get_duck_array(self):
         return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
@@ -75,7 +79,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
+    """Decode arrays on the fly from integer to boolean datatype.
 
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.
@@ -98,19 +102,24 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype("bool")
 
+    @override
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key])
 
+    @override
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key])
 
+    @override
     def __getitem__(self, key) -> Self:
         return type(self)(self.array[key])
 
+    @override
     def get_duck_array(self):
         return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
@@ -120,7 +129,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 def _apply_mask(
     data: np.ndarray,
-    encoded_fill_values: list,
+    encoded_fill_values: set[Any],
     decoded_fill_value: Any,
     dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
@@ -164,14 +173,16 @@ def _is_time_like(units):
         return "timedelta" if any(tstr == units for tstr in time_strings) else False
 
 
-def _check_fill_values(attrs, name, dtype):
+def _check_fill_values(
+    attrs: MutableMapping, name: T_Name, dtype: np.dtype
+) -> tuple[dict, set]:
     """Check _FillValue and missing_value if available.
 
     Return dictionary with raw fill values and set with encoded fill values.
 
     Issue SerializationWarning if appropriate.
     """
-    raw_fill_dict = {}
+    raw_fill_dict: dict[str, Any] = {}
     for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
     encoded_fill_values = set()
@@ -179,23 +190,32 @@ def _check_fill_values(attrs, name, dtype):
         v = raw_fill_dict[k]
         kfill = {fv for fv in np.ravel(v) if not pd.isnull(fv)}
         if not kfill and np.issubdtype(dtype, np.integer):
-            warnings.warn(
+            emit_user_level_warning(
                 f"variable {name!r} has non-conforming {k!r} "
                 f"{v!r} defined, dropping {k!r} entirely.",
                 SerializationWarning,
-                stacklevel=3,
             )
             del raw_fill_dict[k]
         else:
             encoded_fill_values |= kfill
 
         if len(encoded_fill_values) > 1:
-            warnings.warn(
+            emit_user_level_warning(
                 f"variable {name!r} has multiple fill values "
                 f"{encoded_fill_values} defined, decoding all values to NaN.",
                 SerializationWarning,
-                stacklevel=3,
             )
+
+    if dtype.kind == "f":
+        # Compare floating fill values at the precision of the stored data,
+        # even when decoding later promotes the data for scale/offset handling.
+        # Do not turn out-of-range finite fill values into matching infinities.
+        encoded_fill_values = {
+            dtype.type(fv)
+            if isinstance(fv, (float, np.floating)) and abs(fv) <= np.finfo(dtype).max
+            else fv
+            for fv in encoded_fill_values
+        }
 
     return raw_fill_dict, encoded_fill_values
 
@@ -227,11 +247,10 @@ def _convert_unsigned_fill_value(
                 encoded_fill_values.remove(raw_fill_value)
                 encoded_fill_values.add(new_fill)
     else:
-        warnings.warn(
+        emit_user_level_warning(
             f"variable {name!r} has _Unsigned attribute but is not "
             "of integer type. Ignoring attribute.",
             SerializationWarning,
-            stacklevel=3,
         )
     return data
 
@@ -250,12 +269,11 @@ def _encode_unsigned_fill_value(
         new_fill = encoded_dtype.type(fill_value)
     except OverflowError:
         encoded_kind_str = "signed" if encoded_dtype.kind == "i" else "unsigned"
-        warnings.warn(
+        emit_user_level_warning(
             f"variable {name!r} will be stored as {encoded_kind_str} integers "
             f"but _FillValue attribute can't be represented as a "
             f"{encoded_kind_str} integer.",
             SerializationWarning,
-            stacklevel=3,
         )
         # user probably provided the fill as the in-memory dtype,
         # convert to on-disk type to match CF standard
@@ -277,6 +295,7 @@ class CFMaskCoder(VariableCoder):
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -370,6 +389,7 @@ class CFMaskCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None):
         raw_fill_dict, encoded_fill_values = _check_fill_values(
             variable.attrs, name, variable.dtype
@@ -505,6 +525,7 @@ class CFScaleOffsetCoder(VariableCoder):
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -523,6 +544,7 @@ class CFScaleOffsetCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         _attrs = variable.attrs
         if "scale_factor" in _attrs or "add_offset" in _attrs:
@@ -562,6 +584,7 @@ class CFScaleOffsetCoder(VariableCoder):
 class DefaultFillvalueCoder(VariableCoder):
     """Encode default _FillValue if needed."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         # make NaN the fill value for float types
@@ -575,6 +598,7 @@ class DefaultFillvalueCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()
 
@@ -582,6 +606,7 @@ class DefaultFillvalueCoder(VariableCoder):
 class BooleanCoder(VariableCoder):
     """Code boolean values."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if (
             (variable.dtype == bool)
@@ -596,6 +621,7 @@ class BooleanCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.attrs.get("dtype", False) == "bool":
             dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -611,9 +637,11 @@ class BooleanCoder(VariableCoder):
 class EndianCoder(VariableCoder):
     """Decode Endianness to native."""
 
+    @override
     def encode(self):
         raise NotImplementedError()
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
         if not data.dtype.isnative:
@@ -626,6 +654,7 @@ class EndianCoder(VariableCoder):
 class NonStringCoder(VariableCoder):
     """Encode NonString variables if dtypes differ."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if "dtype" in variable.encoding and variable.encoding["dtype"] not in (
             "S1",
@@ -633,7 +662,11 @@ class NonStringCoder(VariableCoder):
         ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = np.dtype(encoding.pop("dtype"))
-            if dtype != variable.dtype:
+            # Fixed-width string itemsize is not meaningful for netCDF values.
+            # Matching kinds (S or U) stay compatible when only the width
+            # differs, so a stale narrower encoding cannot truncate data.
+            same_string_kind = dtype.kind in "SU" and dtype.kind == variable.dtype.kind
+            if dtype != variable.dtype and not same_string_kind:
                 if np.issubdtype(dtype, np.integer):
                     # CF coordinate variables are not allowed to have missing values, so
                     # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.
@@ -644,12 +677,11 @@ class NonStringCoder(VariableCoder):
                         and "missing_value" not in variable.attrs
                         and dims != (name,)
                     ):
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"saving variable {name} with floating "
                             "point data as an integer dtype without "
                             "any _FillValue to use for NaNs",
                             SerializationWarning,
-                            stacklevel=10,
                         )
                     data = duck_array_ops.round(data)
                 data = duck_array_ops.astype(data, dtype=dtype)
@@ -657,14 +689,17 @@ class NonStringCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self):
         raise NotImplementedError()
 
 
 class ObjectVLenStringCoder(VariableCoder):
+    @override
     def encode(self):
         raise NotImplementedError
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
@@ -676,19 +711,24 @@ class ObjectVLenStringCoder(VariableCoder):
 class Numpy2StringDTypeCoder(VariableCoder):
     # Convert Numpy 2 StringDType arrays to object arrays for backwards compatibility
     # TODO: remove this if / when we decide to allow StringDType arrays in Xarray
+    @override
     def encode(self):
         raise NotImplementedError
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype.kind == "T":
+        if (
+            variable.dtype.kind == "T"
+            and variable.encoding.get("dtype") != variable.dtype
+        ):
             return variable.astype(object)
-        else:
-            return variable
+        return variable
 
 
 class NativeEnumCoder(VariableCoder):
     """Encode Enum into variable dtype metadata."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if (
             "dtype" in variable.encoding
@@ -701,5 +741,6 @@ class NativeEnumCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()

@@ -247,7 +247,7 @@ class TestMutableOperations:
         )
 
         def fast_forward(ds: xr.Dataset, years: float) -> xr.Dataset:
-            """Add some years to the age, but by altering the given dataset"""
+            """Add some years to the age, but by altering the given dataset."""
             ds["age"] = ds["age"] + years
             return ds
 

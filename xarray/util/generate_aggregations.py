@@ -9,6 +9,7 @@ Usage:
 
 import textwrap
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 MODULE_PREAMBLE = '''\
@@ -41,10 +42,11 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Generic
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+from xarray.core.types import Self
+from xarray.namedarray._typing import DimsLike, DimType_co
 '''
 
 AGGREGATIONS_PREAMBLE = """
@@ -94,13 +96,13 @@ class {obj}{cls}Aggregations:
 
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
 
-class {obj}{cls}Aggregations:
+class {obj}{cls}Aggregations(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
@@ -182,11 +184,10 @@ class {obj}{cls}Aggregations:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Dims = None,{kw_only}{extra_kwargs}{keep_attrs}
+        dim: {dim_type} = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -194,13 +195,12 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims = None,
+        dim: {dim_type} = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> {obj}:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -372,6 +372,7 @@ class AggregationGenerator:
     definition_preamble: str
     has_keep_attrs: bool = True
     notes: str = ""
+    dim_type: str = "Dims"
     preamble: str = field(init=False)
 
     def __post_init__(self):
@@ -397,6 +398,7 @@ class AggregationGenerator:
                 else ""
             ),
             kw_only="\n        *," if has_kw_only else "",
+            dim_type=self.dim_type,
         )
 
         if method.extra_kwargs:
@@ -614,9 +616,7 @@ AGGREGATION_METHODS = (
         numeric_only=True,
     ),
     Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method(
-        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
-    ),
+    Method("median", extra_kwargs=(skipna,), numeric_only=True),
     # Scans:
     Method(
         "cumsum",
@@ -776,6 +776,7 @@ NAMED_ARRAY_GENERATOR = GenericAggregationGenerator(
     example_call_preamble="",
     definition_preamble=NAMED_ARRAY_AGGREGATIONS_PREAMBLE,
     has_keep_attrs=False,
+    dim_type="DimsLike[DimType_co]",
 )
 
 
@@ -788,13 +789,10 @@ def write_methods(filepath, generators, preamble):
 
 
 if __name__ == "__main__":
-    import os
-    from pathlib import Path
+    # the xarray package, independent of the working directory and checkout name
+    p = Path(__file__).resolve().parents[1]
 
-    p = Path(os.getcwd())
-
-    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
+    filepath = p / "core" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[
@@ -810,8 +808,7 @@ if __name__ == "__main__":
     )
 
     # NamedArray:
-    filepath = p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py"
-    # filepath = p.parent / "namedarray" / "_aggregations.py"  # Run from script location
+    filepath = p / "namedarray" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[NAMED_ARRAY_GENERATOR],

@@ -26,7 +26,7 @@ from xarray.tests import (
     requires_pydap,
     requires_zarr,
 )
-from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
+from xarray.tests.backends.test_netCDF4 import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.backends.writers import T_DataTreeNetcdfEngine
@@ -90,8 +90,10 @@ def assert_chunks_equal(
 
 @pytest.fixture(scope="module")
 def unaligned_datatree_nc(tmp_path_factory):
-    """Creates a test netCDF4 file with the following unaligned structure, writes it to a /tmp directory
-    and returns the file path of the netCDF4 file.
+    """Create a test netCDF4 file with an unaligned structure.
+
+    The file has the following structure, is written to a /tmp directory and
+    the file path of the netCDF4 file is returned.
 
     Group: /
     │   Dimensions:        (lat: 1, lon: 2)
@@ -108,6 +110,11 @@ def unaligned_datatree_nc(tmp_path_factory):
                 Dimensions without coordinates: lat, lon
                 Data variables:
                     subgroup1_var  (lat, lon) float64 32B ...
+
+    Yields
+    ------
+    str
+        Path of the netCDF4 file.
     """
     filepath = tmp_path_factory.mktemp("data") / "unaligned_subgroups.nc"
     with nc4.Dataset(filepath, "w", format="NETCDF4") as root_group:
@@ -141,7 +148,10 @@ def unaligned_datatree_zarr_factory(
     None,
     None,
 ]:
-    """Creates a zarr store with the following unaligned group hierarchy:
+    """Create a zarr store with an unaligned group hierarchy.
+
+    The store has the following unaligned group hierarchy:
+
     Group: /
     │   Dimensions:  (y: 3, x: 2)
     │   Dimensions without coordinates: y, x
@@ -164,6 +174,12 @@ def unaligned_datatree_zarr_factory(
             Data variables:
                 a        (y) int64 16B ...
                 b        (x) float64 16B ...
+
+    Yields
+    ------
+    callable
+        Function that creates the zarr store for a given ``zarr_format`` and
+        returns its path.
     """
 
     def _unaligned_datatree_zarr(zarr_format: Literal[2, 3]) -> Path:
@@ -298,6 +314,24 @@ class NetCDFIOBase:
         assert list(root.dimensions) == ["x"]
         assert list(child.dimensions) == []
 
+    def test_load_datatree_overwrite_same_named_variable(self, tmpdir) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/11672
+        # load_datatree followed by to_netcdf to the same path must succeed
+        # even when a variable shares its parent group's name.
+        filepath = str(tmpdir / "test.nc")
+        original_dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"a": 0}),
+                "/b/b": xr.Dataset({"c": 1}),
+            }
+        )
+        original_dt.to_netcdf(filepath, engine=self.engine)
+        load_datatree(filepath, engine=self.engine).to_netcdf(
+            filepath, engine=self.engine
+        )
+        with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)
+
     @requires_dask
     def test_compute_false(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -316,10 +350,13 @@ class NetCDFIOBase:
             assert_identical(written_dt, original_dt)
 
     def test_default_write_engine(self, tmpdir, simple_datatree, monkeypatch):
-        # Ensure the other netCDF library are not installed
+        # Pretend the other netCDF library is not installed. A None entry in
+        # sys.modules makes importlib.util.find_spec return None and imports of
+        # that module fail, while all other imports keep working. Emptying
+        # sys.meta_path instead broke lazy imports of other modules, e.g. of
+        # h5netcdf.legacyapi, unless another test had imported them already.
         exclude = "netCDF4" if self.engine == "h5netcdf" else "h5netcdf"
-        monkeypatch.delitem(sys.modules, exclude, raising=False)
-        monkeypatch.setattr(sys, "meta_path", [])
+        monkeypatch.setitem(sys.modules, exclude, None)
 
         filepath = tmpdir + "/phony_dims.nc"
         original_dt = simple_datatree
@@ -441,7 +478,6 @@ class TestGenericNetCDFIO(NetCDFIOBase):
     @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
         """Test `open_groups` with chunks on a netcdf4 file."""
-
         chunks = {"x": 2, "y": 1}
         filepath = tmpdir / "test.nc"
 
@@ -475,8 +511,10 @@ class TestNetCDF4DatatreeIO(NetCDFIOBase):
     engine: T_DataTreeNetcdfEngine | None = "netcdf4"
 
     def test_open_groups_to_dict(self, tmpdir) -> None:
-        """Create an aligned netCDF4 with the following structure to test `open_groups`
-        and `DataTree.from_dict`.
+        """Test `open_groups` and `DataTree.from_dict` on an aligned netCDF4 file.
+
+        The file has the following structure:
+
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
@@ -680,6 +718,50 @@ class TestPyDAPDatatreeIO:
 class TestZarrDatatreeIO:
     engine = "zarr"
 
+    @pytest.mark.parametrize("opener", [open_datatree, open_groups])
+    @pytest.mark.parametrize("use_zarr_fill_value_as_mask", [True, False, None])
+    def test_use_zarr_fill_value_as_mask(
+        self, tmp_path, zarr_format, opener, use_zarr_fill_value_as_mask
+    ) -> None:
+        filepath = tmp_path / "fill_value.zarr"
+        dataset = xr.Dataset({"a": ("x", [0, 1])})
+        encoding = {
+            "a": (
+                {"_FillValue": 0}
+                if zarr_format == 2
+                else {"_FillValue": None, "fill_value": 0}
+            )
+        }
+        for group in ["/", "/child"]:
+            dataset.to_zarr(
+                filepath,
+                group=group,
+                mode="a",
+                encoding=encoding,
+                consolidated=False,
+                zarr_format=zarr_format,
+            )
+
+        masked = use_zarr_fill_value_as_mask
+        if masked is None:
+            masked = zarr_format == 2
+        expected = [np.nan, 1] if masked else [0, 1]
+        result = opener(
+            filepath,
+            engine="zarr",
+            consolidated=False,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+        )
+        try:
+            for group in ["/", "/child"]:
+                np.testing.assert_equal(result[group]["a"].values, expected)
+        finally:
+            if isinstance(result, DataTree):
+                result.close()
+            else:
+                for dataset in result.values():
+                    dataset.close()
+
     def test_to_zarr(self, tmpdir, simple_datatree, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
@@ -701,7 +783,7 @@ class TestZarrDatatreeIO:
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
             comp = {"compressors": (codec,)}
         elif zarr_format == 3:
-            import zarr
+            import zarr.codecs
 
             comp = {
                 "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
@@ -969,7 +1051,6 @@ class TestZarrDatatreeIO:
     )
     def test_open_groups(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
-
         storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
         unaligned_dict_of_datasets = open_groups(storepath, engine="zarr")
 
@@ -1019,7 +1100,6 @@ class TestZarrDatatreeIO:
     @requires_dask
     def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
         """Test `open_groups` with chunks on a zarr store."""
-
         chunks = {"x": 2, "y": 1}
         filepath = str(tmpdir / "test.zarr")
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
@@ -1118,7 +1198,7 @@ class TestZarrDatatreeIO:
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
     def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
-        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        """Test that xarray guesses the zarr backend when no engine is specified."""
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),

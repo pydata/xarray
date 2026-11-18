@@ -1,3 +1,5 @@
+from typing import override
+
 """xarray specific universal functions."""
 
 import textwrap
@@ -67,6 +69,7 @@ class _ufunc_wrapper(ABC):
 class _unary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching unary ufuncs."""
 
+    @override
     def __call__(self, x, /, **kwargs):
         xp = get_array_namespace(x)
         func = getattr(xp, self.__name__)
@@ -76,6 +79,7 @@ class _unary_ufunc(_ufunc_wrapper):
 class _binary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching binary ufuncs."""
 
+    @override
     def __call__(self, x, y, /, **kwargs):
         xp = get_array_namespace(x, y)
         func = getattr(xp, self.__name__)

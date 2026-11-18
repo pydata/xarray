@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, get_args, overload
+from typing import TYPE_CHECKING, Any, Final, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -47,8 +47,10 @@ def reindex_variables(
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
 ) -> dict[Hashable, Variable]:
-    """Conform a dictionary of variables onto a new set of variables reindexed
-    with dimension positional indexers and possibly filled with missing values.
+    """Conform a dictionary of variables onto a new set of reindexed variables.
+
+    The variables are reindexed with dimension positional indexers and possibly
+    filled with missing values.
 
     Not public API.
 
@@ -140,9 +142,8 @@ IndexesToAlign = dict[MatchingIndexKey, Index]
 IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
-class Aligner(Generic[T_Alignable]):
-    """Implements all the complex logic for the re-indexing and alignment of Xarray
-    objects.
+class Aligner[T_Alignable: Alignable]:
+    """Implements all the complex logic for re-indexing and aligning Xarray objects.
 
     For internal use only, not public API.
     Usage:
@@ -309,8 +310,10 @@ class Aligner(Generic[T_Alignable]):
                 all_indexes[key].append(idx)
             for key, index_vars in obj_index_vars.items():
                 all_index_vars[key].append(index_vars)
-                for dim, size in calculate_dimensions(index_vars).items():
-                    all_indexes_dim_sizes[key][dim].add(size)
+                if self.join == "override":
+                    # dimension sizes are only checked for join="override"
+                    for dim, size in calculate_dimensions(index_vars).items():
+                        all_indexes_dim_sizes[key][dim].add(size)
 
         self.objects_matching_indexes = tuple(objects_matching_indexes)
         self.objects_matching_index_vars = tuple(objects_matching_index_vars)
@@ -330,15 +333,15 @@ class Aligner(Generic[T_Alignable]):
         unindexed_dim_sizes = defaultdict(set)
 
         for obj in self.objects:
+            indexed_dims = obj.xindexes.dims
             for dim in obj.dims:
-                if dim not in self.exclude_dims and dim not in obj.xindexes.dims:
+                if dim not in self.exclude_dims and dim not in indexed_dims:
                     unindexed_dim_sizes[dim].add(obj.sizes[dim])
 
         self.unindexed_dim_sizes = unindexed_dim_sizes
 
     def _need_reindex(self, dim, cmp_indexes) -> bool:
-        """Whether or not we need to reindex variables for a set of
-        matching indexes.
+        """Check whether we need to reindex variables for a set of matching indexes.
 
         We don't reindex when all matching indexes are equal for two reasons:
         - It's faster for the usual case (already aligned objects).
@@ -394,7 +397,6 @@ class Aligner(Generic[T_Alignable]):
 
     def align_indexes(self) -> None:
         """Compute all aligned indexes and their corresponding coordinate variables."""
-
         aligned_indexes: dict[MatchingIndexKey, Index] = {}
         aligned_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]] = {}
         reindex: dict[MatchingIndexKey, bool] = {}
@@ -592,8 +594,23 @@ class Aligner(Generic[T_Alignable]):
         matching_indexes: dict[MatchingIndexKey, Index],
         matching_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]],
     ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-        new_indexes = {}
-        new_variables = {}
+        new_indexes: dict[Hashable, Index] = {}
+        new_variables: dict[Hashable, Variable] = {}
+
+        obj_dims = set(obj.dims)
+
+        def is_unchanged(key: MatchingIndexKey) -> bool:
+            if key in matching_indexes:
+                return not self.reindex[key]
+            # the aligned index is not added to obj either (see below)
+            aligned_idx_vars = self.aligned_index_vars[key]
+            dims = {d for var in aligned_idx_vars.values() for d in var.dims}
+            return not dims <= obj_dims
+
+        if all(map(is_unchanged, self.aligned_indexes)):
+            # fast path: the object is only copied in this case and the aligned
+            # indexes and (copies of) their coordinate variables are not used
+            return new_indexes, new_variables
 
         for key, aligned_idx in self.aligned_indexes.items():
             aligned_idx_vars = self.aligned_index_vars[key]
@@ -603,7 +620,7 @@ class Aligner(Generic[T_Alignable]):
             if obj_idx is None:
                 # add the aligned index if it relates to unindexed dimensions in obj
                 dims = {d for var in aligned_idx_vars.values() for d in var.dims}
-                if dims <= set(obj.dims):
+                if dims <= obj_dims:
                     obj_idx = aligned_idx
 
             if obj_idx is not None:
@@ -678,15 +695,8 @@ class Aligner(Generic[T_Alignable]):
             self.reindex_all()
 
 
-T_Obj1 = TypeVar("T_Obj1", bound="Alignable")
-T_Obj2 = TypeVar("T_Obj2", bound="Alignable")
-T_Obj3 = TypeVar("T_Obj3", bound="Alignable")
-T_Obj4 = TypeVar("T_Obj4", bound="Alignable")
-T_Obj5 = TypeVar("T_Obj5", bound="Alignable")
-
-
 @overload
-def align(
+def align[T_Obj1: Alignable](
     obj1: T_Obj1,
     /,
     *,
@@ -699,7 +709,7 @@ def align(
 
 
 @overload
-def align(
+def align[T_Obj1: Alignable, T_Obj2: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     /,
@@ -713,7 +723,7 @@ def align(
 
 
 @overload
-def align(
+def align[T_Obj1: Alignable, T_Obj2: Alignable, T_Obj3: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -728,7 +738,12 @@ def align(
 
 
 @overload
-def align(
+def align[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -744,7 +759,13 @@ def align(
 
 
 @overload
-def align(
+def align[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+    T_Obj5: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -779,7 +800,8 @@ def align(
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
 ) -> tuple[T_Alignable, ...]:
-    """
+    """Align any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
 
@@ -1072,7 +1094,6 @@ def reindex(
     Not public API.
 
     """
-
     # TODO: (benbovy - explicit indexes): uncomment?
     # --> from reindex docstrings: "any mismatched dimension is simply ignored"
     # bad_keys = [k for k in indexers if k not in obj._indexes and k not in obj.dims]
@@ -1136,10 +1157,12 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     dims_map = {}
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
+            if dim in exclude:
+                continue
+            if dim not in dims_map:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg._indexes:
-                    common_coords.update(arg.xindexes.get_all_coords(dim))
+            if dim in arg._indexes and dim not in common_coords:
+                common_coords.update(arg.xindexes.get_all_coords(dim))
 
     return dims_map, common_coords
 
@@ -1184,19 +1207,19 @@ def _broadcast_helper(
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable](
     obj1: T_Obj1, /, *, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Obj1]: ...
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable, T_Obj2: Alignable](
     obj1: T_Obj1, obj2: T_Obj2, /, *, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Obj1, T_Obj2]: ...
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable, T_Obj2: Alignable, T_Obj3: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1207,7 +1230,12 @@ def broadcast(
 
 
 @overload
-def broadcast(
+def broadcast[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1219,7 +1247,13 @@ def broadcast(
 
 
 @overload
-def broadcast(
+def broadcast[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+    T_Obj5: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1240,8 +1274,7 @@ def broadcast(
 def broadcast(
     *args: T_Alignable, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Alignable, ...]:
-    """Explicitly broadcast any number of DataArray or Dataset objects against
-    one another.
+    """Explicitly broadcast any number of DataArray or Dataset objects together.
 
     xarray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.
@@ -1302,7 +1335,6 @@ def broadcast(
         a        (x, y) int64 48B 1 1 2 2 3 3
         b        (x, y) int64 48B 5 6 5 6 5 6
     """
-
     if exclude is None:
         exclude = set()
     args = align(*args, join="outer", copy=False, exclude=exclude)

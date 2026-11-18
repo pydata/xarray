@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (internals.custom-indexes)=

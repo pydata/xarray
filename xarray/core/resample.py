@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, override
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -10,6 +9,7 @@ from xarray.core._aggregations import (
 )
 from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from xarray.core.types import Dims, InterpOptions, T_Xarray
+from xarray.core.utils import emit_user_level_warning
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -20,8 +20,10 @@ from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
-    """An object that extends the `GroupBy` object with additional logic
-    for handling specialized re-sampling operations.
+    """A `GroupBy` object with additional logic for re-sampling operations.
+
+    It extends the `GroupBy` object with additional logic for handling
+    specialized re-sampling operations.
 
     You should create a `Resample` object by using the `DataArray.resample` or
     `Dataset.resample` methods. The dimension along re-sampling
@@ -49,6 +51,7 @@ class Resample(GroupBy[T_Xarray]):
 
         super().__init__(*args, **kwargs)
 
+    @override
     def _flox_reduce(
         self,
         dim: Dims,
@@ -62,9 +65,9 @@ class Resample(GroupBy[T_Xarray]):
         )
         return result
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None):
-        """
-        Sort or "shuffle" the underlying object.
+    @override
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None):
+        """Sort or "shuffle" the underlying object.
 
         "Shuffle" means the object is sorted so that all group members occur sequentially,
         in the same chunk. Multiple groups may occur in the same chunk.
@@ -82,6 +85,11 @@ class Resample(GroupBy[T_Xarray]):
         -------
         DataArrayGroupBy or DatasetGroupBy
 
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+
         Examples
         --------
         >>> import dask.array
@@ -97,15 +105,12 @@ class Resample(GroupBy[T_Xarray]):
         dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         (_grouper,) = self.groupers
-        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj.drop_vars(RESAMPLE_DIM)
 
+    @override
     def _first_or_last(
         self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
     ) -> T_Xarray:
@@ -184,8 +189,9 @@ class Resample(GroupBy[T_Xarray]):
     def nearest(
         self, tolerance: float | Iterable[float] | str | None = None
     ) -> T_Xarray:
-        """Take new values from nearest original coordinate to up-sampled
-        frequency coordinates.
+        """Take new values from nearest original coordinate to up-sampled coordinates.
+
+        The up-sampled coordinates are at the new frequency.
 
         Parameters
         ----------
@@ -253,10 +259,12 @@ class Resample(GroupBy[T_Xarray]):
 class DataArrayResample(
     Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
 ):
-    """DataArrayGroupBy object specialized to time resampling operations over a
-    specified dimension
+    """DataArrayGroupBy object specialized to time resampling operations.
+
+    The resampling is done over a specified dimension.
     """
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -267,8 +275,9 @@ class DataArrayResample(
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along the
-        pre-defined resampling dimension.
+        """Reduce the items in this group by applying `func` along the resampling dim.
+
+        The resampling dimension is pre-defined.
 
         Parameters
         ----------
@@ -300,6 +309,7 @@ class DataArrayResample(
             **kwargs,
         )
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -307,8 +317,9 @@ class DataArrayResample(
         shortcut: bool | None = False,
         **kwargs: Any,
     ) -> DataArray:
-        """Apply a function to each array in the group and concatenate them
-        together into a new array.
+        """Apply a function to each array in the group and concatenate the results.
+
+        The results are concatenated together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
         in this group.
@@ -363,24 +374,24 @@ class DataArrayResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
         DataArrayResample.map
         """
-        warnings.warn(
-            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "Resample.apply is deprecated, use Resample.map instead.",
+            FutureWarning,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
     def asfreq(self) -> DataArray:
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
+        """Return values of original object at the new up-sampling frequency.
+
+        This is essentially a re-index with new times set to NaN.
 
         Returns
         -------
@@ -393,8 +404,9 @@ class DataArrayResample(
 class DatasetResample(
     Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
 ):
-    """DatasetGroupBy object specialized to resampling a specified dimension"""
+    """DatasetGroupBy object specialized to resampling a specified dimension."""
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -402,8 +414,10 @@ class DatasetResample(
         shortcut: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function over each Dataset in the groups generated for
-        resampling and concatenate them together into a new Dataset.
+        """Apply a function over each Dataset in the groups and concatenate them.
+
+        The groups are generated for resampling and the results are concatenated
+        together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
         in this group.
@@ -446,22 +460,21 @@ class DatasetResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
         DataSetResample.map
         """
-
-        warnings.warn(
-            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "Resample.apply is deprecated, use Resample.map instead.",
+            FutureWarning,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -472,8 +485,9 @@ class DatasetResample(
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
-        """Reduce the items in this group by applying `func` along the
-        pre-defined resampling dimension.
+        """Reduce the items in this group by applying `func` along the resampling dim.
+
+        The resampling dimension is pre-defined.
 
         Parameters
         ----------
@@ -506,8 +520,9 @@ class DatasetResample(
         )
 
     def asfreq(self) -> Dataset:
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
+        """Return values of original object at the new up-sampling frequency.
+
+        This is essentially a re-index with new times set to NaN.
 
         Returns
         -------

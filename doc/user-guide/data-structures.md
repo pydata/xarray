@@ -485,13 +485,11 @@ simply calling it (e.g., `func(ds)`). This allows you to write pipelines for
 transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
-```{eval-rst}
-.. code-block:: python
-
-    # these lines are equivalent, but with pipe we can make the logic flow
-    # entirely from left to right
-    plt.plot((2 * ds.temperature.sel(loc=0)).mean("instrument"))
-    (ds.temperature.sel(loc=0).pipe(lambda x: 2 * x).mean("instrument").pipe(plt.plot))
+```python
+# these lines are equivalent, but with pipe we can make the logic flow
+# entirely from left to right
+plt.plot((2 * ds.temperature.sel(loc=0)).mean("instrument"))
+(ds.temperature.sel(loc=0).pipe(lambda x: 2 * x).mean("instrument").pipe(plt.plot))
 ```
 
 Both `pipe` and `assign` replicate the pandas methods of the same names
@@ -934,8 +932,9 @@ mda = xr.DataArray(np.random.rand(4), coords={"spec": midx}, dims="spec")
 mda
 ```
 
-For convenience multi-index levels are directly accessible as "virtual" or
-"derived" coordinates (marked by `-` when printing a dataset or data array):
+Each multi-index level is also a coordinate. Like `spec` itself, the level
+coordinates are indexed coordinates, marked by `*` when printing a dataset or
+data array:
 
 ```{code-cell}
 mda["band"]
@@ -948,15 +947,19 @@ mda.wn
 Indexing with multi-index levels is also possible using the `sel` method
 (see {ref}`multi-level-indexing`).
 
-Unlike other coordinates, "virtual" level coordinates are not stored in
-the `coords` attribute of `DataArray` and `Dataset` objects
-(although they are shown when printing the `coords` attribute).
-Consequently, most of the coordinates related methods don't apply for them.
-It also can't be used to replace one particular level.
+All of these coordinates share the same multi-index, so a single level can't
+be replaced on its own. Instead, assign a new multi-index:
 
-Because in a `DataArray` or `Dataset` object each multi-index level is
-accessible as a "virtual" coordinate, its name must not conflict with the names
-of the other levels, coordinates and data variables of the same object.
+```{code-cell}
+new_midx = pd.MultiIndex.from_arrays(
+    [["R", "R", "V", "V"], [0.15, 0.25, 0.75, 0.95]], names=("band", "wn")
+)
+mda.assign_coords(xr.Coordinates.from_pandas_multiindex(new_midx, "spec"))
+```
+
+Because each multi-index level is a coordinate, its name must not conflict
+with the names of the other levels, coordinates and data variables of the same
+object.
 Even though xarray sets default names for multi-indexes with unnamed levels,
 it is recommended that you explicitly set the names of the levels.
 
