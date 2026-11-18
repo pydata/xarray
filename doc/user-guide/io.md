@@ -602,6 +602,40 @@ and returns a modified Dataset.
 {py:func}`open_mfdataset` will call `preprocess` on every dataset
 (corresponding to each file) prior to combining them.
 
+For example, separate model files may contain the same variables and coordinates
+but no coordinate identifying the model. A preprocessing function can use
+`ds.encoding["source"]` to add a new dimension labeled with each file's name:
+
+```{code-cell}
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+
+def add_model_name(ds: xr.Dataset) -> xr.Dataset:
+    model_name = Path(ds.encoding["source"]).stem
+    return ds.expand_dims(model=[model_name])
+
+
+with TemporaryDirectory() as directory:
+    paths = []
+    for name, values in [("model_a", [12.0, 15.0]), ("model_b", [13.0, 16.0])]:
+        path = Path(directory) / f"{name}.nc"
+        xr.Dataset(
+            {"temperature": ("station", values)}, coords={"station": ["A", "B"]}
+        ).to_netcdf(path)
+        paths.append(path)
+
+    with xr.open_mfdataset(paths, preprocess=add_model_name, combine="by_coords") as ds:
+        models = ds.load()
+
+models
+```
+
+The new `model` coordinate lets `combine="by_coords"` concatenate the files
+along that dimension. This example uses local files with distinct filename stems;
+adapt the label extraction if your file naming scheme is different. Loading the
+result inside the context keeps it available after the temporary files are removed.
+
 If {py:func}`open_mfdataset` does not meet your needs, other approaches are possible.
 The general pattern for parallel reading of multiple files
 using dask, modifying those datasets and then combining into a single `Dataset` is:
