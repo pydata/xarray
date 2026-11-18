@@ -24,6 +24,7 @@ from xarray.core.duck_array_ops import (
     reshape,
     stack,
     timedelta_to_numeric,
+    where,
 )
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpnOptions, InterpOptions
@@ -612,6 +613,65 @@ def _floatize_x(
     return x, new_x
 
 
+def _interp_single_point(
+    var: Variable,
+    indexes_coords: SourceDest,
+    method: InterpOptions,
+    kwargs: dict[str, Any],
+) -> Variable:
+    """Interpolate along the dimensions that have a single source point.
+
+    The interpolants need two points or more (GH10747). With one point, a new
+    coordinate equal to it gets the data there, and any other new coordinate is
+    out of range.
+    """
+    single = [dim for dim, (x, _) in indexes_coords.items() if x.size == 1]
+    result = interp(
+        var.isel(dict.fromkeys(single, 0)),
+        {dim: xs for dim, xs in indexes_coords.items() if dim not in single},
+        method,
+        **kwargs,
+    )
+    if not issubclass(result.dtype.type, np.inexact):
+        result = result.astype(float)
+
+    fill_value = kwargs.get("fill_value")
+    # a constant is the only curve through one point
+    extrapolate = (
+        method in ["barycentric", "krogh"]
+        or bool(kwargs.get("extrapolate"))
+        or (isinstance(fill_value, str) and fill_value == "extrapolate")
+    )
+    if fill_value is None or isinstance(fill_value, str):
+        below = above = np.nan
+    elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
+        below, above = fill_value
+    else:
+        below = above = fill_value
+
+    for dim in single:
+        x, new_x = indexes_coords[dim]
+        point = x.data[0]
+        if not extrapolate:
+            off_point = (new_x != point) & new_x.notnull()
+            if kwargs.get("bounds_error") and bool(off_point.any()):
+                raise ValueError(
+                    f"A new coordinate of {dim!r} is out of the interpolation "
+                    f"range, which is the single point {x.values[0]}."
+                )
+            fill = Variable(new_x.dims, where(new_x.data < point, below, above))
+            result = result.where(new_x == point, fill)
+        result = result.where(new_x.notnull())
+
+    out_dims: OrderedSet = OrderedSet()
+    for d in var.dims:
+        if d in indexes_coords:
+            out_dims.update(indexes_coords[d][1].dims)
+        else:
+            out_dims.add(d)
+    return result.transpose(*out_dims)
+
+
 def interp(
     var: Variable,
     indexes_coords: SourceDest,
@@ -645,6 +705,9 @@ def interp(
     """
     if not indexes_coords:
         return var.copy()
+
+    if any(x.size == 1 for x, _ in indexes_coords.values()):
+        return _interp_single_point(var, indexes_coords, method, kwargs)
 
     result = var
 

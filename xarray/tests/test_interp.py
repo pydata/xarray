@@ -1328,3 +1328,84 @@ def test_interp_vectorized_empty_dim(use_dask: bool) -> None:
     actual = da.interp(z=new_z)
     expected = xr.DataArray(np.zeros((0, 3)), dims=("t", "r"), coords={"z": new_z})
     assert_identical(actual.compute(), expected)
+
+
+@requires_scipy
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic", "pchip"])
+def test_interp_single_point(method: InterpOptions, use_dask: bool) -> None:
+    # GH10747: the interpolants need two points or more along each dimension
+    da = xr.DataArray(
+        [[4.0, 7.0, 9.0, 12.0, 15.0]],
+        dims=("x", "y"),
+        coords={"x": [0.3], "y": [0, 1, 2, 3, 4]},
+    )
+    if use_dask:
+        da = da.chunk()
+
+    with raise_if_dask_computes():
+        actual = da.interp(x=[-1.0, 0.3, 0.8, np.nan], y=[1, 3], method=method)
+    expected = xr.DataArray(
+        [[np.nan, np.nan], [7.0, 12.0], [np.nan, np.nan], [np.nan, np.nan]],
+        dims=("x", "y"),
+        coords={"x": [-1.0, 0.3, 0.8, np.nan], "y": [1, 3]},
+    )
+    assert_identical(actual.compute(), expected)
+
+    # the dimension order of the data is kept
+    actual = da.transpose().interp(x=[0.3], y=[1, 3], method=method)
+    assert_identical(actual.compute(), expected.isel(x=[1]).transpose())
+
+
+@requires_scipy
+@pytest.mark.filterwarnings("error")
+def test_interp_single_point_scalar() -> None:
+    # GH10747
+    da = xr.DataArray([[4, 7, 9]], dims=("x", "y"), coords={"x": [0.3], "y": [0, 1, 2]})
+    actual = da.interp(x=0.3, y=1.5)
+    assert_identical(actual, xr.DataArray(8.0, coords={"x": 0.3, "y": 1.5}))
+
+    actual = da.interp(x=0.3)
+    expected = xr.DataArray(
+        [4.0, 7.0, 9.0], dims="y", coords={"x": 0.3, "y": [0, 1, 2]}
+    )
+    assert_identical(actual, expected)
+
+    actual = da.interp(x=0.8, y=1.5)
+    assert np.isnan(actual.item())
+
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "method, kwargs, below, above",
+    [
+        ("linear", {"fill_value": -1.0}, [-1.0, -1.0], [-1.0, -1.0]),
+        ("linear", {"fill_value": (-1.0, -3.0)}, [-1.0, -1.0], [-3.0, -3.0]),
+        ("linear", {"fill_value": "extrapolate"}, [2.0, 5.0], [2.0, 5.0]),
+        ("pchip", {"extrapolate": True}, [2.0, 5.0], [2.0, 5.0]),
+        ("krogh", {}, [2.0, 5.0], [2.0, 5.0]),
+    ],
+)
+def test_interp_single_point_out_of_range(
+    method: InterpOptions, kwargs: dict, below: list[float], above: list[float]
+) -> None:
+    # GH10747: other new coordinates are out of range, and the only way to
+    # extrapolate from one point is a constant
+    da = xr.DataArray([[2.0, 5.0]], dims=("x", "y"), coords={"x": [6], "y": [0, 1]})
+    new_x = [4.0, 6.0, 8.0, np.nan]
+    actual = da.interp(x=new_x, method=method, kwargs=kwargs)
+    expected = xr.DataArray(
+        [below, [2.0, 5.0], above, [np.nan, np.nan]],
+        dims=("x", "y"),
+        coords={"x": new_x, "y": [0, 1]},
+    )
+    assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp_single_point_bounds_error() -> None:
+    da = xr.DataArray([[2.0, 5.0]], dims=("x", "y"), coords={"x": [6], "y": [0, 1]})
+    actual = da.interp(x=[6.0], kwargs={"bounds_error": True})
+    assert_identical(actual, da.astype(float).assign_coords(x=[6.0]))
+    with pytest.raises(ValueError, match="single point 6"):
+        da.interp(x=[6.0, 7.0], kwargs={"bounds_error": True})
