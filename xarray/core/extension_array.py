@@ -234,9 +234,12 @@ def __extension_duck_array__pad(
 
     Building the result from the extension array itself (rather than letting numpy
     coerce it to an ndarray) keeps the extension dtype and lets fill values such as
-    ``pd.NA`` round-trip with full type fidelity. Only constant mode is handled here;
-    the other modes reuse existing values and are routed through numpy by the caller
-    (:func:`xarray.core.duck_array_ops.pad`).
+    ``pd.NA`` round-trip with full type fidelity. Only constant mode is handled here.
+    :func:`xarray.core.duck_array_ops.pad` wraps an extension array in
+    ``PandasExtensionArray`` only for constant mode; for other modes it passes the raw
+    extension array to ``np.pad``, which converts it to an ndarray. Those modes reuse
+    existing values, so the conversion inserts no fill value. This handler is therefore
+    reached only through constant mode in xarray, and raises for any other mode.
     """
     if mode != "constant":
         raise NotImplementedError(

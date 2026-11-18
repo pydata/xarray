@@ -238,6 +238,16 @@ class TestOps:
         assert isinstance(padded, PandasExtensionArray)
         assert list(padded.array) == [0, 1, 2, 3, 9]
 
+    def test_pad_extension_duck_array_non_constant_mode(self):
+        # The np.pad handler only implements constant mode and raises otherwise.
+        # duck_array_ops.pad never sends other modes to it: it passes the raw
+        # extension array to numpy, which converts it to an ndarray.
+        array = pd.array([1, 2, 3], dtype="Int64")
+        with pytest.raises(NotImplementedError, match="mode='edge'"):
+            np.pad(PandasExtensionArray(array), [(1, 1)], mode="edge")
+        padded = DataArray(array, dims="x").pad(x=(1, 1), mode="edge")
+        np.testing.assert_array_equal(padded.values, [1, 1, 2, 3, 3])
+
     @requires_pyarrow
     def test_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
         concatenated = concatenate(
