@@ -180,6 +180,7 @@ def get_default_netcdf_write_engine(
         if format not in {
             "NETCDF4",
             "NETCDF4_CLASSIC",
+            "NETCDF3_64BIT_DATA",
             "NETCDF3_64BIT",
             "NETCDF3_CLASSIC",
         }:
