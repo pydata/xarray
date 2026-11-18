@@ -1350,11 +1350,12 @@ def test_interp_single_point(method: InterpOptions, use_dask: bool) -> None:
         dims=("x", "y"),
         coords={"x": [-1.0, 0.3, 0.8, np.nan], "y": [1, 3]},
     )
-    assert_identical(actual.compute(), expected)
+    # cubic can be off by one ulp
+    assert_allclose(actual.compute(), expected)
 
     # the dimension order of the data is kept
     actual = da.transpose().interp(x=[0.3], y=[1, 3], method=method)
-    assert_identical(actual.compute(), expected.isel(x=[1]).transpose())
+    assert_allclose(actual.compute(), expected.isel(x=[1]).transpose())
 
 
 @requires_scipy
