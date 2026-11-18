@@ -219,6 +219,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Comparison operators with a nonstructured NumPy masked array on the right now return boolean results,
+  treating masked elements as missing values without changing unmasked integer
+  values (:issue:`1792`).
+  By `Zackary Loevseth <https://github.com/ZackaryLoevseth>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
