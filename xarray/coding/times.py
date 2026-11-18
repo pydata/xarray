@@ -1158,6 +1158,7 @@ def _eagerly_encode_cf_datetime(
 
     raise_incompatible_units_error = False
     raise_gregorian_proleptic_gregorian_mismatch_error = False
+    raise_out_of_bounds_error = False
     try:
         if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
@@ -1214,11 +1215,18 @@ def _eagerly_encode_cf_datetime(
 
         # get resolution of TimedeltaIndex and align time_delta
         # todo: check, if this works in any case
-        time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
-        num = _division(
-            time_deltas, time_delta.astype(f"=m8[{time_deltas.unit}]"), floor_division
-        )
-        num = reshape(num.values, dates.shape)
+        try:
+            time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
+        except OutOfBoundsTimedelta:
+            # cftime cannot encode these values with the requested units either
+            raise_out_of_bounds_error = True
+        else:
+            num = _division(
+                time_deltas,
+                time_delta.astype(f"=m8[{time_deltas.unit}]"),
+                floor_division,
+            )
+            num = reshape(num.values, dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):
         time_units, ref_date = _unpack_time_units_and_ref_date_cftime(units, calendar)
@@ -1253,6 +1261,12 @@ def _eagerly_encode_cf_datetime(
             f"Consider setting encoding['dtype'] to a floating point dtype to serialize with "
             f"units {units!r}. Consider setting encoding['units'] to {new_units!r} to "
             f"serialize with an integer dtype."
+        )
+    if raise_out_of_bounds_error:
+        raise OutOfBoundsDatetime(
+            f"Times can't be serialized with requested units {units!r}, because their "
+            f"differences to the reference date do not fit into int64 with these "
+            f"units. Consider setting encoding['units'] to coarser units."
         )
     if raise_gregorian_proleptic_gregorian_mismatch_error:
         raise ValueError(
@@ -1346,7 +1360,14 @@ def _eagerly_encode_cf_timedelta(
 
     time_delta = _unit_timedelta_numpy(units)
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
-    time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
+    try:
+        time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
+    except OutOfBoundsTimedelta as err:
+        raise OutOfBoundsTimedelta(
+            f"Timedeltas can't be serialized with requested units {units!r}, because "
+            f"they do not fit into int64 with these units. Consider setting "
+            f"encoding['units'] to coarser units."
+        ) from err
     # get resolution of TimedeltaIndex and align time_delta
     deltas_unit = time_deltas.unit
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")

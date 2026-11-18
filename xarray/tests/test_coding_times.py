@@ -1162,6 +1162,27 @@ def test_encode_cf_timedelta_units_finer_than_data(
     assert_array_equal(timedeltas, decoded)
 
 
+@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
+def test_encode_cf_datetime_units_finer_than_data_out_of_bounds(
+    dtype: np.dtype | None,
+) -> None:
+    # 500 years do not fit into int64 nanoseconds
+    times = np.array(["2500-01-01", "1700-01-01"], dtype="datetime64[s]")
+    units = "nanoseconds since 2000-01-01"
+    with pytest.raises(OutOfBoundsDatetime, match="do not fit into int64"):
+        encode_cf_datetime(times, units, dtype=dtype)
+
+
+@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
+def test_encode_cf_timedelta_units_finer_than_data_out_of_bounds(
+    dtype: np.dtype | None,
+) -> None:
+    # 500 years do not fit into int64 nanoseconds
+    timedeltas = np.array([500 * 365 * 86400], dtype="timedelta64[s]")
+    with pytest.raises(OutOfBoundsTimedelta, match="do not fit into int64"):
+        encode_cf_timedelta(timedeltas, "nanoseconds", dtype)
+
+
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 def test_encode_decode_roundtrip_datetime64(
     freq, time_unit: PDDatetimeUnitOptions
