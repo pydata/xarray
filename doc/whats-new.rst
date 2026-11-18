@@ -219,6 +219,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.chunk` now chunks data extracted from an indexed coordinate,
+  while preserving eager coordinate indexes (:issue:`6204`). Unsupported pandas
+  extension dtypes raise the same error as ordinary data instead of silently
+  remaining unchunked.
+  By `Zackary Loevseth <https://github.com/ZackaryLoevseth>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
