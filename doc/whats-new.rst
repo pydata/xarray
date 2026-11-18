@@ -516,6 +516,12 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- :py:meth:`Dataset.to_netcdf` and :py:meth:`DataArray.to_netcdf` accept
+  ``format="NETCDF3_64BIT_DATA"`` (CDF5) without an ``engine`` and use the
+  netCDF4 engine, the only one that writes it. Previously this raised
+  ``ValueError: unexpected format``. The ``format`` docstrings now list it
+  (:issue:`8985`).
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 
 
 Documentation
