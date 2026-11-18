@@ -3993,6 +3993,10 @@ class Dataset(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - Along a dimension with a single coordinate value, a new coordinate equal to
+            that value gets the data there, and any other new coordinate is out of
+            range. Extrapolating, e.g. with ``fill_value="extrapolate"``, repeats the
+            data there.
         - For Dask arrays, the chunks along the interpolated dimensions are merged
             into a single chunk. With methods `linear` and `nearest`, the data is
             first subset to the range of the new coordinates, so only the chunks that
