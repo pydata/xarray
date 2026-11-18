@@ -27,6 +27,19 @@ class DateTimeAccessor:
 NSTRINGS = 100_000
 
 
+def _requires_center(dtype: str) -> None:
+    """Skip ``time_center`` if ``str.center`` doesn't support ``dtype``.
+
+    Object arrays raise an AttributeError in versions without #11722, like the
+    v2026.09.0 baseline of the last-release benchmarks. asv only skips benchmarks
+    when a setup raises NotImplementedError, not the benchmark itself.
+    """
+    try:
+        xr.DataArray(np.array(["a"], dtype=dtype)).str.center(1)
+    except AttributeError as err:
+        raise NotImplementedError(f"str.center doesn't support {dtype!r}") from err
+
+
 @parameterize({"dtype": ("U", "S", "O")})
 class StringAccessor:
     def setup(self, dtype):
@@ -55,6 +68,8 @@ class StringAccessor:
 
     def time_center(self, dtype):
         self.da.str.center(16)
+
+    time_center.setup = _requires_center
 
     def time_replace(self, dtype):
         self.da.str.replace("ab", "-", regex=False)
