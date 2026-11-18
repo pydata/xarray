@@ -219,6 +219,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- ``del tree["a/b"]`` on a :py:class:`DataTree` now accepts paths to a child
+  node or variable elsewhere in the tree, like ``tree["a/b"]`` and
+  ``tree["a/b"] = ...``, instead of raising ``KeyError``.
+  By `Yuen Li <https://github.com/yuenlii>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
