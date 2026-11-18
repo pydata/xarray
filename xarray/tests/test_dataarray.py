@@ -8351,3 +8351,63 @@ def test_idxminmax_all_nan_slice_fills_labels(func: str) -> None:
     result = getattr(array, func)()
     assert result.dtype == np.float64
     assert np.isnan(result)
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.Index([1, 2, 3, 4, 5, 6]),
+        pd.Index(list("abcdef")),
+        pd.date_range("2000-01-01", periods=6),
+        pd.MultiIndex.from_product([["a", "b"], [1, 2, 3]], names=["a", "b"]),
+    ],
+    ids=["numeric", "string", "datetime", "multiindex"],
+)
+def test_chunk_coordinate_dataarray(index: pd.Index) -> None:
+    coords = (
+        Coordinates.from_pandas_multiindex(index, "x")
+        if isinstance(index, pd.MultiIndex)
+        else {"x": index}
+    )
+    dataset = Dataset({"values": ("x", np.arange(6))}, coords=coords)
+    array = dataset.x
+    array.attrs = {"description": "coordinate values"}
+    array.encoding = {"source": "example.nc"}
+    original = array.copy(deep=True)
+
+    with raise_if_dask_computes():
+        actual = array.chunk({"x": 2})
+        chunked_dataset = dataset.chunk({"x": 2})
+    assert actual.chunks == ((2, 2, 2),)
+    assert_identical(actual.compute(), original)
+    assert actual.encoding == original.encoding
+    assert_identical(array, original)
+    assert array.chunks is None
+    assert isinstance(actual.coords["x"].variable, IndexVariable)
+    assert actual.xindexes["x"] is array.xindexes["x"]
+    assert actual.coords["x"].chunks is None
+    assert chunked_dataset.x.chunks is None
+    assert chunked_dataset["values"].chunks == ((2, 2, 2),)
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.CategoricalIndex(["a", "b", "a"]),
+        pd.date_range("2000-01-01", periods=3, tz="UTC"),
+    ],
+    ids=["categorical", "timezone"],
+)
+def test_chunk_coordinate_unsupported_dtype(index: pd.Index) -> None:
+    array = DataArray([0, 1, 2], dims="x", coords={"x": index}).x
+    original = array.copy(deep=True)
+    ordinary = DataArray(array, dims=array.dims, coords=array.coords, name=array.name)
+    with pytest.raises(TypeError):
+        ordinary.chunk({"x": 2})
+    with pytest.raises(TypeError):
+        array.chunk({"x": 2})
+    assert_identical(array, original)
+    assert array.chunks is None
+    assert array.xindexes["x"] is ordinary.xindexes["x"]

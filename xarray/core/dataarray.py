@@ -1707,7 +1707,11 @@ class DataArray(
         else:
             chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        ds = self._to_temp_dataset().chunk(
+        array = self
+        if isinstance(self.variable, IndexVariable):
+            # The data can be chunked independently of the eager index coordinates.
+            array = self._replace(variable=self.variable.to_base_variable())
+        ds = array._to_temp_dataset().chunk(
             chunk_mapping,
             name_prefix=name_prefix,
             token=token,
