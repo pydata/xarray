@@ -505,6 +505,9 @@ Bug Fixes
   file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
   of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
+  with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 
 Documentation
