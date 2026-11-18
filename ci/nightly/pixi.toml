@@ -2,7 +2,7 @@
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["linux-64"]
-requires-pixi = ">=0.63.2,!=0.68.0"
+requires-pixi = ">=0.82.1"
 
 [feature.test.dependencies]
 pytest = "!=9.1.0"
@@ -39,7 +39,7 @@ pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-
 dask = { git = "https://github.com/dask/dask" }
 distributed = { git = "https://github.com/dask/distributed" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
-# numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }  #? compilation fails currently, see #11437
+numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
 cftime = { git = "https://github.com/Unidata/cftime" }
 # packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
 pint = { git = "https://github.com/hgrecco/pint" }
@@ -80,7 +80,7 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.typing.dependencies]
-mypy = "==1.19.1"
+mypy = "==2.4.0"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"

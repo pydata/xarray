@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 def _season_from_months(months):
-    """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
+    """Compute season (DJF, MAM, JJA, SON) from month ordinal."""
     # TODO: Move "season" accessor upstream into pandas
     seasons = np.array(["DJF", "MAM", "JJA", "SON", "nan"])
     months = np.asarray(months)
@@ -50,8 +50,10 @@ def _season_from_months(months):
 
 
 def _access_through_cftimeindex(values, name):
-    """Coerce an array of datetime-like values to a CFTimeIndex
-    and access requested datetime component
+    """Access a datetime component via a CFTimeIndex.
+
+    Coerce an array of datetime-like values to a CFTimeIndex and access the
+    requested datetime component.
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -73,8 +75,10 @@ def _access_through_cftimeindex(values, name):
 
 
 def _access_through_series(values, name):
-    """Coerce an array of datetime-like values to a pandas Series and
-    access requested datetime component
+    """Access a datetime component via a pandas Series.
+
+    Coerce an array of datetime-like values to a pandas Series and access the
+    requested datetime component.
     """
     values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     if name == "season":
@@ -106,8 +110,10 @@ def _access_through_series(values, name):
 
 
 def _get_date_field(values, name, dtype):
-    """Indirectly access pandas' libts.get_date_field by wrapping data
-    as a Series and calling through `.dt` attribute.
+    """Access a datetime field of an array of datetime-like values.
+
+    Indirectly access pandas' libts.get_date_field by wrapping data as a Series
+    and calling through `.dt` attribute.
 
     Parameters
     ----------
@@ -150,8 +156,10 @@ def _get_date_field(values, name, dtype):
 
 
 def _round_through_series_or_index(values, name, freq):
-    """Coerce an array of datetime-like values to a pandas Series or xarray
-    CFTimeIndex and apply requested rounding
+    """Round an array of datetime-like values.
+
+    Coerce an array of datetime-like values to a pandas Series or xarray
+    CFTimeIndex and apply the requested rounding.
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -168,8 +176,10 @@ def _round_through_series_or_index(values, name, freq):
 
 
 def _round_field(values, name, freq):
-    """Indirectly access rounding functions by wrapping data
-    as a Series or CFTimeIndex
+    """Round an array of datetime-like values to a given frequency.
+
+    Indirectly access rounding functions by wrapping data as a Series or
+    CFTimeIndex.
 
     Parameters
     ----------
@@ -201,8 +211,10 @@ def _round_field(values, name, freq):
 
 
 def _strftime_through_cftimeindex(values, date_format: str):
-    """Coerce an array of cftime-like values to a CFTimeIndex
-    and access requested datetime component
+    """Format an array of cftime-like values as strings.
+
+    Coerce an array of cftime-like values to a CFTimeIndex and apply string
+    formatting.
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -213,8 +225,10 @@ def _strftime_through_cftimeindex(values, date_format: str):
 
 
 def _strftime_through_series(values, date_format: str):
-    """Coerce an array of datetime-like values to a pandas Series and
-    apply string formatting
+    """Format an array of datetime-like values as strings.
+
+    Coerce an array of datetime-like values to a pandas Series and apply string
+    formatting.
     """
     values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     strs = values_as_series.dt.strftime(date_format)
@@ -240,7 +254,7 @@ def _index_or_data(obj):
         return obj.data
 
 
-class TimeAccessor(Generic[T_DataArray]):
+class TimeAccessor[T_DataArray: DataArray]:
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:
@@ -269,8 +283,7 @@ class TimeAccessor(Generic[T_DataArray]):
         return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps downward to specified frequency resolution.
+        """Round timestamps downward to specified frequency resolution.
 
         Parameters
         ----------
@@ -282,12 +295,10 @@ class TimeAccessor(Generic[T_DataArray]):
         floor-ed timestamps : same type as values
             Array-like of datetime fields accessed for each element in values
         """
-
         return self._tslib_round_accessor("floor", freq)
 
     def ceil(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps upward to specified frequency resolution.
+        """Round timestamps upward to specified frequency resolution.
 
         Parameters
         ----------
@@ -302,8 +313,7 @@ class TimeAccessor(Generic[T_DataArray]):
         return self._tslib_round_accessor("ceil", freq)
 
     def round(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps to specified frequency resolution.
+        """Round timestamps to specified frequency resolution.
 
         Parameters
         ----------
@@ -325,7 +335,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     for applicable DataArrays.
 
     Examples
-    ---------
+    --------
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
@@ -354,11 +364,11 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     """
 
     def strftime(self, date_format: str) -> T_DataArray:
-        """
-        Return an array of formatted strings specified by date_format, which
-        supports the same string format as the python standard library. Details
-        of the string format can be found in `python string format doc
-        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__
+        """Return an array of formatted strings specified by date_format.
+
+        The format supports the same string format as the python standard library.
+        Details of the string format can be found in `python string format doc
+        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__.
 
         Parameters
         ----------
@@ -393,7 +403,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         -----
         The iso year and weekday differ from the nominal year and weekday.
         """
-
         from xarray.core.dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):
@@ -412,158 +421,132 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
 
     @property
     def year(self) -> T_DataArray:
-        """The year of the datetime"""
+        """The year of the datetime."""
         return self._date_field("year", np.int64)
 
     @property
     def month(self) -> T_DataArray:
-        """The month as January=1, December=12"""
+        """The month as January=1, December=12."""
         return self._date_field("month", np.int64)
 
     @property
     def day(self) -> T_DataArray:
-        """The days of the datetime"""
+        """The days of the datetime."""
         return self._date_field("day", np.int64)
 
     @property
     def hour(self) -> T_DataArray:
-        """The hours of the datetime"""
+        """The hours of the datetime."""
         return self._date_field("hour", np.int64)
 
     @property
     def minute(self) -> T_DataArray:
-        """The minutes of the datetime"""
+        """The minutes of the datetime."""
         return self._date_field("minute", np.int64)
 
     @property
     def second(self) -> T_DataArray:
-        """The seconds of the datetime"""
+        """The seconds of the datetime."""
         return self._date_field("second", np.int64)
 
     @property
     def microsecond(self) -> T_DataArray:
-        """The microseconds of the datetime"""
+        """The microseconds of the datetime."""
         return self._date_field("microsecond", np.int64)
 
     @property
     def nanosecond(self) -> T_DataArray:
-        """The nanoseconds of the datetime"""
+        """The nanoseconds of the datetime."""
         return self._date_field("nanosecond", np.int64)
 
     @property
-    def weekofyear(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week.rename("weekofyear")
-
-    @property
-    def week(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week
-
-    @property
     def day_of_week(self) -> T_DataArray:
-        """The day of the week with Monday=0, Sunday=6"""
+        """The day of the week with Monday=0, Sunday=6."""
         return self._date_field("day_of_week", np.int64)
 
     @property
     def dayofweek(self) -> T_DataArray:
-        """The day of the week with Monday=0, Sunday=6"""
+        """The day of the week with Monday=0, Sunday=6."""
         return self._date_field("day_of_week", np.int64).rename("dayofweek")
 
     @property
     def weekday(self) -> T_DataArray:
-        """The day of the week with Monday=0, Sunday=6"""
+        """The day of the week with Monday=0, Sunday=6."""
         return self._date_field("day_of_week", np.int64).rename("weekday")
 
     @property
     def day_of_year(self) -> T_DataArray:
-        """The ordinal day of the year"""
+        """The ordinal day of the year."""
         return self._date_field("day_of_year", np.int64)
 
     @property
     def dayofyear(self) -> T_DataArray:
-        """The ordinal day of the year"""
+        """The ordinal day of the year."""
         return self._date_field("day_of_year", np.int64).rename("dayofyear")
 
     @property
     def quarter(self) -> T_DataArray:
-        """The quarter of the date"""
+        """The quarter of the date."""
         return self._date_field("quarter", np.int64)
 
     @property
     def days_in_month(self) -> T_DataArray:
-        """The number of days in the month"""
+        """The number of days in the month."""
         return self._date_field("days_in_month", np.int64)
 
     @property
     def daysinmonth(self) -> T_DataArray:
-        """The number of days in the month"""
+        """The number of days in the month."""
         return self._date_field("days_in_month", np.int64).rename("daysinmonth")
 
     @property
     def season(self) -> T_DataArray:
-        """Season of the year"""
+        """Season of the year."""
         return self._date_field("season", object)
 
     @property
     def time(self) -> T_DataArray:
-        """Timestamps corresponding to datetimes"""
+        """Timestamps corresponding to datetimes."""
         return self._date_field("time", object)
 
     @property
     def date(self) -> T_DataArray:
-        """Date corresponding to datetimes"""
+        """Date corresponding to datetimes."""
         return self._date_field("date", object)
 
     @property
     def is_month_start(self) -> T_DataArray:
-        """Indicate whether the date is the first day of the month"""
+        """Indicate whether the date is the first day of the month."""
         return self._date_field("is_month_start", bool)
 
     @property
     def is_month_end(self) -> T_DataArray:
-        """Indicate whether the date is the last day of the month"""
+        """Indicate whether the date is the last day of the month."""
         return self._date_field("is_month_end", bool)
 
     @property
     def is_quarter_start(self) -> T_DataArray:
-        """Indicate whether the date is the first day of a quarter"""
+        """Indicate whether the date is the first day of a quarter."""
         return self._date_field("is_quarter_start", bool)
 
     @property
     def is_quarter_end(self) -> T_DataArray:
-        """Indicate whether the date is the last day of a quarter"""
+        """Indicate whether the date is the last day of a quarter."""
         return self._date_field("is_quarter_end", bool)
 
     @property
     def is_year_start(self) -> T_DataArray:
-        """Indicate whether the date is the first day of a year"""
+        """Indicate whether the date is the first day of a year."""
         return self._date_field("is_year_start", bool)
 
     @property
     def is_year_end(self) -> T_DataArray:
-        """Indicate whether the date is the last day of the year"""
+        """Indicate whether the date is the last day of the year."""
         return self._date_field("is_year_end", bool)
 
     @property
     def is_leap_year(self) -> T_DataArray:
-        """Indicate if the date belongs to a leap year"""
+        """Indicate if the date belongs to a leap year."""
         return self._date_field("is_leap_year", bool)
 
     @property
@@ -651,22 +634,22 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 
     @property
     def days(self) -> T_DataArray:
-        """Number of days for each element"""
+        """Number of days for each element."""
         return self._date_field("days", np.int64)
 
     @property
     def seconds(self) -> T_DataArray:
-        """Number of seconds (>= 0 and less than 1 day) for each element"""
+        """Number of seconds (>= 0 and less than 1 day) for each element."""
         return self._date_field("seconds", np.int64)
 
     @property
     def microseconds(self) -> T_DataArray:
-        """Number of microseconds (>= 0 and less than 1 second) for each element"""
+        """Number of microseconds (>= 0 and less than 1 second) for each element."""
         return self._date_field("microseconds", np.int64)
 
     @property
     def nanoseconds(self) -> T_DataArray:
-        """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element"""
+        """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element."""
         return self._date_field("nanoseconds", np.int64)
 
     # Not defined as a property in order to match the Pandas API

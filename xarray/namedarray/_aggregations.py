@@ -4,19 +4,20 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Generic
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+from xarray.core.types import Self
+from xarray.namedarray._typing import DimsLike, DimType_co
 
 
-class NamedArrayAggregations:
+class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
@@ -26,11 +27,10 @@ class NamedArrayAggregations:
 
     def count(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``count`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -78,11 +78,10 @@ class NamedArrayAggregations:
 
     def all(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``all`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -132,11 +131,10 @@ class NamedArrayAggregations:
 
     def any(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``any`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -186,13 +184,12 @@ class NamedArrayAggregations:
 
     def max(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -252,13 +249,12 @@ class NamedArrayAggregations:
 
     def min(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -318,13 +314,12 @@ class NamedArrayAggregations:
 
     def mean(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -388,14 +383,13 @@ class NamedArrayAggregations:
 
     def prod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -472,14 +466,13 @@ class NamedArrayAggregations:
 
     def sum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -556,14 +549,13 @@ class NamedArrayAggregations:
 
     def std(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -637,14 +629,13 @@ class NamedArrayAggregations:
 
     def var(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -718,13 +709,12 @@ class NamedArrayAggregations:
 
     def median(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``median`` along some dimension(s).
+        """Reduce this NamedArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -788,13 +778,12 @@ class NamedArrayAggregations:
 
     def cumsum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -863,13 +852,12 @@ class NamedArrayAggregations:
 
     def cumprod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------

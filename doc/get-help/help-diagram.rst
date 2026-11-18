@@ -45,7 +45,7 @@ Help Flowchart
             fa:fa-robot Ask AI ChatBot]):::ansNodefmt
         extensions([Extension docs:
             fab:fa-readme <a href="https://docs.dask.org">Dask</a>
-            fab:fa-readme <a href="https://corteva.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
+            fab:fa-readme <a href="https://vylor.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
         help([fab:fa-github <a href="https://github.com/pydata/xarray/discussions">Xarray Discussions</a>
             fa:fa-globe <a href="https://ossci.zulipchat.com/#narrow/channel/582428-Xarray">OSSci Zulip</a>
             fa:fa-globe <a href="https://discourse.pangeo.io">Pangeo Discourse</a>]):::ansNodefmt

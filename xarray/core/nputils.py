@@ -5,29 +5,12 @@ from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
+from numpy.exceptions import RankWarning
+from numpy.lib.array_utils import normalize_axis_index
 
 from xarray.compat.array_api_compat import get_array_namespace
-from xarray.core.utils import is_duck_array, module_available
-from xarray.namedarray import pycompat
-
-# remove once numpy 2.0 is the oldest supported version
-if module_available("numpy", minversion="2.0.0.dev0"):
-    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
-        normalize_axis_index,
-    )
-else:
-    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
-        normalize_axis_index,
-    )
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
-except ImportError:
-    from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
-
 from xarray.core.options import OPTIONS
+from xarray.core.utils import is_duck_array, module_available
 
 try:
     import bottleneck as bn
@@ -121,7 +104,7 @@ def array_ne(self, other):
 
 
 def _is_contiguous(positions):
-    """Given a non-empty list, does it consist of contiguous integers?"""
+    """Check whether a non-empty list consists of contiguous integers."""
     previous = positions[0]
     for current in positions[1:]:
         if current != previous + 1:
@@ -131,7 +114,7 @@ def _is_contiguous(positions):
 
 
 def _advanced_indexer_subspaces(key):
-    """Indices of the advanced indexes subspaces for mixed indexing and vindex."""
+    """Return indices of the advanced index subspaces for mixed indexing and vindex."""
     if not isinstance(key, tuple):
         key = (key,)
     advanced_index_positions = [
@@ -189,24 +172,12 @@ def _create_method(name, npmodule=np) -> Callable:
             module_available("numbagg")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
-            # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
-            and (
-                pycompat.mod_version("numbagg") >= Version("0.7.0")
-                or ("var" not in name and "std" not in name)
-                or kwargs.get("ddof", 0) == 1
-            )
             # TODO: bool?
             and values.dtype.kind in "uif"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
-            # numbagg.nanquantile only available after 0.8.0 and with linear method
-            and (
-                name != "nanquantile"
-                or (
-                    pycompat.mod_version("numbagg") >= Version("0.8.0")
-                    and kwargs.get("method", "linear") == "linear"
-                )
-            )
+            # numbagg.nanquantile only supports the linear method
+            and (name != "nanquantile" or kwargs.get("method", "linear") == "linear")
         ):
             import numbagg  # type: ignore[import-not-found, unused-ignore]
 
@@ -214,10 +185,6 @@ def _create_method(name, npmodule=np) -> Callable:
             if nba_func is not None:
                 # numbagg does not use dtype
                 kwargs.pop("dtype", None)
-                # prior to 0.7.0, numbagg did not support ddof; we ensure it's limited
-                # to ddof=1 above.
-                if pycompat.mod_version("numbagg") < Version("0.7.0"):
-                    kwargs.pop("ddof", None)
                 if name == "nanquantile":
                     kwargs["quantiles"] = kwargs.pop("q")
                     kwargs.pop("method", None)

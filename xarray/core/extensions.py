@@ -87,6 +87,10 @@ def register_dataset_accessor(name):
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
 
+    See Also
+    --------
+    register_dataarray_accessor
+
     Examples
     --------
     In your library code:
@@ -116,10 +120,6 @@ def register_dataset_accessor(name):
     >>> ds.geo.center
     (10.0, 5.0)
     >>> ds.geo.plot()  # plots data on a map
-
-    See Also
-    --------
-    register_dataarray_accessor
     """
     return _register_accessor(name, Dataset)
 

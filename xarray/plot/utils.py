@@ -13,7 +13,7 @@ from collections.abc import (
 )
 from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -38,8 +38,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.collections import LineCollection
+    from matplotlib.colorizer import Colorizer
+    from matplotlib.colors import Colormap, Normalize
+    from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter
+    from matplotlib.typing import ColorType, DrawStyleType, LineStyleType
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
@@ -72,9 +77,7 @@ def _determine_extend(calc_data, vmin, vmax):
 
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
-    """
-    Build a discrete colormap and normalization of the data.
-    """
+    """Build a discrete colormap and normalization of the data."""
     import matplotlib as mpl
 
     if len(levels) == 1:
@@ -171,8 +174,7 @@ def _determine_cmap_params(
     norm=None,
     _is_facetgrid=False,
 ):
-    """
-    Use some heuristics to set good defaults for colorbar and range.
+    """Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
     ----------
@@ -334,8 +336,7 @@ def _infer_xy_labels_3d(
     y: Hashable | None,
     rgb: Hashable | None,
 ) -> tuple[Hashable, Hashable]:
-    """
-    Determine x and y labels for showing RGB images.
+    """Determine x and y labels for showing RGB images.
 
     Attempts to infer which dimension is RGB/RGBA by size and order of dims.
 
@@ -398,8 +399,7 @@ def _infer_xy_labels(
     imshow: bool = False,
     rgb: Hashable | None = None,
 ) -> tuple[Hashable, Hashable]:
-    """
-    Determine x and y labels. For use in _plot2d
+    """Determine x and y labels. For use in _plot2d.
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
@@ -435,10 +435,7 @@ def _infer_xy_labels(
 def _assert_valid_xy(
     darray: DataArray | Dataset, xy: Hashable | None, name: str
 ) -> None:
-    """
-    make sure x and y passed to plotting functions are valid
-    """
-
+    """Make sure x and y passed to plotting functions are valid."""
     # MultiIndex cannot be plotted; no point in allowing them here
     multiindex_dims = {
         idx.dim
@@ -518,7 +515,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 
 
 def _get_units_from_attrs(da: DataArray) -> str:
-    """Extracts and formats the unit/units from their attributes."""
+    """Extract and format the unit/units from their attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
@@ -531,8 +528,7 @@ def _get_units_from_attrs(da: DataArray) -> str:
 
 
 def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
-    """Makes informative labels if variable metadata (attrs) follows
-    CF conventions."""
+    """Make informative labels if variable metadata (attrs) follows CF conventions."""
     if da is None:
         return ""
 
@@ -561,20 +557,12 @@ def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
 
 
 def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
-    """
-    Helper function which returns an array
-    with the Intervals' mid points.
-    """
-
+    """Return an array with the Intervals' mid points."""
     return np.array([x.mid for x in array])
 
 
 def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
-    """
-    Helper function which returns an array
-    with the Intervals' boundaries.
-    """
-
+    """Return an array with the Intervals' boundaries."""
     array_boundaries = np.array([x.left for x in array])
     array_boundaries = np.concatenate((array_boundaries, np.array([array[-1].right])))
 
@@ -584,12 +572,11 @@ def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
 def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Helper function to deal with an xarray consisting of pd.Intervals. Each
-    interval is replaced with both boundaries. I.e. the length of xarray
+    """Deal with an xarray consisting of pd.Intervals for step plots.
+
+    Each interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """
-
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
@@ -606,10 +593,11 @@ def _interval_to_double_bound_points(
 def _resolve_intervals_1dplot(
     xval: np.ndarray, yval: np.ndarray, kwargs: dict
 ) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
-    """
-    Helper function to replace the values of x and/or y coordinate arrays
-    containing pd.Interval with their mid-points or - for step plots - double
-    points which double the length.
+    """Replace pd.Interval values of x and/or y coordinate arrays for 1d plots.
+
+    The values of x and/or y coordinate arrays containing pd.Interval are
+    replaced with their mid-points or - for step plots - double points which
+    double the length.
     """
     x_suffix = ""
     y_suffix = ""
@@ -649,10 +637,11 @@ def _resolve_intervals_1dplot(
 
 
 def _resolve_intervals_2dplot(val, func_name):
-    """
-    Helper function to replace the values of a coordinate array containing
-    pd.Interval with their mid-points or - for pcolormesh - boundaries which
-    increases length by 1.
+    """Replace pd.Interval values of a coordinate array for 2d plots.
+
+    The values of a coordinate array containing pd.Interval are replaced with
+    their mid-points or - for pcolormesh - boundaries which increases length
+    by 1.
     """
     label_extra = ""
     if _valid_other_type(val, pd.Interval):
@@ -668,16 +657,12 @@ def _resolve_intervals_2dplot(val, func_name):
 def _valid_other_type(
     x: ArrayLike, types: type[object] | tuple[type[object], ...]
 ) -> bool:
-    """
-    Do all elements of x have a type from types?
-    """
+    """Check whether all elements of x have a type from types."""
     return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
-    """
-    Is any dtype from numpy_types superior to the dtype of x?
-    """
+    """Check whether any dtype from numpy_types is superior to the dtype of x."""
     # If any of the types given in numpy_types is understood as numpy.generic,
     # all possible x will be considered valid.  This is probably unwanted.
     for t in numpy_types:
@@ -687,9 +672,9 @@ def _valid_numpy_subdtype(x, numpy_types):
 
 
 def _ensure_plottable(*args) -> None:
-    """
-    Raise exception if there is anything in args that can't be plotted on an
-    axis by matplotlib.
+    """Raise an exception if anything in args can't be plotted on an axis.
+
+    The axis plotting is done by matplotlib.
     """
     numpy_types: tuple[type[object], ...] = (
         np.floating,
@@ -797,9 +782,7 @@ def _update_axes(
     xlim: tuple[float, float] | None = None,
     ylim: tuple[float, float] | None = None,
 ) -> None:
-    """
-    Update axes with provided parameters
-    """
+    """Update axes with provided parameters."""
     if xincrease is None:
         pass
     elif (xincrease and ax.xaxis_inverted()) or (
@@ -836,7 +819,10 @@ def _update_axes(
 
 
 def _is_monotonic(coord, axis=0):
-    """
+    """Check whether a coordinate is monotonic along an axis.
+
+    Examples
+    --------
     >>> _is_monotonic(np.array([0, 1, 2]))
     np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
@@ -858,7 +844,10 @@ def _is_monotonic(coord, axis=0):
 
 
 def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
-    """
+    """Infer the interval breaks of a coordinate.
+
+    Examples
+    --------
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
@@ -916,7 +905,8 @@ def _process_cmap_cbar_kwargs(
     _is_facetgrid=False,
     **kwargs,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """
+    """Process the colormap and colorbar keyword arguments.
+
     Parameters
     ----------
     func : plotting function
@@ -989,8 +979,7 @@ def _get_nice_quiver_magnitude(u, v):
 def legend_elements(
     self, prop="colors", num="auto", fmt=None, func=lambda x: x, **kwargs
 ):
-    """
-    Create legend handles and labels for a PathCollection.
+    """Create legend handles and labels for a PathCollection.
 
     Each legend handle is a `.Line2D` representing the Path that was drawn,
     and each label is a string what each Path represents.
@@ -1075,9 +1064,10 @@ def legend_elements(
 
     elif prop == "sizes":
         if isinstance(self, mpl.collections.LineCollection):
-            arr = self.get_linewidths()
+            # linewidths of missing values are nan, see _line
+            arr = np.ma.masked_invalid(self.get_linewidths())
         else:
-            arr = self.get_sizes()
+            arr = np.ma.asarray(self.get_sizes())
         _color = kwargs.pop("color", "k")
 
         def _get_color_and_size(value):
@@ -1090,7 +1080,7 @@ def legend_elements(
         )
 
     # Get the unique values and their labels:
-    values = np.unique(arr)
+    values = np.unique(arr[~arr.mask])
     label_values = np.asarray(func(values))
     label_values_are_numeric = np.issubdtype(label_values.dtype, np.number)
 
@@ -1368,8 +1358,7 @@ def _parse_size(
 
 
 class _Normalize(Sequence):
-    """
-    Normalize numerical or categorical values to numerical values.
+    """Normalize numerical or categorical values to numerical values.
 
     The class includes helper methods that simplifies transforming to
     and from normalized values.
@@ -1439,8 +1428,7 @@ class _Normalize(Sequence):
 
     @property
     def data_is_numeric(self) -> bool:
-        """
-        Check if data is numeric.
+        """Check if data is numeric.
 
         Examples
         --------
@@ -1471,9 +1459,7 @@ class _Normalize(Sequence):
     def _calc_widths(self, y: DataArray) -> DataArray: ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
-        """
-        Normalize the values so they're in between self._width.
-        """
+        """Normalize the values so they're in between self._width."""
         if self._width is None:
             return y
 
@@ -1496,16 +1482,15 @@ class _Normalize(Sequence):
     def _indexes_centered(self, x: DataArray) -> DataArray: ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
-        """
-        Offset indexes to make sure being in the center of self.levels.
+        """Offset indexes to make sure being in the center of self.levels.
+
         ["a", "b", "c"] -> [1, 3, 5]
         """
         return x * 2 + 1
 
     @property
     def values(self) -> DataArray | None:
-        """
-        Return a normalized number array for the unique levels.
+        """Return a normalized number array for the unique levels.
 
         Examples
         --------
@@ -1551,8 +1536,7 @@ class _Normalize(Sequence):
 
     @property
     def _values_unique(self) -> np.ndarray | None:
-        """
-        Return unique values.
+        """Return unique values.
 
         Examples
         --------
@@ -1583,8 +1567,7 @@ class _Normalize(Sequence):
 
     @property
     def ticks(self) -> np.ndarray | None:
-        """
-        Return ticks for plt.colorbar if the data is not numeric.
+        """Return ticks for plt.colorbar if the data is not numeric.
 
         Examples
         --------
@@ -1602,8 +1585,8 @@ class _Normalize(Sequence):
 
     @property
     def levels(self) -> np.ndarray:
-        """
-        Return discrete levels that will evenly bound self.values.
+        """Return discrete levels that will evenly bound self.values.
+
         ["a", "b", "c"] -> [0, 2, 4, 6]
 
         Examples
@@ -1632,9 +1615,10 @@ class _Normalize(Sequence):
 
     @property
     def format(self) -> FuncFormatter:
-        """
-        Return a FuncFormatter that maps self.values elements back to
-        the original value as a string. Useful with plt.colorbar.
+        """Return a FuncFormatter that maps self.values elements to original values.
+
+        The elements are mapped back to the original value as a string. Useful
+        with plt.colorbar.
 
         Examples
         --------
@@ -1658,9 +1642,10 @@ class _Normalize(Sequence):
 
     @property
     def func(self) -> Callable[[Any, Any | None], Any]:
-        """
-        Return a lambda function that maps self.values elements back to
-        the original value as a numpy array. Useful with ax.legend_elements.
+        """Return a lambda function that maps self.values elements to original values.
+
+        The elements are mapped back to the original value as a numpy array.
+        Useful with ax.legend_elements.
 
         Examples
         --------
@@ -1733,17 +1718,20 @@ def _add_legend(
             # values correctly. Order might be different because
             # legend_elements uses np.unique instead of pd.unique,
             # FacetGrid.add_legend might have troubles with this:
-            hdl, lbl = [], []
+            hdl: list[Line2D] = []
+            lbl: list[str] = []
             for p in primitive:
                 hdl_, lbl_ = legend_elements(p, prop, num="auto", func=huesizeplt.func)
                 hdl += hdl_
                 lbl += lbl_
 
-            # Only save unique values:
-            u, ind = np.unique(lbl, return_index=True)
-            ind = np.argsort(ind)
-            lbl = cast(list, u[ind].tolist())
-            hdl = cast(list, np.array(hdl)[ind].tolist())
+            # Only save unique values, don't sort values as it was already sort in
+            # legend_elements:
+            lbl_ = np.array(lbl)
+            _, ind = np.unique(lbl_, return_index=True)
+            ind = np.sort(ind)
+            lbl = lbl_[ind].tolist()
+            hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
             hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
@@ -1763,9 +1751,9 @@ def _guess_coords_to_plot(
     # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
     ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
 ) -> MutableMapping[str, Hashable]:
-    """
-    Guess what coords to plot if some of the values in coords_to_plot are None which
-    happens when the user has not defined all available ways of visualizing
+    """Guess what coords to plot if some of the values in coords_to_plot are None.
+
+    This happens when the user has not defined all available ways of visualizing
     the data.
 
     Parameters
@@ -1846,9 +1834,259 @@ def _guess_coords_to_plot(
     return coords_to_plot
 
 
-def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
+@overload
+def _line(
+    self,  # Axes,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: None = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    *,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
+    **kwargs,
+) -> LineCollection: ...
+
+
+@overload
+def _line(
+    self,  # Axes3D,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    *,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
+    drawstyle: DrawStyleType = ...,
+    **kwargs,
+) -> Line3DCollection: ...
+
+
+def _line(
+    self,  # Axes | Axes3D
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike | None = None,
+    s: float | ArrayLike | None = None,
+    c: ArrayLike | Sequence[ColorType] | ColorType | None = None,
+    *,
+    linestyle: LineStyleType | None = None,
+    cmap: str | Colormap | None = None,
+    norm: str | Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    alpha: float | None = None,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    colorizer: Colorizer | None = None,
+    plotnonfinite: bool = False,
+    data=None,
+    drawstyle: DrawStyleType = "default",
+    **kwargs,
+) -> LineCollection | Line3DCollection:
+    """ax.scatter-like wrapper for LineCollection.
+
+    This function helps the handling of datetimes since Linecollection doesn't
+    support it directly, just like PatchCollection doesn't either.
+
+    The function attempts to be as similar to the scatter version as possible.
     """
-    Use ConciseDateFormatter which is meant to improve the
+    import matplotlib.collections as mcoll
+    import matplotlib.pyplot as plt
+    from matplotlib import _api, cbook
+
+    rcParams = plt.matplotlib.rcParams
+
+    def _parse_lines_color_args(
+        self, c, edgecolors, kwargs, xsize, get_next_color_func
+    ):
+        if edgecolors is None:
+            # Use "face" instead of rcParams['scatter.edgecolors']
+            edgecolors = "face"
+
+        c, colors, edgecolors = self._parse_scatter_color_args(
+            c,
+            edgecolors,
+            kwargs,
+            x_.size,
+            get_next_color_func=self._get_patches_for_fill.get_next_color,
+        )
+
+        return c, colors, edgecolors
+
+    linewidths = s  # Can be different in scatter, but same in line plots.
+
+    # add edgecolors and linewidths to kwargs so they
+    # can be processed by normalize_kwargs
+    if edgecolors is not None:
+        kwargs.update({"edgecolors": edgecolors})
+    if linewidths is not None:
+        kwargs.update({"linewidths": linewidths})
+
+    kwargs = cbook.normalize_kwargs(kwargs, mcoll.Collection)
+    # re direct linewidth and edgecolor so it can be
+    # further processed by the rest of the function
+    linewidths = kwargs.pop("linewidth", None)
+    edgecolors = kwargs.pop("edgecolor", None)
+
+    # Process **kwargs to handle aliases, conflicts with explicit kwargs:
+    x_: np.ndarray
+    y_: np.ndarray
+    x_, y_ = self._process_unit_info(
+        [("x", x), ("y", y)], kwargs
+    )  # type ignore[union-attr]
+
+    # Handle z inputs:
+    if z is not None:
+        from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+        LineCollection_ = Line3DCollection
+        add_collection_ = self.add_collection3d
+        auto_scale = self.auto_scale_xyz
+        auto_scale_args: tuple[Any, ...] = (x_, y_, z, self.has_data())
+    else:
+        LineCollection_ = plt.matplotlib.collections.LineCollection
+        add_collection_ = self.add_collection
+        auto_scale = self._request_autoscale_view
+        auto_scale_args = tuple()
+
+    if s is None:
+        s = np.array([rcParams["lines.linewidth"]])
+
+    s_: np.ndarray = np.ma.ravel(s)
+    if len(s_) not in (1, x_.size) or (
+        not np.issubdtype(s_.dtype, np.floating)
+        and not np.issubdtype(s_.dtype, np.integer)
+    ):
+        raise ValueError(
+            "s must be a scalar, or float array-like with the same size as x and y"
+        )
+
+    # get the original edgecolor the user passed before we normalize
+    orig_edgecolor = edgecolors
+    if edgecolors is None:
+        orig_edgecolor = kwargs.get("edgecolor", None)
+    c, colors, edgecolors = _parse_lines_color_args(
+        self,
+        c,
+        edgecolors,
+        kwargs,
+        x_.size,
+        get_next_color_func=self._get_patches_for_fill.get_next_color,
+    )
+
+    if plotnonfinite and colors is None:
+        c = np.ma.masked_invalid(c)
+        (
+            x_,
+            y_,
+            s_,
+            edgecolors,
+            linewidths,
+        ) = cbook._combine_masks(  # type: ignore[attr-defined] # non-public?
+            x_, y_, s_, edgecolors, linewidths
+        )
+    else:
+        (
+            x_,
+            y_,
+            s_,
+            c,
+            colors,
+            edgecolors,
+            linewidths,
+        ) = cbook._combine_masks(  # type: ignore[attr-defined] # non-public?
+            x_, y_, s_, c, colors, edgecolors, linewidths
+        )
+
+    # Unmask edgecolors if it was actually a single RGB or RGBA.
+    if (
+        x_.size in (3, 4)
+        and isinstance(edgecolors, np.ma.MaskedArray)
+        and not np.ma.is_masked(orig_edgecolor)
+    ):
+        edgecolors = edgecolors.data  # type: ignore[assignment,unused-ignore]
+
+    # load default linestyle from rcParams
+    if linestyle is None:
+        linestyle = rcParams["lines.linestyle"]
+
+    if drawstyle == "default":
+        # Draw linear lines:
+        xyz = list(v for v in (x_, y_, z) if v is not None)
+    else:
+        # Draw stepwise lines:
+        from matplotlib.cbook import STEP_LOOKUP_MAP
+
+        step_func = STEP_LOOKUP_MAP[drawstyle]
+        xyz = step_func(*tuple(v for v in (x_, y_, z) if v is not None))
+
+    # Broadcast arrays to correct format:
+    # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
+    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(-1, 1, len(xyz))
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    collection = LineCollection_(
+        segments,
+        # matplotlib doesn't support masked linewidths, use nan explicitly instead
+        linewidths=np.ma.filled(s_, np.nan),
+        linestyles=linestyle,
+        facecolors=colors,
+        edgecolors=edgecolors,
+        alpha=alpha,
+        # offset_transform=kwargs.pop("transform", self.transData),
+    )
+    # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
+    collection.update(kwargs)
+
+    if colors is None:
+        if colorizer:
+            collection._set_colorizer_check_keywords(
+                colorizer, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax
+            )
+        else:
+            collection.set_cmap(cmap)
+            collection.set_norm(norm)
+        collection.set_array(c)
+        collection._scale_norm(norm, vmin, vmax)
+    else:
+        extra_kwargs = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+        extra_keys = [k for k, v in extra_kwargs.items() if v is not None]
+        if any(extra_keys):
+            keys_str = ", ".join(f"'{k}'" for k in extra_keys)
+            _api.warn_external(
+                "No data for colormapping provided via 'c'. "
+                f"Parameters {keys_str} will be ignored"
+            )
+    collection._internal_update(kwargs)
+
+    add_collection_(collection)
+
+    auto_scale(*auto_scale_args)
+
+    return collection
+
+
+def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
+    """Use ConciseDateFormatter for the tick labels of an axis.
+
+    ConciseDateFormatter is meant to improve the
     strings chosen for the ticklabels, and to minimize the
     strings used in those tick labels as much as possible.
 
@@ -1868,3 +2106,26 @@ def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
     _axis = getattr(ax, f"{axis}axis")
     _axis.set_major_locator(locator)
     _axis.set_major_formatter(formatter)
+
+
+# Line2D properties that an axes' property cycle commonly varies per line.
+_CYCLE_PROPS = (
+    "color",
+    "linestyle",
+    "linewidth",
+    "marker",
+    "markersize",
+    "markeredgewidth",
+    "alpha",
+)
+
+
+def _group_hue_values(hue_values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Group hue values in order of first appearance.
+
+    Returns the group code of every position and the position of the first
+    occurrence of every group. Missing values (NaN, NaT, None) form one group.
+    """
+    codes, _ = pd.factorize(hue_values, use_na_sentinel=False)
+    first = np.unique(codes, return_index=True)[1]
+    return codes, first

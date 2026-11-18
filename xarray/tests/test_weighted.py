@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from types import EllipsisType
 from typing import Any
 
 import numpy as np
@@ -11,6 +12,7 @@ from xarray import DataArray, Dataset
 from xarray.tests import (
     assert_allclose,
     assert_equal,
+    assert_identical,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -523,11 +525,10 @@ def test_weighted_std_bool():
 
 
 def expected_weighted(da, weights, dim, skipna, operation):
-    """
-    Generate expected result using ``*`` and ``sum``. This is checked against
-    the result of da.weighted which uses ``dot``
-    """
+    """Generate expected result using ``*`` and ``sum``.
 
+    This is checked against the result of da.weighted which uses ``dot``.
+    """
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
 
     if operation == "sum":
@@ -666,7 +667,6 @@ def test_weighted_operations_nonequal_coords(
 ) -> None:
     """Check that weighted operations work with unequal coords.
 
-
     Parameters
     ----------
     coords_weights : Iterable[Any]
@@ -786,6 +786,24 @@ def test_weighted_mean_keep_attrs_ds():
     assert data.coords["dim_1"].attrs == result.coords["dim_1"].attrs
 
 
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_operations_drop_coord_attrs(as_dataset):
+    # Test that coord attrs are cleared when keep_attrs=False
+    weights = DataArray(np.random.randn(2))
+    ds = Dataset(
+        {"a": (["dim_0", "dim_1"], np.random.randn(2, 2), {"attr": "data"})},
+        coords={"dim_1": ("dim_1", ["a", "b"], {"coord_attr": "value"})},
+    )
+
+    data: DataArray | Dataset = ds if as_dataset else ds["a"]
+
+    result = data.weighted(weights).mean(dim="dim_0", keep_attrs=False)
+
+    # All attrs should be cleared
+    assert result.attrs == {}
+    assert result.coords["dim_1"].attrs == {}
+
+
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
@@ -808,3 +826,54 @@ def test_weighted_bad_dim(operation, as_dataset):
         ),
     ):
         getattr(data.weighted(weights), operation)(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "operation", ["sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"]
+)
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+@pytest.mark.parametrize("dim", [None, ..., "x"])
+def test_dataset_weighted_keeps_unreduced_coords(
+    operation: str, coords: dict[str, Any], dim: str | EllipsisType | None
+) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = getattr(data.weighted(weights), operation)(dim=dim)
+    unweighted_op = (
+        "sum" if operation in ("sum_of_weights", "sum_of_squares") else operation
+    )
+    expected = getattr(data, unweighted_op)(dim=dim)
+
+    assert_identical(result.coords.to_dataset(), expected.coords.to_dataset())
+
+
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+def test_dataset_weighted_none_ellipsis_equiv(coords: dict[str, Any]) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result_none = data.weighted(weights).quantile(0.5, dim=None)
+    result_ellipsis = data.weighted(weights).quantile(0.5, dim=...)
+
+    assert_identical(result_none, result_ellipsis)

@@ -6,7 +6,7 @@ from . import requires_dask
 
 
 class Concat1d:
-    """Benchmark concatenating large datasets"""
+    """Benchmark concatenating large datasets."""
 
     def setup(self) -> None:
         self.data_arrays = [
@@ -22,11 +22,10 @@ class Concat1d:
 
 
 class Combine1d:
-    """Benchmark concatenating and merging large datasets"""
+    """Benchmark concatenating and merging large datasets."""
 
     def setup(self) -> None:
-        """Create 2 datasets with two different variables"""
-
+        """Create 2 datasets with two different variables."""
         t_size = 8000
         t = np.arange(t_size)
         data = np.random.randn(t_size)
@@ -37,17 +36,17 @@ class Combine1d:
         )
 
     def time_combine_by_coords(self) -> None:
-        """Also has to load and arrange t coordinate"""
+        """Also has to load and arrange t coordinate."""
         datasets = [self.dsA0, self.dsA1]
 
         xr.combine_by_coords(datasets)
 
 
 class Combine1dDask(Combine1d):
-    """Benchmark concatenating and merging large datasets"""
+    """Benchmark concatenating and merging large datasets."""
 
     def setup(self) -> None:
-        """Create 2 datasets with two different variables"""
+        """Create 2 datasets with two different variables."""
         requires_dask()
 
         t_size = 8000
@@ -61,11 +60,10 @@ class Combine1dDask(Combine1d):
 
 
 class Combine3d:
-    """Benchmark concatenating and merging large datasets"""
+    """Benchmark concatenating and merging large datasets."""
 
     def setup(self):
-        """Create 4 datasets with two different variables"""
-
+        """Create 4 datasets with two different variables."""
         t_size, x_size, y_size = 50, 450, 400
         t = np.arange(t_size)
         data = np.random.randn(t_size, x_size, y_size)
@@ -89,7 +87,7 @@ class Combine3d:
         xr.combine_nested(datasets, concat_dim=[None, "T"])
 
     def time_combine_by_coords(self):
-        """Also has to load and arrange t coordinate"""
+        """Also has to load and arrange t coordinate."""
         datasets = [self.dsA0, self.dsA1, self.dsB0, self.dsB1]
 
         xr.combine_by_coords(datasets)

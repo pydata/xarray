@@ -11,6 +11,7 @@ import pandas as pd
 from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
+    _CYCLE_PROPS,
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -18,9 +19,11 @@ from xarray.plot.utils import (
     _assert_valid_xy,
     _determine_guide,
     _ensure_plottable,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
+    _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -36,7 +39,7 @@ from xarray.structure.concat import concat
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import PathCollection, QuadMesh
+    from matplotlib.collections import LineCollection, PathCollection, QuadMesh
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
@@ -49,7 +52,6 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         AspectOptions,
         ExtendOptions,
-        HueStyleOptions,
         ScaleOptions,
         T_DataArray,
     )
@@ -151,8 +153,7 @@ def _prepare_plot1d_data(
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
-    """
-    Prepare data for usage with plt.scatter.
+    """Prepare data for usage with plt.scatter.
 
     Parameters
     ----------
@@ -186,24 +187,38 @@ def _prepare_plot1d_data(
     """
     # If there are more than 1 dimension in the array than stack all the
     # dimensions so the plotter can plot anything:
-    if darray.ndim > 1:
+    if darray.ndim >= 2:
         # When stacking dims the lines will continue connecting. For floats
         # this can be solved by adding a nan element in between the flattening
         # points:
-        dims_T = []
-        if np.issubdtype(darray.dtype, np.floating):
-            for v in ["z", "x"]:
-                dim = coords_to_plot.get(v, None)
-                if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel({dim: -1})
+        dims_T: list[Hashable] = []
+        if plotfunc_name == "lines" and np.issubdtype(darray.dtype, np.floating):
+            i = 0
+            for v in ("z", "x"):
+                coord = coords_to_plot.get(v, None)
+                if coord is not None:
+                    if coord in darray.dims:
+                        # Dimension coordinate:
+                        d = coord
+                    else:
+                        # Coordinate with multiple dimensions:
+                        c = darray[coord]
+                        dims_filt = dict.fromkeys(c.dims)
+                        for k in dims_filt.keys() & set(dims_T):
+                            dims_filt.pop(k)
+
+                        d = tuple(dims_filt.keys())[i]
+
+                    darray_nan = np.nan * darray.isel({d: -1})
                     darray = concat(
                         [darray, darray_nan],
-                        dim=dim,
+                        dim=d,
                         coords="minimal",
                         compat="override",
                         join="exact",
                     )
-                    dims_T.append(coords_to_plot[v])
+                    dims_T.append(d)
+                    # i += 1
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
@@ -234,8 +249,7 @@ def plot(
     subplot_kws: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Any:
-    """
-    Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
+    """Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
     the squeezed DataArray.
@@ -425,8 +439,7 @@ def line(
     _labels: bool = True,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[T_DataArray]:
-    """
-    Line plot of DataArray values.
+    """Line plot of DataArray values.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
 
@@ -480,6 +493,11 @@ def line(
     primitive : list of Line3D or FacetGrid
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
+
+    See Also
+    --------
+    :py:func:`xarray.plot.lines`
+        Efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:
@@ -519,6 +537,22 @@ def line(
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
+    # ax.plot draws each column of a 2D array with the next style from the
+    # axes' property cycle, so duplicate hue values get distinct styles.
+    # Restyle so lines sharing a hue value share a style: the k-th hue value
+    # (in order of first appearance) takes the style of the k-th line, which
+    # inherits whatever property cycle the axes carries.
+    if hueplt is not None:
+        hue_values = hueplt.to_numpy()
+        hue_codes, hue_first = _group_hue_values(hue_values)
+        if len(hue_first) < len(primitive):
+            styles = [
+                {prop: getattr(line2d, f"get_{prop}")() for prop in _CYCLE_PROPS}
+                for line2d in primitive
+            ]
+            for line2d, code in zip(primitive, hue_codes, strict=True):
+                line2d.set(**styles[code])
+
     if _labels:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
@@ -530,7 +564,12 @@ def line(
 
     if darray.ndim == 2 and add_legend:
         assert hueplt is not None
-        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
+        # One legend entry per hue value, keyed to the first line drawn with it.
+        ax.legend(
+            handles=[primitive[i] for i in hue_first],
+            labels=list(hue_values[hue_first]),
+            title=hue_label,
+        )
 
     if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):  # type: ignore[redundant-expr]
         _set_concise_date(ax, axis="x")
@@ -589,8 +628,7 @@ def step(
     col: Hashable | None = None,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[DataArray]:
-    """
-    Step plot of DataArray values.
+    """Step plot of DataArray values.
 
     Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
 
@@ -658,8 +696,7 @@ def hist(
     ylim: tuple[float, float] | None = None,
     **kwargs: Any,
 ) -> tuple[np.ndarray, np.ndarray, BarContainer | Polygon]:
-    """
-    Histogram of DataArray.
+    """Histogram of DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
@@ -720,7 +757,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """Decorator for common 1d plotting logic."""
+    """Decorate a 1d plotting function with common 1d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -848,7 +885,6 @@ artist :
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         row: Hashable | None = None,
@@ -932,19 +968,6 @@ artist :
                 warnings.warn(msg, FutureWarning, stacklevel=2)
             del msg
         del args
-
-        if hue_style is not None:
-            # TODO: Not used since 2022.10. Deprecated since 2023.07.
-            warnings.warn(
-                (
-                    "hue_style is no longer used for plot1d plots "
-                    "and the argument will eventually be removed. "
-                    "Convert numbers to string for a discrete hue "
-                    "and use add_legend or add_colorbar to control which guide to display."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -1047,7 +1070,7 @@ artist :
             )
 
         if add_legend_:
-            if plotfunc.__name__ in ["scatter", "line"]:
+            if plotfunc.__name__ in ["scatter", "lines"]:
                 _add_legend(
                     (
                         hueplt_norm
@@ -1118,6 +1141,173 @@ def _add_labels(
 
 
 @overload
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> LineCollection: ...
+
+
+@overload
+def lines(
+    darray: T_DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
+def lines(
+    darray: T_DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]: ...
+
+
+@_plot1d
+def lines(
+    xplt: DataArray | None,
+    yplt: DataArray | None,
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+) -> LineCollection:
+    """Line plot of DataArray values.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
+    """
+    if "u" in kwargs or "v" in kwargs:
+        raise ValueError("u, v are not allowed in lines plots.")
+
+    zplt: DataArray | None = kwargs.pop("zplt", None)
+    hueplt: DataArray | None = kwargs.pop("hueplt", None)
+    sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
+
+    if hueplt is not None:
+        kwargs.update(c=hueplt.to_numpy().ravel())
+
+    if sizeplt is not None:
+        kwargs.update(s=sizeplt.to_numpy().ravel())
+
+    plts_or_none = (xplt, yplt, zplt)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), ax)
+
+    xplt_np = None if xplt is None else xplt.to_numpy().ravel()
+    yplt_np = None if yplt is None else yplt.to_numpy().ravel()
+    zplt_np = None if zplt is None else zplt.to_numpy().ravel()
+    plts_np = tuple(p for p in (xplt_np, yplt_np, zplt_np) if p is not None)
+
+    if len(plts_np) == 3:
+        import mpl_toolkits
+
+        assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
+        return _line(ax, *plts_np, **kwargs)
+
+    if len(plts_np) == 2:
+        return _line(ax, *plts_np, **kwargs)
+
+    raise ValueError("At least two variables required for a lines plot.")
+
+
+@overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     *args: Any,
@@ -1125,7 +1315,6 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1166,7 +1355,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1207,7 +1395,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1286,7 +1473,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """Decorator for common 2d plotting logic."""
+    """Decorate a 2d plotting function with common 2d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1493,13 +1680,6 @@ artist :
 
         if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid"):
             if ax is None:
-                # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
-                # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D
-
-                # delete so it does not end up in locals()
-                del Axes3D
-
                 # Need to create a "3d" Axes instance for surface plots
                 subplot_kws["projection"] = "3d"
 
@@ -1793,8 +1973,7 @@ def imshow(
 def imshow(
     x: np.ndarray, y: np.ndarray, z: np.ma.core.MaskedArray, ax: Axes, **kwargs: Any
 ) -> AxesImage:
-    """
-    Image plot of 2D DataArray.
+    """Image plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.imshow`.
 
@@ -1819,7 +1998,6 @@ def imshow(
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
-
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
@@ -2010,8 +2188,7 @@ def contour(
 def contour(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Contour plot of 2D DataArray.
+    """Contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contour`.
     """
@@ -2143,8 +2320,7 @@ def contourf(
 def contourf(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Filled contour plot of 2D DataArray.
+    """Draw a filled contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
@@ -2283,12 +2459,10 @@ def pcolormesh(
     infer_intervals=None,
     **kwargs: Any,
 ) -> QuadMesh:
-    """
-    Pseudocolor plot of 2D DataArray.
+    """Pseudocolor plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
-
     # decide on a default for infer_intervals (GH781)
     x = np.asarray(x)
     if infer_intervals is None:
@@ -2460,8 +2634,7 @@ def surface(
 def surface(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> Poly3DCollection:
-    """
-    Surface plot of 2D DataArray.
+    """Surface plot of 2D DataArray.
 
     Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """

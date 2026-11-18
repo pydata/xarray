@@ -6,9 +6,10 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -16,9 +17,9 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
-dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
+dependencies = ["numpy>=2.2", "packaging>=25.0", "pandas>=2.3"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,30 +28,30 @@ dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
 [project.optional-dependencies]
 accel = [
-  "scipy>=1.15",
+  "scipy>=1.16",
   "bottleneck",
-  "numbagg>=0.9",
-  "numba>=0.62",  # numba 0.62 added support for numpy 2.3
+  "numbagg>=0.9,!=0.9.5", # 0.9.5 breaks dask.array.nanmedian
+  "numba>=0.62",          # numba 0.62 added support for numpy 2.3
   "flox>=0.10",
   "opt_einsum",
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4>=1.6.0",
+  "netCDF4>=1.7.0",
   # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
   # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
   "h5netcdf[h5py]>=1.8.0",
   "pydap",
-  "scipy>=1.15",
-  "zarr>=3.0",
+  "scipy>=1.16",
+  "zarr>=3.1",
   "fsspec",
   "cftime",
   "pooch",
 ]
 arrow = ["pyarrow"]
-etc = ["sparse>=0.15"]
+etc = ["sparse>=0.17"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.25", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -58,12 +59,14 @@ types = [
   "types-decorator",
   "types-defusedxml",
   "types-docutils",
+  "types-gevent",
   "types-networkx",
   "types-openpyxl",
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
   "types-Pygments",
+  "types-pysocks",
   "types-python-dateutil",
   "types-pytz",
   "types-PyYAML",
@@ -76,7 +79,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==1.19.1",
+  "mypy==2.4.0",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -116,10 +119,10 @@ fallback_version = "9999"
 omit = [
   "*/xarray/tests/*",
   "*/xarray/compat/dask_array_compat.py",
-  "*/xarray/compat/npcompat.py",
   "*/xarray/compat/pdcompat.py",
   "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
+  "*/xarray/util/generate_*.py",
 ]
 source = ["xarray"]
 
@@ -132,14 +135,12 @@ exclude = ['build', 'xarray/util/generate_.*\.py']
 files = "xarray"
 show_error_context = true
 warn_redundant_casts = true
-warn_unused_configs = true
 warn_unused_ignores = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  "affine.*",
   "bottleneck.*",
   "cartopy.*",
   "cf_units.*",
@@ -151,11 +152,11 @@ module = [
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
+  "IPython.*",
   "iris.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
   "netCDF4.*",
-  "netcdftime.*",
   "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
@@ -171,6 +172,14 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
   "array_api_strict.*",
 ]
+
+# pint>=0.26's annotations send mypy into infinite recursion (segfault / RecursionError)
+# when optype is installed, so don't analyse pint at all.
+# Fixed upstream in https://github.com/python/mypy/pull/22036; remove this override
+# once we require mypy > 2.3.1.
+[[tool.mypy.overrides]]
+follow_imports = "skip"
+module = ["pint.*"]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
 # coverage. Once a module is here, functions are checked by mypy regardless of
@@ -258,12 +267,18 @@ extend-select = [
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
+  "D",    # pydocstyle
+  "D212", # summary on the first line, not part of the numpy convention
+  "D402", # signature in the summary, not part of the numpy convention
 ]
+# these preview rules only run in a separate pre-commit hook, keep their noqa comments
+external = ["D420", "DOC102", "DOC202", "DOC402"]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
   "C40",     # unnecessary generator, comprehension, or literal
+  "D1",      # missing docstrings
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
@@ -290,6 +305,13 @@ ignore = [
   "RUF003",  # comment contains ambiguous no-break space unicode character
   "RUF005",  # consider unpacking operator instead of concatenation
   "RUF012",  # mutable class attributes
+  # rules added to the default set in ruff 0.16
+  "BLE001", # blind `except Exception`: used on purpose, e.g. in print_versions
+  "DTZ001", # `datetime()` without `tzinfo`: xarray works with naive datetimes
+  "N999",   # invalid module name: `netCDF4_`
+  "S110",   # `try`-`except`-`pass`
+  "TRY002", # raising vanilla `Exception`
+  "TRY004", # prefer `TypeError`: switching would change the raised exceptions
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -300,6 +322,13 @@ ignore = [
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pydoclint]
+# e.g. private generators like `_iter_parents` don't need a Yields section
+ignore-one-line-docstrings = true
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
@@ -344,15 +373,20 @@ filterwarnings = [
   "error:::xarray.*",
   # Zarr 2 V3 implementation
   "default:Zarr-Python is not in alignment with the final V3 specification",
-  # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "default:is currently not part .* the Zarr version 3 specification.",
+  # raised by zarr < 3.1 for vlen-utf8, consolidated metadata, U1 dtype
+  "ignore:.* is currently not part .* the Zarr (version|format) 3 specification.:UserWarning",
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",
-  # raised by `numpy` for code in `netcdf4-python`
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.backends.netCDF4_",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends_datatree",
+  # raised by `numpy` for code in `netcdf4-python`. Not scoped to a module
+  # because warnings re-emitted by `pytest.warns` lose their module.
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
+  # raised by `pyarrow` for `pandas` ranking arrow-backed strings
+  "ignore:Specifying null_placement in RankOptions is deprecated:FutureWarning:pyarrow",
+  # raised by `numpy` for `np.datetime64("NaT")` in `flox`
+  "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning:flox",
+  # raised by `numpy` for code in `netcdf4-python` < 1.7 when indexing with empty arrays
+  "ignore:The truth value of an empty array is ambiguous:DeprecationWarning:netCDF4",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
@@ -428,6 +462,8 @@ slowy = "slowy"
 Commun = "Commun"
 Noice = "Noice"
 Hax = "Hax"
+Yau = "Yau"
+whn = "whn"
 
 # Tests
 Ome = "Ome"

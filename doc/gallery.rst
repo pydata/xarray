@@ -24,7 +24,6 @@ Notebook Examples
     examples/visualization_gallery
     examples/ROMS_ocean_model
     examples/ERA5-GRIB-example
-    examples/apply_ufunc_vectorize_1d
     examples/blank_template
 
 

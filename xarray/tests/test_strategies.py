@@ -78,7 +78,7 @@ class TestDimensionSizesStrategy:
 
 
 def check_dict_values(dictionary: dict, allowed_attrs_values_types) -> bool:
-    """Helper function to assert that all values in recursive dict match one of a set of types."""
+    """Assert that all values in recursive dict match one of a set of types."""
     for value in dictionary.values():
         if isinstance(value, allowed_attrs_values_types) or value is None:
             continue
@@ -140,7 +140,11 @@ class TestVariablesStrategy:
     @given(st.data(), npst.arrays(shape=npst.array_shapes(), dtype=supported_dtypes()))
     def test_given_fixed_data_dims_and_dtype(self, data, arr):
         def fixed_array_strategy_fn(*, shape=None, dtype=None):
-            """The fact this ignores shape and dtype is only okay because compatible shape & dtype will be passed separately."""
+            """Return a strategy for the fixed array, ignoring shape and dtype.
+
+            Ignoring shape and dtype is only okay because compatible shape & dtype
+            will be passed separately.
+            """
             return st.just(arr)
 
         dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
@@ -177,7 +181,7 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_catch_unruly_dtype_from_custom_array_strategy_fn(self, data):
         def dodgy_array_strategy_fn(*, shape=None, dtype=None):
-            """Dodgy function which ignores the dtype it was passed"""
+            """Dodgy function which ignores the dtype it was passed."""
             return npst.arrays(shape=shape, dtype=npst.floating_dtypes())
 
         with pytest.raises(
@@ -193,7 +197,7 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_catch_unruly_shape_from_custom_array_strategy_fn(self, data):
         def dodgy_array_strategy_fn(*, shape=None, dtype=None):
-            """Dodgy function which ignores the shape it was passed"""
+            """Dodgy function which ignores the shape it was passed."""
             return npst.arrays(shape=(3, 2), dtype=dtype)
 
         with pytest.raises(
@@ -209,8 +213,7 @@ class TestVariablesStrategy:
 
     @given(st.data())
     def test_make_strategies_namespace(self, data):
-        """
-        Test not causing a hypothesis.InvalidArgument by generating a dtype that's not in the array API.
+        """Test not causing a hypothesis.InvalidArgument by generating a dtype that's not in the array API.
 
         We still want to generate dtypes not in the array API by default, but this checks we don't accidentally override
         the user's choice of dtypes with non-API-compliant ones.
@@ -263,23 +266,28 @@ class TestUniqueSubsetOf:
 
 
 class TestReduction:
-    """
-    These tests are for checking that the examples given in the docs page on testing actually work.
-    """
+    """Check that the examples given in the docs page on testing actually work."""
 
     @given(st.data(), variables(dims=dimension_names(min_dims=1)))
     def test_mean(self, data, var):
+        """Test that the mean of a Variable equals the mean of the underlying array.
+
+        This must hold for any Variable of at least one dimension.
         """
-        Test that given a Variable of at least one dimension,
-        the mean of the Variable is always equal to the mean of the underlying array.
-        """
-        with set_options(use_numbagg=False):
+        # arbitrary floats can overflow to inf, and inf - inf gives nan
+        with (
+            set_options(use_numbagg=False),
+            np.errstate(over="ignore", invalid="ignore"),
+        ):
             # specify arbitrary reduction along at least one dimension
             reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
 
             # create expected result (using nanmean because arrays with Nans will be generated)
             reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-            expected = np.nanmean(var.data, axis=reduction_axes)
+            with warnings.catch_warnings():
+                # all-NaN slices are expected to reduce to NaN
+                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+                expected = np.nanmean(var.data, axis=reduction_axes)
 
             # assert property is always satisfied
             result = var.mean(dim=reduction_dims).data
