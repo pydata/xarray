@@ -2179,6 +2179,11 @@ class DataArray(
         exclude_vars: frozenset[Hashable],
     ) -> Self:
         """Create a new reindexed DataArray (callback called from ``Aligner``)."""
+        if not dim_pos_indexers and indexes.keys() <= self._indexes.keys():
+            # fast path for no reindexing necessary and no index to add: skip
+            # the conversion to and from a temporary dataset
+            return self.copy(deep=aligner.copy)
+
         if isinstance(fill_value, dict):
             fill_value = fill_value.copy()
             sentinel = object()
