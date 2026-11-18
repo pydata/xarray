@@ -511,6 +511,9 @@ Bug Fixes
   values of an in-memory variable gave different results, and read-only data
   raised ``ValueError: output array is read-only`` (:pull:`11906`).
   By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
+- Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
+  with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 
 Documentation
