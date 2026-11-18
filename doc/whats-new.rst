@@ -343,6 +343,11 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling` and
+  :py:class:`~computation.rolling.DatasetRolling` no longer return negative indices
+  for windows at the edge of the array when a value equals the padding
+  (``True``, ``inf`` or the largest integer for ``argmin``). The index is now 0,
+  as for :py:func:`numpy.argmin` on the window (:issue:`11899`).
 - :py:meth:`DataArray.str.replace` now respects ``case=False`` when ``regex=False``;
   the option was silently ignored. :py:meth:`DataArray.str.contains` with
   ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
