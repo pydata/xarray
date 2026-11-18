@@ -1078,7 +1078,7 @@ def _units_finer_than_data(
     Without valid values nothing is lost in the division, so this is False then.
     """
     finer = time_delta < np.timedelta64(1, time_deltas.unit)
-    return bool(finer and time_deltas.notna().any())
+    return bool(finer) and len(time_deltas.dropna()) > 0
 
 
 def _division(deltas, delta, floor):
