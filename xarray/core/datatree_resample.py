@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 
 
 class DataTreeResample:
-    """
-    Resample object for hierarchical DataTree structures.
+    """Resample object for hierarchical DataTree structures.
 
     Created by calling :meth:`DataTree.resample`. Resample operations
     are applied to all nodes in the tree that contain the resampled

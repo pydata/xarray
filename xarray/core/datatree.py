@@ -2741,8 +2741,7 @@ class DataTree(
         center: bool | Mapping[Any, bool] = False,
         **dim_kwargs: int,
     ) -> DataTreeRolling:
-        """
-        Rolling window object for this DataTree.
+        """Rolling window object for this DataTree.
 
         Parameters
         ----------
@@ -2780,8 +2779,7 @@ class DataTree(
         ) = "mean",
         **dim_kwargs: int,
     ) -> DataTreeCoarsen:
-        """
-        Coarsen object for this DataTree.
+        """Coarsen object for this DataTree.
 
         Parameters
         ----------
@@ -2824,8 +2822,7 @@ class DataTree(
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: Any,
     ) -> DataTreeResample:
-        """
-        Resample object for this DataTree.
+        """Resample object for this DataTree.
 
         Parameters
         ----------
@@ -2876,8 +2873,7 @@ class DataTree(
         kwargs: Mapping[str, Any] | None = None,
         template: DataTree | None = None,
     ) -> DataTree:
-        """
-        Apply a function to each node's dataset using block-parallel execution.
+        """Apply a function to each node's dataset using block-parallel execution.
 
         Parameters
         ----------
@@ -2917,8 +2913,7 @@ class DataTree(
         n: int = 1,
         label: str = "upper",
     ) -> Self:
-        """
-        Calculate the n-th order discrete difference along given dimension across all nodes.
+        """Calculate the n-th order discrete difference along given dimension across all nodes.
 
         Parameters
         ----------
@@ -2944,12 +2939,11 @@ class DataTree(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         **dim_kwargs: Any,
     ) -> Self:
-        """
-        Expand the dimensions of each dataset in this tree.
+        """Expand the dimensions of each dataset in this tree.
 
         Parameters
         ----------
@@ -2981,8 +2975,7 @@ class DataTree(
         copy: bool = True,
         keep_attrs: bool = True,
     ) -> Self:
-        """
-        Cast variables in all nodes to a specified dtype.
+        """Cast variables in all nodes to a specified dtype.
 
         Parameters
         ----------
@@ -3007,8 +3000,7 @@ class DataTree(
         return map_over_datasets(_node_astype, self)
 
     def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
-        """
-        Backward fill missing values along a dimension across all nodes.
+        """Backward fill missing values along a dimension across all nodes.
 
         Parameters
         ----------
@@ -3031,8 +3023,7 @@ class DataTree(
         return map_over_datasets(_node_bfill, self)
 
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
-        """
-        Forward fill missing values along a dimension across all nodes.
+        """Forward fill missing values along a dimension across all nodes.
 
         Parameters
         ----------
@@ -3064,8 +3055,7 @@ class DataTree(
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Interpolate values along a dimension for missing (NaN) data across all nodes.
+        """Interpolate values along a dimension for missing (NaN) data across all nodes.
 
         Parameters
         ----------
@@ -3110,8 +3100,7 @@ class DataTree(
         dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> Self:
-        """
-        Stack dimensions into a multi-index on each node where dimensions exist.
+        """Stack dimensions into a multi-index on each node where dimensions exist.
 
         Parameters
         ----------
@@ -3146,8 +3135,7 @@ class DataTree(
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> Self:
-        """
-        Unstack multi-index dimensions across all eligible nodes.
+        """Unstack multi-index dimensions across all eligible nodes.
 
         Parameters
         ----------

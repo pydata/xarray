@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 
 
 class DataTreeCoarsen:
-    """
-    Coarsen object for hierarchical DataTree structures.
+    """Coarsen object for hierarchical DataTree structures.
 
     Created by calling :meth:`DataTree.coarsen`. Coarsening reductions
     are applied to all nodes in the tree that contain the specified
@@ -95,8 +94,7 @@ class DataTreeCoarsen:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataTree:
-        """
-        Reduce the coarsened blocks by applying ``func`` across all eligible nodes.
+        """Reduce the coarsened blocks by applying ``func`` across all eligible nodes.
 
         Parameters
         ----------
@@ -166,9 +164,7 @@ class DataTreeCoarsen:
         keep_attrs: bool | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataTree:
-        """
-        Convert this coarsen object to a DataTree with block dimensions.
-        """
+        """Convert this coarsen object to a DataTree with block dimensions."""
 
         def _node_construct(ds: Dataset) -> Dataset:
             if len(ds) == 0:

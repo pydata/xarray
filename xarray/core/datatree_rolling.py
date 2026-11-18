@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 
 
 class DataTreeRolling:
-    """
-    Rolling window object for hierarchical DataTree structures.
+    """Rolling window object for hierarchical DataTree structures.
 
     Created by calling :meth:`DataTree.rolling`. Rolling window operations
     are applied to all nodes in the tree that contain the specified
@@ -88,8 +87,7 @@ class DataTreeRolling:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataTree:
-        """
-        Reduce the rolling windows by applying ``func`` across all eligible nodes.
+        """Reduce the rolling windows by applying ``func`` across all eligible nodes.
 
         Parameters
         ----------
@@ -177,8 +175,7 @@ class DataTreeRolling:
         keep_attrs: bool | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataTree:
-        """
-        Convert this rolling object to a DataTree, where the window dimension
+        """Convert this rolling object to a DataTree, where the window dimension
         is stacked as a new dimension on all eligible nodes.
 
         Parameters
