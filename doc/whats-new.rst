@@ -509,7 +509,7 @@ Bug Fixes
   ``seconds``, ``milliseconds`` or ``microseconds`` no longer modifies the
   encoded values in place. Previously, repeated access to the lazily decoded
   values of an in-memory variable gave different results, and read-only data
-  raised ``ValueError: output array is read-only`` (:pull:`XXXXX`).
+  raised ``ValueError: output array is read-only`` (:pull:`11906`).
   By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 
 
