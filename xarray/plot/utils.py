@@ -716,10 +716,11 @@ def _ensure_plottable(*args) -> None:
             or _valid_other_type(np.asarray(x), other_types)
         ):
             raise TypeError(
-                "Plotting requires coordinates to be numeric, boolean, "
-                "or dates of type numpy.datetime64, "
-                "datetime.datetime, cftime.datetime or "
-                f"pandas.Interval. Received data of type {np.asarray(x).dtype} instead."
+                "Plotting requires coordinates to be numeric, boolean, strings, "
+                "or dates or times of type numpy.datetime64, numpy.timedelta64, "
+                "datetime.datetime or cftime.datetime. pandas.Interval values are "
+                "plotted at their midpoints or bounds, which must be one of these "
+                f"types. Received data of type {np.asarray(x).dtype} instead."
             )
         if _valid_other_type(np.asarray(x), cftime_datetime_types):
             if nc_time_axis_available:

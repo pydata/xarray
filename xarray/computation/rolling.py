@@ -782,7 +782,9 @@ class DataArrayRolling(Rolling["DataArray"]):
         axis = result.get_axis_num(dim)
         n_pad = n_pad.reshape((-1,) + (1,) * (result.ndim - axis - 1))
         n_pad = duck_array_ops.astype(n_pad, result.dtype)
-        return result.copy(data=result.data - n_pad)
+        # A real value tied with the padding sentinel selects the padding, which
+        # lies before the array: the first value of the window is then the answer.
+        return result.copy(data=duck_array_ops.clip(result.data - n_pad, min=0))
 
     def _array_reduce_impl(
         self,
