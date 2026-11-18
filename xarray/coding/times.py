@@ -1070,17 +1070,15 @@ def cast_to_int_if_safe(num) -> np.ndarray:
     return num
 
 
-def _cast_to_finer_unit(
-    time_deltas: pd.TimedeltaIndex, time_delta: np.timedelta64
-) -> pd.TimedeltaIndex:
-    """Cast time_deltas to the unit of time_delta, if that unit is finer.
+def _units_finer_than_data(
+    time_delta: np.timedelta64, time_deltas: pd.TimedeltaIndex
+) -> bool:
+    """Check if time_delta is truncated to zero in the unit of time_deltas.
 
-    Otherwise time_delta is truncated to zero in the unit of time_deltas.
+    Without valid values nothing is lost in the division, so this is False then.
     """
-    if time_delta < np.timedelta64(1, time_deltas.unit):
-        unit, _ = np.datetime_data(time_delta.dtype)
-        time_deltas = time_deltas.as_unit(cast(PDDatetimeUnitOptions, unit))
-    return time_deltas
+    finer = time_delta < np.timedelta64(1, time_deltas.unit)
+    return bool(finer and time_deltas.notna().any())
 
 
 def _division(deltas, delta, floor):
@@ -1158,7 +1156,7 @@ def _eagerly_encode_cf_datetime(
 
     raise_incompatible_units_error = False
     raise_gregorian_proleptic_gregorian_mismatch_error = False
-    raise_out_of_bounds_error = False
+    raise_units_finer_than_data_error = False
     try:
         if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
@@ -1215,11 +1213,9 @@ def _eagerly_encode_cf_datetime(
 
         # get resolution of TimedeltaIndex and align time_delta
         # todo: check, if this works in any case
-        try:
-            time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
-        except OutOfBoundsTimedelta:
-            # cftime cannot encode these values with the requested units either
-            raise_out_of_bounds_error = True
+        if _units_finer_than_data(time_delta, time_deltas):
+            raise_units_finer_than_data_error = True
+            data_resolution = _numpy_to_netcdf_timeunit(time_deltas.unit)
         else:
             num = _division(
                 time_deltas,
@@ -1262,11 +1258,12 @@ def _eagerly_encode_cf_datetime(
             f"units {units!r}. Consider setting encoding['units'] to {new_units!r} to "
             f"serialize with an integer dtype."
         )
-    if raise_out_of_bounds_error:
-        raise OutOfBoundsDatetime(
-            f"Times can't be serialized with requested units {units!r}, because their "
-            f"differences to the reference date do not fit into int64 with these "
-            f"units. Consider setting encoding['units'] to coarser units."
+    if raise_units_finer_than_data_error:
+        raise ValueError(
+            f"Times can't be serialized with requested units {units!r}, because these "
+            f"units are finer than the resolution of the data ({data_resolution!r}). "
+            f"Consider setting encoding['units'] to units of {data_resolution!r} or "
+            f"coarser, or casting the data to a finer resolution."
         )
     if raise_gregorian_proleptic_gregorian_mismatch_error:
         raise ValueError(
@@ -1360,16 +1357,17 @@ def _eagerly_encode_cf_timedelta(
 
     time_delta = _unit_timedelta_numpy(units)
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
-    try:
-        time_deltas = _cast_to_finer_unit(time_deltas, time_delta)
-    except OutOfBoundsTimedelta as err:
-        raise OutOfBoundsTimedelta(
-            f"Timedeltas can't be serialized with requested units {units!r}, because "
-            f"they do not fit into int64 with these units. Consider setting "
-            f"encoding['units'] to coarser units."
-        ) from err
     # get resolution of TimedeltaIndex and align time_delta
     deltas_unit = time_deltas.unit
+    if _units_finer_than_data(time_delta, time_deltas):
+        data_resolution = _numpy_to_netcdf_timeunit(deltas_unit)
+        raise ValueError(
+            f"Timedeltas can't be serialized with requested units {units!r}, because "
+            f"these units are finer than the resolution of the data "
+            f"({data_resolution!r}). Consider setting encoding['units'] to units of "
+            f"{data_resolution!r} or coarser, or casting the data to a finer "
+            f"resolution."
+        )
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 
     # retrieve needed units to faithfully encode to int64

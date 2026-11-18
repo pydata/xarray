@@ -1113,74 +1113,30 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
         assert encoded.dtype == np.float64
 
 
-_ENCODING_UNITS_FINER_THAN_DATA = [
-    ("s", "milliseconds"),
-    ("s", "microseconds"),
-    ("s", "nanoseconds"),
-    ("ms", "microseconds"),
-    ("ms", "nanoseconds"),
-    ("us", "nanoseconds"),
-]
+def test_encode_cf_datetime_units_finer_than_data() -> None:
+    times = np.array(["2000-01-02T00:00:01", "NaT"], dtype="datetime64[s]")
+    with pytest.raises(ValueError, match="finer than the resolution of the data"):
+        encode_cf_datetime(times, "milliseconds since 2000-01-01")
 
 
-@pytest.mark.parametrize(
-    ["data_unit", "encoding_units"], _ENCODING_UNITS_FINER_THAN_DATA
-)
-@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
-def test_encode_cf_datetime_units_finer_than_data(
-    data_unit: PDDatetimeUnitOptions, encoding_units: str, dtype: np.dtype | None
-) -> None:
-    times = np.array(["2000-01-02T00:00:01", "NaT"], dtype=f"datetime64[{data_unit}]")
-    units = f"{encoding_units} since 2000-01-01"
-    numpy_timeunit = _netcdf_to_numpy_timeunit(encoding_units)
-    expected = np.timedelta64(86401, "s") // np.timedelta64(1, numpy_timeunit)
-
-    encoded, encoded_units, calendar = encode_cf_datetime(times, units, dtype=dtype)
-
-    assert encoded_units == units
-    assert encoded[0] == expected
-    decoded = decode_cf_datetime(encoded, units, calendar, time_unit=data_unit)
-    assert_array_equal(times, decoded)
+def test_encode_cf_timedelta_units_finer_than_data() -> None:
+    timedeltas = np.array([86401, "NaT"], dtype="timedelta64[s]")
+    with pytest.raises(ValueError, match="finer than the resolution of the data"):
+        encode_cf_timedelta(timedeltas, "milliseconds")
 
 
-@pytest.mark.parametrize(
-    ["data_unit", "encoding_units"], _ENCODING_UNITS_FINER_THAN_DATA
-)
-@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
-def test_encode_cf_timedelta_units_finer_than_data(
-    data_unit: PDDatetimeUnitOptions, encoding_units: str, dtype: np.dtype | None
-) -> None:
-    timedeltas = np.array([86401, "NaT"], dtype=f"timedelta64[{data_unit}]")
-    numpy_timeunit = _netcdf_to_numpy_timeunit(encoding_units)
-    expected = np.timedelta64(86401, data_unit) // np.timedelta64(1, numpy_timeunit)
+def test_encode_cf_times_units_finer_than_data_without_valid_values() -> None:
+    # nothing is lost without valid values, e.g. for an all-NaT variable that was
+    # decoded with a coarser time_unit than its units
+    expected = np.full(2, np.iinfo(np.int64).min)
 
-    encoded, encoded_units = encode_cf_timedelta(timedeltas, encoding_units, dtype)
+    times = np.array(["NaT", "NaT"], dtype="datetime64[s]")
+    encoded, _, _ = encode_cf_datetime(times, "milliseconds since 2000-01-01")
+    assert_array_equal(expected, encoded)
 
-    assert encoded_units == encoding_units
-    assert encoded[0] == expected
-    decoded = decode_cf_timedelta(encoded, encoding_units, time_unit=data_unit)
-    assert_array_equal(timedeltas, decoded)
-
-
-@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
-def test_encode_cf_datetime_units_finer_than_data_out_of_bounds(
-    dtype: np.dtype | None,
-) -> None:
-    # 500 years do not fit into int64 nanoseconds
-    times = np.array(["2500-01-01", "1700-01-01"], dtype="datetime64[s]")
-    units = "nanoseconds since 2000-01-01"
-    with pytest.raises(OutOfBoundsDatetime, match="do not fit into int64"):
-        encode_cf_datetime(times, units, dtype=dtype)
-
-
-@pytest.mark.parametrize("dtype", [None, np.dtype("int64"), np.dtype("float64")])
-def test_encode_cf_timedelta_units_finer_than_data_out_of_bounds(
-    dtype: np.dtype | None,
-) -> None:
-    # 500 years do not fit into int64 nanoseconds
-    timedeltas = np.array([500 * 365 * 86400], dtype="timedelta64[s]")
-    with pytest.raises(OutOfBoundsTimedelta, match="do not fit into int64"):
-        encode_cf_timedelta(timedeltas, "nanoseconds", dtype)
+    timedeltas = np.array(["NaT", "NaT"], dtype="timedelta64[s]")
+    encoded, _ = encode_cf_timedelta(timedeltas, "milliseconds")
+    assert_array_equal(expected, encoded)
 
 
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())

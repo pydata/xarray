@@ -515,9 +515,9 @@ Bug Fixes
   By `David Hoese <https://github.com/djhoese>`_.
 - Encoding ``datetime64`` and ``timedelta64`` values with ``units`` finer than
   the resolution of the data, e.g. ``datetime64[s]`` values with
-  ``"milliseconds since 2000-01-01"``, no longer encodes every value as ``NaT``,
-  or as ``inf`` for a floating point ``dtype``. Values that do not fit into
-  ``int64`` with the requested units raise an error (:pull:`11907`).
+  ``"milliseconds since 2000-01-01"``, now raises a ``ValueError``. Previously
+  every value was silently encoded as ``NaT``, or as ``inf`` for a floating point
+  ``dtype`` (:pull:`11907`).
   By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 - Weighted reductions (e.g. :py:meth:`DataArray.weighted` ``.mean()``,
   ``.sum()`` and ``.sum_of_weights()``) no longer overflow with bool or small
