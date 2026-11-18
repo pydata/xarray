@@ -221,9 +221,17 @@ Bug Fixes
 ~~~~~~~~~
 - :py:meth:`DataArray.chunk` and :py:meth:`Dataset.chunk` now convert scalar data
   variables to chunked arrays, preserving eager scalar coordinates (:issue:`8251`).
+- The error raised when plotting coordinates of an unsupported type now lists
+  every supported type, including ``numpy.timedelta64`` and strings, and
+  explains that ``pandas.Interval`` values are plotted at their midpoints or
+  bounds, which must themselves be plottable (:issue:`4378`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Indexed coordinates can now have non-string names, e.g. integers or tuples,
+  instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
   ``ValueError: cannot convert float NaN to integer``
   (:pull:`11860`).
@@ -265,6 +273,8 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
+- Fix :py:func:`decode_cf` leaving floating-point missing values unmasked when
+  their metadata has higher precision than the stored data (:issue:`9381`).
 - :py:meth:`DataArray.to_unstacked_dataset` no longer raises ``KeyError`` for
   unused variable labels left in the stacked index after selecting features
   (:pull:`11808`).
@@ -335,6 +345,11 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling` and
+  :py:class:`~computation.rolling.DatasetRolling` no longer return negative indices
+  for windows at the edge of the array when a value equals the padding
+  (``True``, ``inf`` or the largest integer for ``argmin``). The index is now 0,
+  as for :py:func:`numpy.argmin` on the window (:issue:`11899`).
 - :py:meth:`DataArray.str.replace` now respects ``case=False`` when ``regex=False``;
   the option was silently ignored. :py:meth:`DataArray.str.contains` with
   ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
@@ -500,6 +515,11 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Weighted reductions (e.g. :py:meth:`DataArray.weighted` ``.mean()``,
+  ``.sum()`` and ``.sum_of_weights()``) no longer overflow with bool or small
+  integer dtypes, e.g. ``uint8`` weights summing past 255. They now promote
+  like ``sum`` does (:issue:`11867`).
+  By `Pranav Somalraju <https://github.com/THEpranavsomalraju>`_.
 - :py:func:`open_dataset` now gives deterministic dask names for a
   :py:class:`~xarray.backends.NetCDF4DataStore`,
   :py:class:`~xarray.backends.H5NetCDFStore`, or
@@ -507,10 +527,16 @@ Bug Fixes
   file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
   of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
+  with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Update the user guide on multi-index levels, which are indexed coordinates
+  marked by ``*`` when printing (:issue:`8071`, :pull:`11888`).
+  By `Ramy Akin Saidi <https://github.com/RamyAkin>`_.
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
   docstring. The ``apply_ufunc`` example notebook was removed in favor of the
   `apply_ufunc interpolation tutorial

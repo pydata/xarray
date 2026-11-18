@@ -7111,6 +7111,42 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        Dataset.fillna
+        Dataset.merge
+        DataArray.combine_first
+
+        Notes
+        -----
+        See :ref:`combine` for more on combining objects with missing values.
+
+        Examples
+        --------
+        Fill missing temperatures from a second dataset while keeping existing
+        values in the calling dataset. The result includes the union of station
+        labels and data variables from both datasets.
+
+        >>> observations = xr.Dataset(
+        ...     {"temperature": ("station", [12.0, np.nan])},
+        ...     coords={"station": ["A", "B"]},
+        ... )
+        >>> fallback = xr.Dataset(
+        ...     {
+        ...         "temperature": ("station", [99.0, 15.0, 18.0]),
+        ...         "rainfall": ("station", [0.0, 2.0, 1.0]),
+        ...     },
+        ...     coords={"station": ["A", "B", "C"]},
+        ... )
+        >>> observations.combine_first(fallback)
+        <xarray.Dataset> Size: 60B
+        Dimensions:      (station: 3)
+        Coordinates:
+          * station      (station) <U1 12B 'A' 'B' 'C'
+        Data variables:
+            temperature  (station) float64 24B 12.0 15.0 18.0
+            rainfall     (station) float64 24B 0.0 2.0 1.0
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
