@@ -103,7 +103,11 @@ def to_0d_object_array(
 
 
 def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+    # Look up the methods on the type: a DataArray is not dict-like, but
+    # attribute access on an instance falls back to its coordinates and
+    # attributes, which may be named "keys".
+    cls = type(value)
+    return hasattr(cls, "keys") and hasattr(cls, "__getitem__")
 
 
 def drop_missing_dims[DimType: Hashable](

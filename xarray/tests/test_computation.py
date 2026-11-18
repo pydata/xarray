@@ -124,6 +124,24 @@ def test_apply_identity() -> None:
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
 
 
+def test_apply_dataarray_with_keys_coordinate_or_attribute() -> None:
+    # a DataArray with a coordinate or attribute named "keys" is not dict-like
+    array = np.arange(3)
+    with_coord = xr.DataArray(array, dims="x", coords={"keys": ("x", array)})
+    with_attr = xr.DataArray(array, dims="x", attrs={"keys": 1})
+    dataset = xr.Dataset({"y": ("x", array)})
+
+    for data_array in [with_coord, with_attr]:
+        assert_identical(data_array, apply_ufunc(identity, data_array))
+        assert_identical(data_array, np.abs(data_array))
+        assert_identical(data_array, data_array + 0)
+
+    expected = xr.Dataset({"y": ("x", 2 * array)}, coords={"keys": ("x", array)})
+    assert_identical(expected, apply_ufunc(operator.add, dataset, with_coord))
+    assert_identical(expected, dataset + with_coord)
+    assert_identical(expected, with_coord + dataset)
+
+
 def test_apply_identity_datatree() -> None:
     tree = xr.DataTree.from_dict(
         {
