@@ -2910,6 +2910,18 @@ def test_groupby_binary_op_regression() -> None:
     assert_identical(xr.zeros_like(anom_gb), anom_gb)
 
 
+def test_groupby_binary_op_preserves_scalar_coords() -> None:
+    # regression test for #11878: binary op with groupby must not mutate right-hand operand
+    ds = xr.DataArray([1, 2, 3, 4], dims="time").rename("foo")
+    ds = ds.assign_coords({"spare_scalar": 1})
+
+    gb_1 = ds.groupby(ds.time % 2).mean()
+    assert gb_1["spare_scalar"].ndim == 0
+
+    _ = ds.groupby(ds.time % 2) - gb_1
+    assert gb_1["spare_scalar"].ndim == 0
+
+
 def test_groupby_multiindex_level() -> None:
     # GH6836
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
