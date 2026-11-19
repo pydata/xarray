@@ -38,8 +38,7 @@ from enum import Enum
 from typing import Literal
 
 import pandas as pd
-
-from xarray.core.types import PDDatetimeUnitOptions
+from packaging.version import Version
 
 
 def count_not_none(*args) -> int:
@@ -52,9 +51,11 @@ def count_not_none(*args) -> int:
 
 class _NoDefault(Enum):
     """Used by pandas to specify a default value for a deprecated argument.
+
     Copied from pandas._libs.lib._NoDefault.
 
-    See also:
+    See Also
+    --------
     - pandas-dev/pandas#30788
     - pandas-dev/pandas#40684
     - pandas-dev/pandas#40715
@@ -73,20 +74,6 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def timestamp_as_unit(date: pd.Timestamp, unit: PDDatetimeUnitOptions) -> pd.Timestamp:
-    """Convert the underlying int64 representation to the given unit.
-
-    Compatibility function for pandas issue where "as_unit" is not defined
-    for pandas.Timestamp in pandas versions < 2.2. Can be removed minimum
-    pandas version is >= 2.2.
-    """
-    if hasattr(date, "as_unit"):
-        date = date.as_unit(unit)
-    elif hasattr(date, "_as_unit"):
-        date = date._as_unit(unit)
-    return date
-
-
 def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a Timestamp object with the default precision.
 
@@ -94,5 +81,16 @@ def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """
     dt = pd.Timestamp(*args, **kwargs)
     if dt.unit != "ns":
-        dt = timestamp_as_unit(dt, "ns")
+        dt = dt.as_unit("ns")
     return dt
+
+
+def pandas_infers_string_dtype() -> bool:
+    """Whether ``pd.Series`` infers the (slow to build) ``str`` dtype for strings."""
+    # TODO: remove once pandas 3.0 is the oldest supported version, together with
+    #       its call in `xarray.core.variable._possibly_convert_objects`
+    if Version(pd.__version__) >= Version("3.0.0dev0"):
+        # Default since pandas 3.0; the option is deprecated there and will be
+        # removed in pandas 4.0, so don't query it.
+        return True
+    return bool(pd.get_option("future.infer_string"))

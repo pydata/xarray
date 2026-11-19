@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS      = -T -W --keep-going -j auto
 SPHINXBUILD     = sphinx-build
-SPHINXATUOBUILD = sphinx-autobuild
+SPHINXAUTOBUILD = sphinx-autobuild
 PAPER           =
 BUILDDIR        = _build
 
@@ -52,6 +52,7 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf generated/*
 	rm -rf auto_gallery/
+	rm -rf jupyter_execute/
 
 .PHONY: html
 html:
@@ -68,8 +69,8 @@ rtdhtml:
 
 .PHONY: livehtml
 livehtml:
-	# @echo "$(SPHINXATUOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html"
-	$(SPHINXATUOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	# @echo "$(SPHINXAUTOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html"
+	$(SPHINXAUTOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 .PHONY: dirhtml
 dirhtml:

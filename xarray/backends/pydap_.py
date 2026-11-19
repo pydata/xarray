@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, override
 
 import numpy as np
 
@@ -14,6 +13,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     _is_likely_dap_url,
     _normalize_path,
+    _raise_if_zarr_store,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
 )
@@ -28,11 +28,8 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
-    import os
-
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
 
 
 class PydapArrayWrapper(BackendArray):
@@ -88,11 +85,13 @@ class PydapDataStore(AbstractDataStore):
         protocol=None,
         checksums=True,
     ):
-        """
+        """Initialize the data store.
+
         Parameters
         ----------
-        ds : pydap DatasetType
-        group: str or None (default None)
+        dataset : pydap DatasetType
+            The opened pydap dataset.
+        group : str or None, default: None
             The group to open. If None, the root group is opened.
         """
         self.dataset = dataset
@@ -142,12 +141,15 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
+        else:
+            _raise_if_zarr_store(url, "pydap")
+            raise TypeError(f"invalid url for pydap backend: {url!r}")
         args = {"dataset": dataset, "checksums": checksums}
         if group:
             args["group"] = group
-        if url.startswith(("http", "dap2")):
+        if isinstance(url, str) and url.startswith(("http", "dap2")):
             args["protocol"] = "dap2"
-        elif url.startswith("dap4"):
+        elif isinstance(url, str) and url.startswith("dap4"):
             args["protocol"] = "dap4"
         return cls(**args)
 
@@ -175,6 +177,7 @@ class PydapDataStore(AbstractDataStore):
 
         return Variable(dimensions, data, var.attributes)
 
+    @override
     def get_variables(self):
         # get first all variables arrays, excluding any container type like,
         # `Groups`, `Sequence` or `Structure` types
@@ -193,8 +196,9 @@ class PydapDataStore(AbstractDataStore):
 
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
+    @override
     def get_attrs(self):
-        """Remove any opendap specific attributes"""
+        """Remove any opendap specific attributes."""
         opendap_attrs = (
             "configuration",
             "build_dmrpp",
@@ -209,6 +213,7 @@ class PydapDataStore(AbstractDataStore):
         list(map(attrs.pop, opendap_attrs, [None] * len(opendap_attrs)))
         return Frozen(attrs)
 
+    @override
     def get_dimensions(self):
         return Frozen(sorted(self.ds.dimensions))
 
@@ -217,8 +222,9 @@ class PydapDataStore(AbstractDataStore):
         return get_group(self.dataset, self.group)
 
     def _get_data_array(self, var):
-        """gets dimension data all at once, storing the numpy
-        arrays within a cached dictionary
+        """Get dimension data all at once.
+
+        The numpy arrays are stored within a cached dictionary.
         """
         from pydap.client import get_batch_data
 
@@ -231,10 +237,10 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for steaming datasets over the internet using
-    the Data Access Protocol, also known as DODS or OPeNDAP
-    based on the pydap package.
+    """Backend for streaming datasets over the internet using pydap.
+
+    Uses the Data Access Protocol, also known as DODS or OPeNDAP, based on
+    the pydap package.
 
     This backend is selected by default for urls.
 
@@ -249,16 +255,16 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if not isinstance(filename_or_obj, str):
             return False
         return _is_likely_dap_url(filename_or_obj)
 
+    @override
     def open_dataset(
         self,
-        filename_or_obj: (
-            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
-        ),
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -301,6 +307,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             )
             return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -340,6 +347,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -389,8 +397,10 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             # `pydap>= 3.5.1` has a new method `groups()`
             # that returns a dict of group names and their paths
             def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
-                """To be removed for pydap > 3.5.0.
-                Derives the fully qualifying name of a Group."""
+                """Derive the fully qualifying name of a Group.
+
+                To be removed for pydap > 3.5.0.
+                """
                 from pydap.model import GroupType
 
                 if not path:

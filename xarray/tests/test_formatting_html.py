@@ -10,6 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
+from xarray.tests import requires_dask
 
 
 def drop_fallback_text_repr(html: str) -> str:
@@ -79,7 +80,6 @@ def dataarray() -> xr.DataArray:
 
 @pytest.fixture
 def dask_dataarray(dataarray: xr.DataArray) -> xr.DataArray:
-    pytest.importorskip("dask")
     return dataarray.chunk()
 
 
@@ -116,11 +116,7 @@ def test_short_data_repr_html(dataarray: xr.DataArray) -> None:
     assert data_repr.startswith("<pre>array")
 
 
-def test_short_data_repr_html_non_str_keys(dataset: xr.Dataset) -> None:
-    ds = dataset.assign({2: lambda x: x["tmin"]})
-    fh.dataset_repr(ds)
-
-
+@requires_dask
 def test_short_data_repr_html_dask(dask_dataarray: xr.DataArray) -> None:
     assert hasattr(dask_dataarray.data, "_repr_html_")
     data_repr = fh.short_data_repr_html(dask_dataarray)
@@ -156,10 +152,38 @@ def test_format_dims_index() -> None:
 def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     attrs = {"<x>": 3, "y": "<pd.DataFrame>"}
     formatted = fh.summarize_attrs(attrs)
-    assert "<dt><span>&lt;x&gt; :</span></dt>" in formatted
-    assert "<dt><span>y :</span></dt>" in formatted
+    assert "<dt><span>&lt;x&gt;</span></dt>" in formatted
+    assert "<dt><span>y</span></dt>" in formatted
     assert "<dd>3</dd>" in formatted
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
+
+
+def test_repr_toggle_all() -> None:
+    ds = xr.Dataset(
+        {"a": ("x", [1, 2]), "b": ("x", [3, 4])},
+        coords={"x": ("x", [0, 1], {"units": "m"})},
+    )
+    with xr.set_options(display_default_indexes=True):
+        formatted = xarray_html_only_repr(ds)
+    by_name = {}
+    for section in formatted.split("<li class='xr-section-item'>")[1:]:
+        match = re.search(r"class='xr-section-summary'[^>]*>([^:<]*)", section)
+        assert match is not None
+        by_name[match.group(1)] = section
+
+    # coordinates have attributes, so both toggles are enabled
+    coords = by_name["Coordinates"]
+    assert "class='xr-all-attrs-in' type='checkbox'>" in coords
+    assert "class='xr-all-data-in' type='checkbox'>" in coords
+    # no data variable has attributes
+    assert (
+        "class='xr-all-attrs-in' type='checkbox' disabled>" in by_name["Data variables"]
+    )
+    # indexes have no attributes toggle
+    assert "xr-all-attrs-in" not in by_name["Indexes"]
+    assert "class='xr-all-data-in' type='checkbox'>" in by_name["Indexes"]
+    for name in ("Dimensions", "Attributes"):
+        assert "xr-all-" not in by_name.get(name, "")
 
 
 def test_repr_of_dataarray() -> None:
@@ -281,30 +305,51 @@ def test_variable_repr_html() -> None:
     assert "xarray.Variable" in html
 
 
-def test_repr_of_nonstr_dataset(dataset: xr.Dataset) -> None:
-    ds = dataset.copy()
-    ds.attrs[1] = "Test value"
-    ds[2] = ds["tmin"]
-    formatted = fh.dataset_repr(ds)
-    assert "<dt><span>1 :</span></dt><dd>Test value</dd>" in formatted
-    assert "<div class='xr-var-name'><span>2</span>" in formatted
+@pytest.mark.parametrize("kind", ["Variable", "DataArray", "Dataset", "DataTree"])
+def test_repr_of_nonstr_names(kind: str) -> None:
+    # names of dimensions, coordinates, indexes, variables and attributes
+    # can be any hashable, e.g. int or tuple (GH10613)
+    ds = xr.Dataset(
+        {1: ((("a", "b"), 10), np.zeros((2, 3)), {2: "variable attr"})},
+        coords={10: [5, 6, 7], 7: ((("a", "b"),), ["x", "y"])},
+        attrs={3: "int key", ("a", "b"): "tuple key"},
+    )
+    objs: dict[str, XarrayTypes] = {
+        "Variable": ds[1].variable,
+        "DataArray": ds[1],
+        "Dataset": ds,
+        "DataTree": xr.DataTree(ds),
+    }
+    obj = objs[kind]
+    with xr.set_options(display_style="html", display_default_indexes=True):
+        html = obj._repr_html_()
 
-
-def test_repr_of_nonstr_dataarray(dataarray: xr.DataArray) -> None:
-    da = dataarray.rename(dim_0=15)
-    da.attrs[1] = "value"
-    formatted = fh.array_repr(da)
-    assert "<dt><span>1 :</span></dt><dd>value</dd>" in formatted
-    assert "<li><span>15</span>: 4</li>" in formatted
-
-
-def test_nonstr_variable_repr_html() -> None:
-    v = xr.Variable(["time", 10], [[1, 2, 3], [4, 5, 6]], {22: "bar"})
-    assert hasattr(v, "_repr_html_")
-    with xr.set_options(display_style="html"):
-        html = v._repr_html_().strip()
-    assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
-    assert "<li><span>10</span>: 3</li></ul>" in html
+    tup = "(&#x27;a&#x27;, &#x27;b&#x27;)"
+    expected = [f"<li><span>{tup}</span>: 2</li>"]
+    if kind == "Variable":
+        expected += [
+            "<li><span>10</span>: 3</li>",
+            "<dt><span>2</span></dt><dd>variable attr</dd>",
+        ]
+    else:
+        expected += [
+            "<li><span class='xr-has-index'>10</span>: 3</li>",
+            "<div class='xr-var-name'><span class='xr-has-index'>10</span>",
+            "<div class='xr-var-name'><span>7</span>",
+            f"<div class='xr-var-dims'>({tup})</div>",
+            "<div class='xr-index-name'><div>10</div></div>",
+        ]
+    if kind == "DataArray":
+        expected.append("<dt><span>2</span></dt><dd>variable attr</dd>")
+    if kind in ("Dataset", "DataTree"):
+        expected += [
+            "<div class='xr-var-name'><span>1</span>",
+            f"<div class='xr-var-dims'>({tup}, 10)</div>",
+            "<dt><span>3</span></dt><dd>int key</dd>",
+            f"<dt><span>{tup}</span></dt><dd>tuple key</dd>",
+        ]
+    for fragment in expected:
+        assert fragment in html
 
 
 class TestDataTreeTruncatesNodes:

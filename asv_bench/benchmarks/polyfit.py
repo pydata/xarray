@@ -1,8 +1,9 @@
 import numpy as np
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized, randn, requires_dask
+from . import randn, requires_dask
 
 NDEGS = (2, 5, 20)
 NX = (10**2, 10**6)
@@ -18,13 +19,13 @@ class Polyval:
             for ndeg in NDEGS
         }
 
-    @parameterized(["nx", "ndeg"], [NX, NDEGS])
+    @parameterize({"nx": NX, "ndeg": NDEGS})
     def time_polyval(self, nx, ndeg):
         x = self.xs[nx]
         c = self.coeffs[ndeg]
         xr.polyval(x, c).compute()
 
-    @parameterized(["nx", "ndeg"], [NX, NDEGS])
+    @parameterize({"nx": NX, "ndeg": NDEGS})
     def peakmem_polyval(self, nx, ndeg):
         x = self.xs[nx]
         c = self.coeffs[ndeg]

@@ -3,20 +3,13 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/core/_aggregations.py --accept
-    pytest --doctest-modules xarray/core/_aggregations.py
-    pytest --doctest-modules xarray/namedarray/_aggregations.py --accept
-    pytest --doctest-modules xarray/namedarray/_aggregations.py
-
-This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
-The second run of pytest is deliberate, since the first will return an error
-while replacing the doctests.
-
+    pixi run generate-aggregations
+    pixi run pre-commit
 """
 
 import textwrap
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 MODULE_PREAMBLE = '''\
@@ -49,10 +42,11 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Generic
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+from xarray.core.types import Self
+from xarray.namedarray._typing import DimsLike, DimType_co
 '''
 
 AGGREGATIONS_PREAMBLE = """
@@ -102,13 +96,13 @@ class {obj}{cls}Aggregations:
 
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
 
-class {obj}{cls}Aggregations:
+class {obj}{cls}Aggregations(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
@@ -190,11 +184,10 @@ class {obj}{cls}Aggregations:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Dims = None,{kw_only}{extra_kwargs}{keep_attrs}
+        dim: {dim_type} = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -202,13 +195,12 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims = None,
+        dim: {dim_type} = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> {obj}:
-        """
-        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
+        """Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -330,6 +322,7 @@ class Method:
     def __init__(
         self,
         name,
+        long_name=None,
         bool_reduce=False,
         extra_kwargs=tuple(),
         numeric_only=False,
@@ -340,6 +333,7 @@ class Method:
         aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
+        self.long_name = long_name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
@@ -357,6 +351,12 @@ class Method:
             self.array_method = name
             self.np_example_array = """np.array([1, 2, 3, 0, 2, np.nan])"""
 
+    @property
+    def clarification(self):
+        if self.long_name is None:
+            return ""
+        return f"(i.e., {self.long_name}) "
+
 
 @dataclass
 class AggregationGenerator:
@@ -372,6 +372,7 @@ class AggregationGenerator:
     definition_preamble: str
     has_keep_attrs: bool = True
     notes: str = ""
+    dim_type: str = "Dims"
     preamble: str = field(init=False)
 
     def __post_init__(self):
@@ -390,12 +391,14 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
+            clarification=method.clarification,
             keep_attrs=(
                 "\n        keep_attrs: bool | None = None,"
                 if self.has_keep_attrs
                 else ""
             ),
             kw_only="\n        *," if has_kw_only else "",
+            dim_type=self.dim_type,
         )
 
         if method.extra_kwargs:
@@ -497,9 +500,8 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
-        # median isn't enabled yet, because it would break if a single group was present in multiple
-        # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
-        method_is_not_flox_supported = method.name in ("median", "cumprod")
+        # cumprod isn't enabled yet, since flox doesn't implement it.
+        method_is_not_flox_supported = method.name == "cumprod"
         if method_is_not_flox_supported:
             indent = 12
         else:
@@ -529,15 +531,24 @@ class GroupByAggregationGenerator(AggregationGenerator):
         min_version_check = f"""
             and module_available("flox", minversion="{method.min_flox_version}")"""
 
+        flox_defaults = (
+            """
+            kwargs.setdefault("method", "blockwise")"""
+            if method.name == "median"
+            else ""
+        )
+
         return (
             """\
         if (
             flox_available
             and OPTIONS["use_flox"]"""
             + (min_version_check if method.min_flox_version is not None else "")
-            + f"""
+            + """
             and contains_only_chunked_or_numpy(self._obj)
-        ):
+        ):"""
+            + flox_defaults
+            + f"""
             return self._flox_{method.aggregation_type}(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
@@ -591,19 +602,25 @@ AGGREGATION_METHODS = (
     Method("count", see_also_modules=("pandas.DataFrame", "dask.dataframe.DataFrame")),
     Method("all", bool_reduce=True),
     Method("any", bool_reduce=True),
-    Method("max", extra_kwargs=(skipna,)),
-    Method("min", extra_kwargs=(skipna,)),
+    Method("max", long_name="maximum", extra_kwargs=(skipna,)),
+    Method("min", long_name="minimum", extra_kwargs=(skipna,)),
     Method("mean", extra_kwargs=(skipna,), numeric_only=True),
-    Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
-    Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
-    Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
-        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
+        "prod", long_name="product", extra_kwargs=(skipna, min_count), numeric_only=True
     ),
+    Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
+    Method(
+        "std",
+        long_name="standard deviation",
+        extra_kwargs=(skipna, ddof),
+        numeric_only=True,
+    ),
+    Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method("median", extra_kwargs=(skipna,), numeric_only=True),
     # Scans:
     Method(
         "cumsum",
+        long_name="cumulative sum",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
@@ -613,6 +630,7 @@ AGGREGATION_METHODS = (
     ),
     Method(
         "cumprod",
+        long_name="cumulative product",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
@@ -758,6 +776,7 @@ NAMED_ARRAY_GENERATOR = GenericAggregationGenerator(
     example_call_preamble="",
     definition_preamble=NAMED_ARRAY_AGGREGATIONS_PREAMBLE,
     has_keep_attrs=False,
+    dim_type="DimsLike[DimType_co]",
 )
 
 
@@ -770,13 +789,10 @@ def write_methods(filepath, generators, preamble):
 
 
 if __name__ == "__main__":
-    import os
-    from pathlib import Path
+    # the xarray package, independent of the working directory and checkout name
+    p = Path(__file__).resolve().parents[1]
 
-    p = Path(os.getcwd())
-
-    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
+    filepath = p / "core" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[
@@ -792,8 +808,7 @@ if __name__ == "__main__":
     )
 
     # NamedArray:
-    filepath = p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py"
-    # filepath = p.parent / "namedarray" / "_aggregations.py"  # Run from script location
+    filepath = p / "namedarray" / "_aggregations.py"
     write_methods(
         filepath=filepath,
         generators=[NAMED_ARRAY_GENERATOR],

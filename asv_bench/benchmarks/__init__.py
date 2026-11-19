@@ -1,23 +1,23 @@
+import inspect
 import itertools
 import os
 
 import numpy as np
+from asv_runner.benchmarks.mark import skip_benchmark
 
 _counter = itertools.count()
-
-
-def parameterized(names, params):
-    def decorator(func):
-        func.param_names = names
-        func.params = params
-        return func
-
-    return decorator
 
 
 def requires_dask():
     try:
         import dask  # noqa: F401
+    except ImportError as err:
+        raise NotImplementedError() from err
+
+
+def requires_zarr():
+    try:
+        import zarr  # noqa: F401
     except ImportError as err:
         raise NotImplementedError() from err
 
@@ -56,19 +56,32 @@ def randint(low, high=None, size=None, frac_minus=None, seed=0):
     return x
 
 
-def _skip_slow():
-    """
-    Use this function to skip slow or highly demanding tests.
+_BENCHMARK_PREFIXES = ("time_", "timeraw_", "mem_", "peakmem_", "track_")
 
-    Use it as a `Class.setup` method or a `function.setup` attribute.
+
+def skip_slow[T](obj: T) -> T:
+    """Skip a slow or highly demanding benchmark, or all benchmarks of a class.
+
+    The benchmarks are skipped if the ``ASV_SKIP_SLOW`` environment variable is
+    set to ``1`` (as in CI).
+
+    asv only looks for ``skip_benchmark`` on the benchmark methods themselves, so
+    for a class the (possibly inherited) benchmark methods are wrapped on the
+    class itself, leaving any parent class untouched.
 
     Examples
     --------
-    >>> from . import _skip_slow
-    >>> def time_something_slow():
+    >>> from . import skip_slow
+    >>> @skip_slow
+    ... def time_something_slow():
     ...     pass
     ...
-    >>> time_something.setup = _skip_slow
     """
-    if os.environ.get("ASV_SKIP_SLOW", "0") == "1":
-        raise NotImplementedError("Skipping this test...")
+    if os.environ.get("ASV_SKIP_SLOW", "0") != "1":
+        return obj
+    if not inspect.isclass(obj):
+        return skip_benchmark(obj)
+    for name, member in inspect.getmembers(obj, inspect.isfunction):
+        if name.startswith(_BENCHMARK_PREFIXES):
+            setattr(obj, name, skip_benchmark(member))
+    return obj

@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized, requires_dask
+from . import requires_dask
 
 
 class MultiIndexSeries:
@@ -21,7 +22,7 @@ class MultiIndexSeries:
             series = series[::3]
         self.series = series
 
-    @parameterized(["dtype", "subset"], ([int, float], [True, False]))
+    @parameterize({"dtype": [int, float], "subset": [True, False]})
     def time_from_series(self, dtype, subset):
         xr.DataArray.from_series(self.series)
 

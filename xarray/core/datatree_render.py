@@ -1,5 +1,4 @@
-"""
-String Tree Rendering. Copied from anytree.
+"""String Tree Rendering. Copied from anytree.
 
 Minor changes to `RenderDataTree` include accessing `children.values()`, and
 type hints.
@@ -24,8 +23,8 @@ class Row(NamedTuple):
 
 class AbstractStyle:
     def __init__(self, vertical: str, cont: str, end: str):
-        """
-        Tree Render Style.
+        """Tree Render Style.
+
         Args:
             vertical: Sign for vertical line.
             cont: Chars for a continued branch.
@@ -50,8 +49,7 @@ class AbstractStyle:
 
 class ContStyle(AbstractStyle):
     def __init__(self):
-        """
-        Continued style, without gaps.
+        """Continued style, without gaps.
 
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
@@ -85,8 +83,8 @@ class RenderDataTree:
         maxlevel: int | None = None,
         maxchildren: int | None = None,
     ):
-        """
-        Render tree starting at `node`.
+        """Render tree starting at `node`.
+
         Keyword Args:
             style (AbstractStyle): Render Style.
             childiter: Child iterator. Note, due to the use of node.children.values(),
@@ -105,7 +103,6 @@ class RenderDataTree:
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
@@ -247,12 +244,10 @@ class RenderDataTree:
         return f"{classname}({', '.join(args)})"
 
     def by_attr(self, attrname: str = "name") -> str:
-        """
-        Return rendered tree with node attribute `attrname`.
+        """Return rendered tree with node attribute `attrname`.
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
