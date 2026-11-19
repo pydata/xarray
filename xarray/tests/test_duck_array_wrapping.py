@@ -577,6 +577,7 @@ class TestDatasetMethods(_BaseTest):
         self.setup_for_test(request, namespace)
         self.ds = self.get_test_dataarray().to_dataset()
 
+    @requires_cupy
     @requires_dask
     def test_dask_chunk_compute_roundtrip(self):
         """Ensure duck arrays are returned after calling `.compute()`.
@@ -593,6 +594,7 @@ class TestDatasetMethods(_BaseTest):
             f"Expected: {self.Array}, got {computed_ds.foo.data.__class__}"
         )
 
+    @requires_cupy
     @requires_dask
     def test_dask_manager_from_array(self):
         """Ensure dask array.backend supported duck arrays are computed as duck arrays.
