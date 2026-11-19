@@ -173,7 +173,7 @@ class _BaseTest:
             reason = NAMESPACE_ARRAYS[namespace]["skips"][xarray_method]
             pytest.skip(reason=f"skip for {self.namespace}: {reason}")
 
-    def get_test_dataarray(self) -> xr.DataArray:
+    def get_test_dataarray(self):
         data = np.asarray([[1, 2, 3, np.nan, 5]])
         x = np.arange(5)
         data = self.constructor(data)
