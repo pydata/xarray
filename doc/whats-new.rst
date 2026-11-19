@@ -83,6 +83,8 @@ New Features
   accessor's methods. These packages are not new
   dependencies (:issue:`11078`, :pull:`11087`).
   By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
+- Support CuPy-backed arrays in DaskManager - :pull:`11383`
+  By `Wei Ji Leong <https://github.com/weiji14>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
