@@ -71,9 +71,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
-            # lazily loaded backend array classes should use NumPy or CuPy array operations.
+            # lazily loaded backend array classes should use NumPy array operations.
+            kwargs["meta"] = np.ndarray
             xp = data.__array_namespace__()
-            kwargs["meta"] = xp.ndarray
 
         if (
             isinstance(chunks, tuple)
@@ -82,7 +82,18 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         ):
             chunks = data.shape
 
-        return da.from_array(data, chunks, **kwargs)  # type: ignore[no-untyped-call]
+        dask_array = da.from_array(data, chunks, **kwargs)  # type: ignore[no-untyped-call]
+        try:
+            backend: str = xp.__name__  # e.g. "numpy", "cupy"
+            da.backends.array_creation_dispatch.dispatch(backend=backend)
+            return dask_array.to_backend(  # https://github.com/dask/dask/pull/9914
+                backend=backend
+            )
+        except (
+            UnboundLocalError,  # cannot access local variable 'xp
+            ValueError,  # No backend dispatch registered for <library>
+        ):
+            return dask_array
 
     @override
     def compute[DType: np.dtype[Any]](
