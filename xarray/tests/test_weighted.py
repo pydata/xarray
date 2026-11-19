@@ -111,6 +111,25 @@ def test_dataset_weighted_retains_aggregatable_dtypes(
             assert_identical(result, expected)
 
 
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_nullable_data_and_weights(as_dataset: bool) -> None:
+    data: DataArray | Dataset = DataArray(
+        pd.array([100, 200], dtype="Int64"), dims="x", name="values"
+    )
+    weights = DataArray(pd.array([True, True], dtype="boolean"), dims="x")
+    if as_dataset:
+        data = data.to_dataset()
+
+    expected_sum: DataArray | Dataset = DataArray(300, name="values")
+    expected_mean: DataArray | Dataset = DataArray(150, name="values")
+    if as_dataset:
+        expected_sum = expected_sum.to_dataset()
+        expected_mean = expected_mean.to_dataset()
+
+    assert_equal(data.weighted(weights).sum(), expected_sum)
+    assert_equal(data.weighted(weights).mean(), expected_mean)
+
+
 def test_dataset_weighted_timedelta_quantile(use_dask: bool) -> None:
     data = Dataset({"duration": ("x", np.array([1, 3], dtype="timedelta64[ns]"))})
     if use_dask:
@@ -533,6 +552,38 @@ def test_weighted_mean_bool():
     result = da.weighted(weights).mean()
 
     assert_equal(expected, result)
+
+
+@pytest.mark.parametrize("dtype", ["uint8", "int8", "bool"])
+@pytest.mark.parametrize("n", [255, 256, 300])
+def test_weighted_small_int_weights_no_overflow(
+    dtype: str, n: int, use_dask: bool
+) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.ones(n), dims="x")
+    weights = DataArray(np.ones(n, dtype=dtype), dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum_of_weights(), DataArray(n))
+    assert_equal(weighted.mean(), DataArray(1))
+
+
+def test_weighted_small_int_data_no_overflow(use_dask: bool) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.array([100, 200], dtype="uint8"), dims="x")
+    weights = DataArray([True, True], dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum(), DataArray(300))
+    assert_equal(weighted.mean(), DataArray(150))
 
 
 @pytest.mark.parametrize(
