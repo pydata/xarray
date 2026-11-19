@@ -46,6 +46,8 @@ NAMESPACE_ARRAYS = {
             "rolling_reduce": "no sliding_window_view",
             "cumulative_construct": "no sliding_window_view",
             "cumulative_reduce": "no sliding_window_view",
+            # https://github.com/jax-ml/jax/issues/1565
+            "dask_chunk_compute_roundtrip": "jax doesn't have __array_function__ yet",
         },
     },
     "pint": {
