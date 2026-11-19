@@ -41,7 +41,7 @@ class DataTreeCoarsen:
     """
 
     datatree: DataTree
-    dim: dict[Hashable, int]
+    dim: Mapping[Any, int]
     boundary: CoarsenBoundaryOptions
     side: SideOptions | Mapping[Any, SideOptions]
     coord_func: str | Callable[..., Any] | Mapping[Any, str | Callable[..., Any]]

@@ -83,6 +83,7 @@ if TYPE_CHECKING:
     from dask.delayed import Delayed
 
     from xarray.backends import ZarrStore
+    from xarray.backends.writers import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.datatree_coarsen import DataTreeCoarsen
     from xarray.core.datatree_resample import DataTreeResample
     from xarray.core.datatree_rolling import DataTreeRolling
@@ -2911,8 +2912,8 @@ class DataTree(
         self,
         dim: Hashable,
         n: int = 1,
-        label: str = "upper",
-    ) -> Self:
+        label: Literal["upper", "lower"] = "upper",
+    ) -> DataTree:
         """Calculate the n-th order discrete difference along given dimension across all nodes.
 
         Parameters
@@ -2942,7 +2943,7 @@ class DataTree(
         dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
         axis: int | Sequence[int] | None = None,
         **dim_kwargs: Any,
-    ) -> Self:
+    ) -> DataTree:
         """Expand the dimensions of each dataset in this tree.
 
         Parameters
@@ -2959,7 +2960,9 @@ class DataTree(
         DataTree
             New DataTree with expanded dimensions on each node.
         """
-        combined = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
+        combined: dict[Hashable, Any] = either_dict_or_kwargs(  # type: ignore[arg-type]
+            dim, dim_kwargs, "expand_dims"
+        )
 
         def _node_expand(ds: Dataset) -> Dataset:
             if len(ds) == 0:
@@ -2974,7 +2977,7 @@ class DataTree(
         *,
         copy: bool = True,
         keep_attrs: bool = True,
-    ) -> Self:
+    ) -> DataTree:
         """Cast variables in all nodes to a specified dtype.
 
         Parameters
@@ -2999,7 +3002,7 @@ class DataTree(
 
         return map_over_datasets(_node_astype, self)
 
-    def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
+    def bfill(self, dim: Hashable, limit: int | None = None) -> DataTree:
         """Backward fill missing values along a dimension across all nodes.
 
         Parameters
@@ -3022,7 +3025,7 @@ class DataTree(
 
         return map_over_datasets(_node_bfill, self)
 
-    def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
+    def ffill(self, dim: Hashable, limit: int | None = None) -> DataTree:
         """Forward fill missing values along a dimension across all nodes.
 
         Parameters
@@ -3054,7 +3057,7 @@ class DataTree(
         max_gap: int | str | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataTree:
         """Interpolate values along a dimension for missing (NaN) data across all nodes.
 
         Parameters
@@ -3099,7 +3102,7 @@ class DataTree(
         self,
         dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
         **dimensions_kwargs: Sequence[Hashable],
-    ) -> Self:
+    ) -> DataTree:
         """Stack dimensions into a multi-index on each node where dimensions exist.
 
         Parameters
@@ -3134,7 +3137,7 @@ class DataTree(
         dim: Hashable | Sequence[Hashable] | None = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> Self:
+    ) -> DataTree:
         """Unstack multi-index dimensions across all eligible nodes.
 
         Parameters
@@ -3159,8 +3162,8 @@ class DataTree(
                 return ds.unstack(fill_value=fill_value, sparse=sparse)
             dims_to_unstack = (
                 [dim]
-                if isinstance(dim, Hashable) and not isinstance(dim, tuple)
-                else dim
+                if isinstance(dim, str) or not isinstance(dim, Sequence)
+                else list(dim)
             )
             matching = [d for d in dims_to_unstack if d in ds.dims]
             if matching:

@@ -115,8 +115,14 @@ class TestDataTreeMapBlocks:
             return ds * 2.0
 
         res = dt.map_blocks(scale_vars)
-        assert np.allclose(res["/"]["a"].values, dt["/"]["a"].values * 2.0)
-        assert np.allclose(res["/child"]["b"].values, dt["/child"]["b"].values * 2.0)
         assert np.allclose(
-            res["/no_time"]["c"].values, dt["/no_time"]["c"].values * 2.0
+            res["/"].to_dataset()["a"].values, dt["/"].to_dataset()["a"].values * 2.0
+        )
+        assert np.allclose(
+            res["/child"].to_dataset()["b"].values,
+            dt["/child"].to_dataset()["b"].values * 2.0,
+        )
+        assert np.allclose(
+            res["/no_time"].to_dataset()["c"].values,
+            dt["/no_time"].to_dataset()["c"].values * 2.0,
         )

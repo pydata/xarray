@@ -40,7 +40,7 @@ class DataTreeRolling:
     """
 
     datatree: DataTree
-    dim: dict[Hashable, int]
+    dim: Mapping[Any, int]
     min_periods: int | None
     center: bool | Mapping[Any, bool]
 
@@ -113,7 +113,7 @@ class DataTreeRolling:
                     matching_dims,
                     min_periods=self.min_periods,
                     center=self.center,
-                ).reduce(func, keep_attrs=keep_attrs, **kwargs)
+                ).reduce(func, keep_attrs=keep_attrs, **kwargs)  # type: ignore[return-value]
             return ds.copy()
 
         return map_over_datasets(_node_reduce, self.datatree)
@@ -207,7 +207,7 @@ class DataTreeRolling:
                     min_periods=self.min_periods,
                     center=self.center,
                 )
-                return r.construct(
+                return r.construct(  # type: ignore[arg-type, return-value]
                     window_dim=window_dim,
                     stride=stride,
                     fill_value=fill_value,

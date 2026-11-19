@@ -50,7 +50,7 @@ class DataTreeResample:
     """
 
     datatree: DataTree
-    indexer: dict[Hashable, Any]
+    indexer: Mapping[Any, Any]
     resample_kwargs: dict[str, Any]
 
     def __init__(
