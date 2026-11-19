@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Mapping
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any
 
 from xarray.core.datatree_mapping import map_over_datasets
