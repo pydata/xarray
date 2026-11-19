@@ -565,9 +565,11 @@ class TestDatasetMethods(_BaseTest):
 
     @requires_dask
     def test_dask_chunk_compute_roundtrip(self):
-        """
-        Ensure duck arrays chunked into a dask.Array get returned as duck arrays
-        (and not numpy array) after calling `.compute()`.
+        """Ensure duck arrays are returned after calling `.compute()`.
+
+        Specifically, duck arrays chunked into a dask.Array should get returned as duck
+        arrays (and not numpy array). Needed because dask.array.from_array() doesn't
+        fully respect cupy-meta chunks, see https://github.com/dask/dask/issues/12440
         """
         chunked_ds = self.ds.chunk(x=2, chunked_array_type="dask")
         assert isinstance(chunked_ds.foo.data._meta, self.Array)
