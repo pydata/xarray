@@ -5,6 +5,8 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core.indexing import CopyOnWriteArray, ImplicitToExplicitIndexingAdapter
+from xarray.namedarray.daskmanager import DaskManager
 from xarray.tests import (
     get_dask_chunkmanager,
     has_dask_array_expr,
@@ -34,6 +36,7 @@ NAMESPACE_ARRAYS = {
             "conjugate": "conj but no conjugate",
             "searchsorted": "dask.array.searchsorted but no Array.searchsorted",
             "dask_chunk_compute_roundtrip": "no need to test dask with dask",
+            "dask_manager_from_array": "no need to test dask with dask",
         },
     },
     "jax.numpy": {
@@ -48,6 +51,8 @@ NAMESPACE_ARRAYS = {
             "cumulative_reduce": "no sliding_window_view",
             # https://github.com/jax-ml/jax/issues/1565
             "dask_chunk_compute_roundtrip": "jax doesn't have __array_function__ yet",
+            # https://github.com/dask/dask/issues/11983
+            "dask_manager_from_array": "jax doesn't have dask.array.backends.ArrayBackendEntrypoint yet",
         },
     },
     "pint": {
@@ -73,6 +78,7 @@ NAMESPACE_ARRAYS = {
             "cumulative_reduce": "no dispatch for numbagg/bottleneck",
             "searchsorted": "returns an int",
             "weighted": "no tensordot",
+            "dask_manager_from_array": "pint doesn't have a dask.array.backends.ArrayBackendEntrypoint yet",
         },
     },
     "sparse": {
@@ -111,6 +117,7 @@ NAMESPACE_ARRAYS = {
             "searchsorted": "no searchsorted",
             "shift": "pad constant_values must be fill_value",
             "pad": "pad constant_values must be fill_value",
+            "dask_manager_from_array": "sparse doesn't have a dask.array.backends.ArrayBackendEntrypoint yet",
         },
     },
 }
@@ -580,3 +587,22 @@ class TestDatasetMethods(_BaseTest):
         assert isinstance(computed_ds.foo.data, self.Array), (
             f"Expected: {self.Array}, got {computed_ds.foo.data.__class__}"
         )
+
+    @requires_dask
+    def test_dask_manager_from_array(self):
+        """Ensure dask array.backend supported duck arrays are computed as duck arrays.
+
+        Specifically, any duck array with a `dask.array.backends.ArrayBackendEntrypoint`
+        implementation (currently just `cupy`) wrapped around CopyOnWriteArray and
+        ImplicitToExplicitIndexingAdapter, then put into a dask.array.Array (via
+        DaskManager.from_array), will return as a duck array (e.g. `cupy.ndarray`) when
+        computed.
+        """
+        arr = self.constructor(np.asarray([[1, 2, 3, np.nan, 5]]))
+        cow_arr = CopyOnWriteArray(array=arr)
+        data = ImplicitToExplicitIndexingAdapter(array=cow_arr)
+
+        dm = DaskManager()
+        dask_array = dm.from_array(data=data, chunks=(2, 3))
+        assert isinstance(dask_array._meta, self.Array)
+        assert isinstance(dask_array.compute(), self.Array)
