@@ -83,6 +83,11 @@ New Features
   accessor's methods. These packages are not new
   dependencies (:issue:`11078`, :pull:`11087`).
   By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
+- Added `Arrow PyCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`Dataset`.
+  Added :py:meth:`Dataset.to_arrow` & :py:meth:`DataArray.to_arrow` to export to flat :py:class:`pyarrow.Table`.
+  By `Jules Chéron <https://github.com/jules-ch>`_. (:pull:`11600`)
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
