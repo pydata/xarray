@@ -35,6 +35,8 @@ NAMESPACE_ARRAYS = {
             "argsort": "no argsort",
             "conjugate": "conj but no conjugate",
             "searchsorted": "dask.array.searchsorted but no Array.searchsorted",
+        },
+        "skips": {
             "dask_chunk_compute_roundtrip": "no need to test dask with dask",
             "dask_manager_from_array": "no need to test dask with dask",
         },
@@ -167,6 +169,9 @@ class _BaseTest:
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")
+        elif xarray_method in NAMESPACE_ARRAYS[namespace].get("skips", {}):
+            reason = NAMESPACE_ARRAYS[namespace]["skips"][xarray_method]
+            pytest.skip(reason=f"skip for {self.namespace}: {reason}")
 
     def get_test_dataarray(self) -> xr.DataArray:
         data = np.asarray([[1, 2, 3, np.nan, 5]])
