@@ -24,7 +24,6 @@ from xarray.core.duck_array_ops import (
     reshape,
     stack,
     timedelta_to_numeric,
-    where,
 )
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpnOptions, InterpOptions
@@ -644,10 +643,15 @@ def _interp_single_point(
     )
     if fill_value is None or isinstance(fill_value, str):
         below = above = np.nan
-    elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
+    elif isinstance(fill_value, tuple) and len(fill_value) == 2:
         below, above = fill_value
     else:
         below = above = fill_value
+    # like scipy, an array fill value broadcasts against the other dimensions
+    other_dims = [d for d in var.dims if d not in indexes_coords]
+    below_fill, above_fill = (
+        Variable(other_dims[len(other_dims) - np.ndim(v) :], v) for v in (below, above)
+    )
 
     for dim in single:
         x, new_x = indexes_coords[dim]
@@ -659,7 +663,7 @@ def _interp_single_point(
                     f"A new coordinate of {dim!r} is out of the interpolation "
                     f"range, which is the single point {x.values[0]}."
                 )
-            fill = Variable(new_x.dims, where(new_x.data < point, below, above))
+            fill = below_fill.where(new_x < point, above_fill)
             result = result.where(new_x == point, fill)
         result = result.where(new_x.notnull())
 

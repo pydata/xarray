@@ -1382,25 +1382,41 @@ def test_interp_single_point_scalar() -> None:
     [
         ("linear", {"fill_value": -1.0}, [-1.0, -1.0], [-1.0, -1.0]),
         ("linear", {"fill_value": (-1.0, -3.0)}, [-1.0, -1.0], [-3.0, -3.0]),
+        # array fill values broadcast against y, and only a tuple splits them
+        (
+            "linear",
+            {"fill_value": (np.array([-1.0, -3.0]), np.array([-2.0, -4.0]))},
+            [-1.0, -3.0],
+            [-2.0, -4.0],
+        ),
+        ("linear", {"fill_value": [-1.0, -3.0]}, [-1.0, -3.0], [-1.0, -3.0]),
+        ("linear", {"fill_value": np.array([-1.0, -3.0])}, [-1.0, -3.0], [-1.0, -3.0]),
         ("linear", {"fill_value": "extrapolate"}, [2.0, 5.0], [2.0, 5.0]),
         ("pchip", {"extrapolate": True}, [2.0, 5.0], [2.0, 5.0]),
         ("krogh", {}, [2.0, 5.0], [2.0, 5.0]),
     ],
 )
 def test_interp_single_point_out_of_range(
-    method: InterpOptions, kwargs: dict, below: list[float], above: list[float]
+    method: InterpOptions,
+    kwargs: dict,
+    below: list[float],
+    above: list[float],
+    use_dask: bool,
 ) -> None:
     # GH10747: other new coordinates are out of range, and the only way to
     # extrapolate from one point is a constant
     da = xr.DataArray([[2.0, 5.0]], dims=("x", "y"), coords={"x": [6], "y": [0, 1]})
+    if use_dask:
+        da = da.chunk()
     new_x = [4.0, 6.0, 8.0, np.nan]
-    actual = da.interp(x=new_x, method=method, kwargs=kwargs)
+    with raise_if_dask_computes():
+        actual = da.interp(x=new_x, method=method, kwargs=kwargs)
     expected = xr.DataArray(
         [below, [2.0, 5.0], above, [np.nan, np.nan]],
         dims=("x", "y"),
         coords={"x": new_x, "y": [0, 1]},
     )
-    assert_identical(actual, expected)
+    assert_identical(actual.compute(), expected)
 
 
 @requires_scipy
