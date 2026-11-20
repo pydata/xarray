@@ -227,6 +227,10 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:meth:`DataArray.plot.pcolormesh` no longer unconditionally disables the
+  grid, so the ``axes.grid`` rcParam and grids enabled directly on the axes are
+  respected (:issue:`11919`).
+  By `Sealdot <https://github.com/Sealdot>`_.
 - Indexed coordinates can now have non-string names, e.g. integers or tuples,
   instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
