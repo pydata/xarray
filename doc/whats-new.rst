@@ -83,6 +83,10 @@ New Features
   accessor's methods. These packages are not new
   dependencies (:issue:`11078`, :pull:`11087`).
   By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
+- When merging, if a variable appears as a coordinate on one input and as a data
+  variable on another, the coordinate "status" is chosen by looking at the first object.
+  A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
