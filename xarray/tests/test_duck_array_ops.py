@@ -25,6 +25,7 @@ from xarray.core.duck_array_ops import (
     least_squares,
     mean,
     np_timedelta64_to_float,
+    pad,
     pd_timedelta_to_float,
     push,
     py_timedelta_to_float,
@@ -209,6 +210,43 @@ class TestOps:
             concate_res
             == type(categorical1)._concat_same_type((categorical1, categorical2))
         ).all()
+
+    @pytest.mark.parametrize(
+        "values,dtype",
+        [
+            ([1, 2, 3], "Int64"),
+            ([1.5, 2.5, 3.5], "Float64"),
+            ([True, False, True], "boolean"),
+        ],
+    )
+    def test_pad_extension_duck_array(self, values, dtype):
+        # GH #10301: padding (used by shift/pad) must keep the extension dtype
+        # and use its native NA instead of letting numpy coerce to an ndarray.
+        array = pd.array(values, dtype=dtype)
+        padded = pad(array, [(1, 0)], mode="constant", constant_values=pd.NA)
+        assert isinstance(padded, PandasExtensionArray)
+        assert padded.dtype == array.dtype
+        pd.testing.assert_extension_array_equal(
+            padded.array,
+            array._from_sequence([pd.NA, *list(array)], dtype=array.dtype),
+        )
+
+    def test_pad_extension_duck_array_per_side_fill(self):
+        # constant_values=(before, after) is honored independently per side
+        array = pd.array([1, 2, 3], dtype="Int64")
+        padded = pad(array, [(1, 1)], mode="constant", constant_values=(0, 9))
+        assert isinstance(padded, PandasExtensionArray)
+        assert list(padded.array) == [0, 1, 2, 3, 9]
+
+    def test_pad_extension_duck_array_non_constant_mode(self):
+        # The np.pad handler only implements constant mode and raises otherwise.
+        # duck_array_ops.pad never sends other modes to it: it passes the raw
+        # extension array to numpy, which converts it to an ndarray.
+        array = pd.array([1, 2, 3], dtype="Int64")
+        with pytest.raises(NotImplementedError, match="mode='edge'"):
+            np.pad(PandasExtensionArray(array), [(1, 1)], mode="edge")
+        padded = DataArray(array, dims="x").pad(x=(1, 1), mode="edge")
+        np.testing.assert_array_equal(padded.values, [1, 1, 2, 3, 3])
 
     @requires_pyarrow
     def test_extension_array_pyarrow_concatenate(self, arrow1, arrow2):

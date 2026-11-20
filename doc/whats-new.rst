@@ -539,6 +539,13 @@ Bug Fixes
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
+- :py:meth:`DataArray.shift`, :py:meth:`Dataset.shift`, :py:meth:`DataArray.pad`
+  and :py:meth:`Dataset.pad` no longer raise ``TypeError`` on variables backed by
+  pandas nullable extension arrays (e.g. ``Int64``, ``Float64``, ``boolean``).
+  The padding/fill values are now inserted using the extension array's own
+  missing value (``pd.NA``), preserving the extension dtype instead of letting
+  numpy coerce it to an ``object`` or numeric ndarray (:issue:`10301`).
+  By `Mayk Thewessen <https://github.com/MaykThewessen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
