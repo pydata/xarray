@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` no longer
+  drop the index of indexed non-dimension coordinates, such as multi-index
+  levels, whose dimensions are not being swapped (:issue:`8914`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or

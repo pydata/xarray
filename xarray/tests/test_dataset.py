@@ -3749,6 +3749,24 @@ class TestDataset:
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
+    def test_swap_dims_keeps_unrelated_multiindex(self) -> None:
+        # regression test for GH8914: swapping one dimension dropped the index
+        # of multi-index levels along another dimension
+        midx_coords = Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_arrays([[0, 0, 1], [0, 1, 0]], names=["a", "b"]), "t"
+        )
+        original = Dataset(
+            {"v": ("t", [1.0, 2.0, 3.0]), "w": ("p", [5])},
+            coords=midx_coords,
+        ).assign_coords(p2=("p", [6]))
+
+        actual = original.swap_dims({"p": "p2"})
+
+        _assert_internal_invariants(actual, check_default_indexes=False)
+        assert set(actual.xindexes) == {"t", "a", "b", "p2"}
+        assert actual.xindexes["a"] is original.xindexes["a"]
+        assert_identical(actual.sel(a=1).v, original.sel(a=1).v)
+
     def test_to_array_deprecated(self) -> None:
         ds = Dataset({"a": 1, "b": ("x", [1, 2, 3])}, coords={"c": 42})
         expected = ds.to_dataarray("abc", name="foo")
