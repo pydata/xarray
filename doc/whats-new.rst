@@ -223,6 +223,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Writing a list of strings as an attribute to a netCDF-3 file now raises a
+  clear ``ValueError``, instead of a ``KeyError`` from scipy, an ``OSError``
+  from netCDF4, or (for lists of bytes with scipy) silently keeping only the
+  first value. A list with a single string is written as that string
+  (:issue:`7608`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or

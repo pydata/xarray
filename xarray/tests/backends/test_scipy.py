@@ -174,6 +174,21 @@ class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
             with self.roundtrip(ds):
                 pass
 
+    @pytest.mark.parametrize("value", [["1", "2", "3"], [b"x", b"y"]])
+    def test_string_list_attrs_raise(self, value) -> None:
+        # regression test for GH7608: netCDF-3 cannot store a list of strings,
+        # this used to raise a KeyError from scipy or silently keep one string
+        ds = Dataset(attrs={"foo": value})
+        with pytest.raises(ValueError, match=r"cannot store attributes that are lists"):
+            with self.roundtrip(ds):
+                pass
+
+    @pytest.mark.parametrize("value", [["abc"], np.array(["abc"], dtype=object)])
+    def test_single_string_list_attr(self, value) -> None:
+        ds = Dataset(attrs={"foo": value})
+        with self.roundtrip(ds) as actual:
+            assert actual.attrs["foo"] == "abc"
+
     def test_roundtrip_example_1_netcdf_gz(self) -> None:
         with open_example_dataset("example_1.nc.gz") as expected:
             with open_example_dataset("example_1.nc") as actual:
