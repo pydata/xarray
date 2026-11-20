@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:func:`map_blocks` raising an assertion error when chunking along a
+  pandas MultiIndex, preserving each block's index and level coordinates
+  (:issue:`8745`).
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or

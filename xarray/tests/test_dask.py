@@ -17,6 +17,7 @@ from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import PandasIndex
+from xarray.core.parallel import subset_dataset_to_block
 from xarray.testing import assert_chunks_equal
 from xarray.tests import (
     assert_allclose,
@@ -1978,3 +1979,50 @@ def test_isel_0d_dask_indexer_with_outer_indexer() -> None:
     actual = data.isel(x=da.from_array(np.array(2)), y=[0, 2])
     expected = data.isel(x=2, y=[0, 2])
     assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("as_dataset", [False, True])
+@pytest.mark.parametrize("chunk_size", [1, 2, 3, 4])
+@pytest.mark.parametrize("use_template", [False, True])
+def test_map_blocks_multiindex_chunks(
+    as_dataset: bool, chunk_size: int, use_template: bool
+) -> None:
+    array = xr.DataArray(
+        [[0, 1], [2, 3]],
+        coords={"x": [0, 1], "y": [0, 1]},
+        dims=("x", "y"),
+        name="values",
+    ).stack(n=("x", "y"))
+    obj = array.to_dataset() if as_dataset else array
+    chunked = obj.chunk({"n": chunk_size})
+    template = chunked if use_template else None
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(operator.add, chunked, args=[1], template=template)
+    assert_identical(actual.compute(), obj + 1)
+
+
+def test_map_blocks_slices_each_index_chunk_once() -> None:
+    dataset = xr.Dataset(coords={"a": range(2), "b": range(2), "y": range(3)}).stack(
+        x=("a", "b")
+    )
+    bounds = {"x": np.array([0, 2, 4]), "y": np.array([0, 1, 2, 3])}
+    graph: dict = {}
+    with mock.patch.object(
+        PandasIndex, "isel", autospec=True, side_effect=PandasIndex.isel
+    ) as isel:
+        for x in range(2):
+            for y in range(3):
+                subset_dataset_to_block(
+                    graph, "test", dataset, bounds, {"x": x, "y": y}
+                )
+    assert isel.call_count == 5
+
+
+def test_map_blocks_does_not_slice_ordinary_indexes() -> None:
+    dataset = xr.Dataset(coords={"x": range(4)})
+    graph: dict = {}
+    with mock.patch.object(PandasIndex, "isel", autospec=True) as isel:
+        subset_dataset_to_block(
+            graph, "test", dataset, {"x": np.array([0, 2, 4])}, {"x": 0}
+        )
+    isel.assert_not_called()
