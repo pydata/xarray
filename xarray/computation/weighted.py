@@ -262,10 +262,13 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
+        squared = (
+            (demeaned.conj() * demeaned).real if da.dtype.kind == "c" else demeaned**2
+        )
 
         # TODO: unsure why mypy complains about these being DataArray return types
         # rather than T_DataArray?
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
+        return self._reduce(squared, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,

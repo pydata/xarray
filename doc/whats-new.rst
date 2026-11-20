@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Weighted variance, standard deviation and sums of squared deviations now
+  use conjugated deviations for complex data, matching unweighted reductions
+  and correcting weighted self-correlation.
+  By `zhouziyu-cn <https://github.com/zhouziyu-cn>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
