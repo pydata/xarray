@@ -3462,16 +3462,39 @@ class Dataset(
         other: T_DataArrayOrSet,
         exclude: Iterable[Hashable] | None = None,
     ) -> Self:
-        """Broadcast this DataArray against another Dataset or DataArray.
+        """Broadcast this Dataset against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1].
 
         Parameters
         ----------
         other : Dataset or DataArray
-            Object against which to broadcast this array.
+            Object against which to broadcast this dataset.
         exclude : iterable of hashable, optional
             Dimensions that must not be broadcasted
+
+        Examples
+        --------
+        The result gains the other object's ``hour`` dimension and aligns on
+        the shared ``station`` coordinate. Stations not present in the
+        original dataset have missing values.
+
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("station", [10, 15])},
+        ...     coords={"station": ["a", "b"]},
+        ... )
+        >>> other = xr.DataArray(
+        ...     [[0, 0], [0, 0]],
+        ...     dims=("station", "hour"),
+        ...     coords={"station": ["b", "c"], "hour": [0, 1]},
+        ... )
+        >>> result = ds.broadcast_like(other)
+        >>> result.station.values.tolist()
+        ['a', 'b', 'c']
+        >>> result.temperature.sel(station="b").values.tolist()
+        [15.0, 15.0]
+        >>> result.temperature.sel(station="c").isnull().all().item()
+        True
 
         """
         if exclude is None:
