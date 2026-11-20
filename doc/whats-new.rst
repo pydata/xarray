@@ -540,6 +540,10 @@ Bug Fixes
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 
+- Fix the :py:class:`DataTree` constructor error message to correctly list
+  the accepted input types, and include :py:class:`Coordinates` in the
+  constructor documentation (:issue:`11514`).
+
 Documentation
 ~~~~~~~~~~~~~
 - Update the user guide on multi-index levels, which are indexed coordinates
@@ -694,7 +698,6 @@ Internal Changes
 - Use the public ``zarr.Array.async_array`` of zarr 3.1.4 and later instead of
   the private ``_async_array`` (:issue:`11259`, :pull:`11684`).
   By `rutabaga <https://github.com/0xrutabaga>`_.
-
 
 .. _whats-new.2026.09.0:
 
