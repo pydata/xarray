@@ -1096,9 +1096,14 @@ class DataTree(
             raise ValueError("Invalid format for key")
 
     @override
-    def __delitem__(self, key: str) -> None:
-        """Remove a variable or child node from this datatree node."""
-        if key in self.children:
+    def __delitem__(self, key: Hashable) -> None:
+        """Remove a variable or child node from this tree.
+
+        ``key`` is the name of a variable or child within this node, or a
+        unix-like path to a variable or child within another node, as accepted
+        by ``__getitem__``.
+        """
+        if isinstance(key, str) and key in self.children:
             super().__delitem__(key)
 
         elif key in self._node_coord_variables:
@@ -1110,6 +1115,21 @@ class DataTree(
         elif key in self._data_variables:
             del self._data_variables[key]
             self._node_dims = calculate_dimensions(self.variables)
+
+        elif isinstance(key, str) and "/" in key:
+            path = NodePath(key)
+            if path.name in ("", ".", ".."):
+                raise KeyError(key)
+            try:
+                parent = self._get_item(path.parent)
+            except KeyError:
+                raise KeyError(key) from None
+            if not isinstance(parent, DataTree):
+                raise KeyError(key)
+            try:
+                del parent[path.name]
+            except KeyError:
+                raise KeyError(key) from None
 
         else:
             raise KeyError(key)

@@ -902,6 +902,63 @@ def test_delitem() -> None:
         del dt["x"]
 
 
+def test_delitem_path() -> None:
+    def make_tree() -> DataTree:
+        return DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+                "/a": Dataset({"v": 0}, coords={"z": "a"}),
+                "/a/b": Dataset({"w": 1}),
+                "/a/b/c": None,
+            }
+        )
+
+    # delete a node through a relative path
+    dt = make_tree()
+    del dt["a/b"]
+    assert "a/b" not in dt
+    assert list(dt["a"].children) == []
+    assert set(dt["a"].data_vars) == {"v"}
+
+    # delete a data variable and a coordinate through relative paths
+    dt = make_tree()
+    del dt["a/v"]
+    del dt["a/z"]
+    assert "a/v" not in dt
+    assert set(dt["a"].variables) == {"x"}
+    assert "a/b" in dt
+
+    # absolute paths and parent references are resolved like __getitem__
+    dt = make_tree()
+    del dt["a/b"]["/a/v"]
+    del dt["a"]["../a/z"]
+    del dt["a"]["./b/c"]
+    assert set(dt["a"].variables) == {"x"}
+    assert list(dt["a/b"].children) == []
+
+    # paths that do not lead to an item raise KeyError and change nothing
+    dt = make_tree()
+    expected = dt.copy()
+    for key in ["a/missing", "missing/v", "a/v/extra", "/a/b/c/d", "../a"]:
+        with pytest.raises(KeyError, match=key):
+            del dt[key]
+    with pytest.raises(KeyError):
+        del dt["/"]
+    assert_identical(dt, expected)
+
+    # an inherited coordinate still cannot be deleted from a child node
+    with pytest.raises(KeyError, match="a/x"):
+        del dt["a/x"]
+    assert "x" in dt.coords
+
+    # non-string variable names are still deleted, or raise KeyError if absent
+    dt = DataTree(Dataset({0: ("x", [1])}))
+    del dt[0]
+    assert dt.data_vars == {}
+    with pytest.raises(KeyError):
+        del dt[0]
+
+
 class TestTreeFromDict:
     def test_data_in_root(self) -> None:
         dat = xr.Dataset()

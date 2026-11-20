@@ -1094,7 +1094,7 @@ class DataTreeCoordinates(Coordinates):
     @override
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
-            del self._data[key]  # type: ignore[arg-type]  # see https://github.com/pydata/xarray/issues/8836
+            del self._data[key]
         else:
             raise KeyError(key)
 
