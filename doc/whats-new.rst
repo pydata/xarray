@@ -223,6 +223,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.chunk` and :py:meth:`Dataset.chunk` now convert scalar data
+  variables to chunked arrays, preserving eager scalar coordinates (:issue:`8251`).
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or

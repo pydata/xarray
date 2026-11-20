@@ -42,6 +42,7 @@ from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
+from xarray.structure.chunks import _maybe_chunk
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
@@ -56,6 +57,7 @@ from xarray.tests import (
     create_test_data,
     dask_array_api,
     dask_array_type,
+    get_dask_chunkmanager,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -77,6 +79,86 @@ pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
     pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
+
+
+@requires_dask
+@pytest.mark.parametrize("mixed", [False, True])
+@pytest.mark.parametrize("lazy", [False, True])
+@pytest.mark.parametrize("chunks", [{}, "auto", -1])
+def test_chunk_scalar_data(mixed: bool, lazy: bool, chunks: Any) -> None:
+    scalar = np.array(7, dtype="int16")
+    if lazy:
+        scalar = dask_array_api.from_array(scalar)
+    original = Dataset({"scalar": scalar}, coords={"coordinate": 42})
+    original.attrs = {"description": "scalar data"}
+    original.scalar.attrs = {"units": "m"}
+    original.scalar.encoding = {"dtype": "int16"}
+    if mixed:
+        original["vector"] = ("x", [1, 2, 3])
+        original.coords["x"] = [4, 5, 6]
+
+    with raise_if_dask_computes():
+        actual = original.chunk(chunks)
+
+    assert isinstance(actual.scalar.data, dask_array_type)
+    assert actual.scalar.chunks == ()
+    assert actual.scalar.dtype == original.scalar.dtype
+    assert actual.scalar.encoding == original.scalar.encoding
+    assert isinstance(actual.coordinate.data, np.ndarray)
+    if mixed:
+        assert isinstance(actual.vector.data, dask_array_type)
+        assert isinstance(actual.x.data, np.ndarray)
+        assert actual.xindexes["x"] is original.xindexes["x"]
+    assert_identical(actual, original)
+
+
+@requires_dask
+def test_chunk_scalar_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    manager = get_dask_chunkmanager()
+    from_array = manager.from_array
+    received: dict[str, Any] = {}
+
+    def record_from_array(data: Any, chunks: Any, **kwargs: Any) -> Any:
+        received.update(kwargs)
+        return from_array(data, chunks, **kwargs)
+
+    monkeypatch.setattr(manager, "from_array", record_from_array)
+    original = Dataset({"scalar": 7})
+    kwargs = {"asarray": False}
+    actual = original.chunk(
+        chunked_array_type="dask",
+        name_prefix="scalar-",
+        token="test",
+        inline_array=True,
+        from_array_kwargs=kwargs,
+    )
+    assert isinstance(actual.scalar.data, dask_array_type)
+    assert received["inline_array"] is True
+    assert received["asarray"] is False
+    assert received["name"] == actual.scalar.data.name
+    assert actual.scalar.data.name.startswith("scalar-scalar-")
+    assert (
+        actual.scalar.data.name
+        == original.chunk(
+            chunked_array_type="dask",
+            name_prefix="scalar-",
+            token="test",
+            inline_array=True,
+            from_array_kwargs=kwargs,
+        ).scalar.data.name
+    )
+    assert kwargs == {"asarray": False}
+    assert_identical(actual, original)
+    with pytest.raises(ValueError, match="argument name cannot be passed both"):
+        original.chunk(from_array_kwargs={"name": "custom"})
+    with pytest.raises(ValueError, match="argument inline_array cannot be passed both"):
+        original.chunk(from_array_kwargs={"inline_array": True})
+
+
+def test_chunk_scalar_shared_default() -> None:
+    original = Variable((), np.int16(7))
+    actual = _maybe_chunk("scalar", original, {}, chunked_array_type="unavailable")
+    assert actual is original
 
 
 class ScalarPreservingIndex(Index):
