@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable
 from types import EllipsisType
 from typing import Any
@@ -909,3 +910,34 @@ def test_dataset_weighted_none_ellipsis_equiv(coords: dict[str, Any]) -> None:
     result_ellipsis = data.weighted(weights).quantile(0.5, dim=...)
 
     assert_identical(result_none, result_ellipsis)
+
+
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_no_shared_dims_warns(as_dataset: bool) -> None:
+    # regression test for GH6952: weights on unrelated dimensions are broadcast
+    # and silently have no effect, so warn about the likely dimension mismatch
+    data: DataArray | Dataset = DataArray([0.0, 1.0, 2.0], dims="x")
+    if as_dataset:
+        data = data.to_dataset(name="a")
+    weights = DataArray([1.0, 50.0, 100.0], dims="y")
+
+    with pytest.warns(UserWarning, match=r"do not overlap with the dimensions"):
+        data.weighted(weights)
+
+
+@pytest.mark.parametrize(
+    "data",
+    (
+        pytest.param(DataArray([0.0, 1.0, 2.0], dims="x"), id="matching"),
+        pytest.param(
+            Dataset({"a": ("x", [0.0, 1.0, 2.0]), "scalar": 1.0}),
+            id="dataset-with-scalar",
+        ),
+    ),
+)
+def test_weighted_shared_dims_no_warning(data: DataArray | Dataset) -> None:
+    weights = DataArray([1.0, 50.0, 100.0], dims="x")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        data.weighted(weights).mean()

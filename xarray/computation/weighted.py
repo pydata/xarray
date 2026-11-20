@@ -187,6 +187,15 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         else:
             _weight_check(weights.data)
 
+        if obj.dims and weights.dims and not set(obj.dims) & set(weights.dims):
+            utils.emit_user_level_warning(
+                f"`weights` dimensions {tuple(weights.dims)} do not overlap with the "
+                f"dimensions {tuple(obj.dims)} of the object being weighted, so the "
+                "weights are broadcast and have no effect along the reduced "
+                "dimensions. Check that the dimension names match.",
+                UserWarning,
+            )
+
         self.obj: T_Xarray = obj
         self.weights: T_DataArray = weights
 

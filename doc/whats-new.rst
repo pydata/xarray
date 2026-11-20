@@ -223,6 +223,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.weighted` and :py:meth:`Dataset.weighted` now warn when
+  ``weights`` share no dimension with the weighted object. The weights were
+  silently broadcast and had no effect, so the result was an unweighted
+  reduction (:issue:`6952`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
