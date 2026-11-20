@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pytest
+from numpy.typing import ArrayLike
 
 import xarray as xr
 from xarray.core.coordinates import Coordinates
@@ -146,7 +149,7 @@ def test_assert_equal_transpose_datatree() -> None:
         pytest.param(
             quantity,
             id="pint",
-            marks=requires_pint,
+            marks=[requires_pint, pytest.mark.duckarray],
         ),
     ),
 )
@@ -158,7 +161,9 @@ def test_assert_equal_transpose_datatree() -> None:
         pytest.param(0.0, [1e-17, 2], id="first scalar"),
     ),
 )
-def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
+def test_assert_duckarray_equal_failing(
+    duckarray: Callable[[ArrayLike], Any], obj1: ArrayLike, obj2: ArrayLike
+) -> None:
     # TODO: actually check the repr
     a = duckarray(obj1)
     b = duckarray(obj2)
@@ -182,7 +187,7 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
         pytest.param(
             quantity,
             id="pint",
-            marks=requires_pint,
+            marks=[requires_pint, pytest.mark.duckarray],
         ),
     ),
 )
@@ -194,7 +199,9 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
         pytest.param(0.0, [0, 0], id="first scalar"),
     ),
 )
-def test_assert_duckarray_equal(duckarray, obj1, obj2) -> None:
+def test_assert_duckarray_equal(
+    duckarray: Callable[[ArrayLike], Any], obj1: ArrayLike, obj2: ArrayLike
+) -> None:
     a = duckarray(obj1)
     b = duckarray(obj2)
 

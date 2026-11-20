@@ -295,6 +295,8 @@ def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
     assert plugins.list_engines.cache_info().misses == initial_misses
 
 
+# Exercise lazy imports with the optional duck-array packages installed.
+@pytest.mark.duckarray
 def test_lazy_import() -> None:
     """Test that some modules are imported in a lazy manner.
 

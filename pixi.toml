@@ -80,8 +80,6 @@ seaborn = "*"
 
 [feature.extras.dependencies]
 # array
-sparse = "*"
-pint = "*"
 array-api-strict = "*"
 
 # algorithms
@@ -94,8 +92,11 @@ pooch = "*"
 # calendar
 cftime = "*"
 
-[feature.extras.pypi-dependencies]
-# array
+[feature.duckarray.dependencies]
+pint = "*"
+sparse = "*"
+
+[feature.duckarray.pypi-dependencies]
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
 [feature.minimal.dependencies]
@@ -135,16 +136,23 @@ netcdf4 = "1.7.*"
 numba = "0.62.*"
 numbagg = "0.9.*"
 packaging = "25.0.*"
-pint = "0.25.*"
 pydap = "3.5.*"
 rasterio = "1.4.*"
 seaborn = "0.13.*"
-sparse = "0.17.*"
 toolz = "1.0.*"
 zarr = "3.1.*"
 pyarrow = "*"        # required by dask.dataframe
 # numcodecs warns on import when crc32c is used instead of google-crc32c
 google-crc32c = "*"
+
+[feature.duckarray-min.dependencies]
+pint = "0.25.*"
+sparse = "0.17.*"
+
+[feature.duckarray-min.pypi-dependencies]
+# The policy checker ignores PyPI dependencies, so update JAX manually following
+# the 12-month version policy.
+jax = "==0.8.*"
 
 
 [feature.test.dependencies]
@@ -313,6 +321,9 @@ policy-min-versions = [
   { task = "_check-policy", args = [
     "pixi:test-py312-min-versions",
   ] },
+  { task = "_check-policy", args = [
+    "pixi:test-py312-duckarray-min",
+  ] },
 ]
 [feature.policy.tasks.policy]
 
@@ -322,6 +333,7 @@ depends-on = [
     pixi:test-py312-bare-minimum \
     pixi:test-py312-bare-min-and-scipy \
     pixi:test-py312-min-versions \
+    pixi:test-py312-duckarray-min \
     """,
   ] },
 ]
@@ -519,6 +531,25 @@ test-py312-min-versions = { features = [
   "min-versions",
 ] }
 
+test-py315-duckarray = { features = [
+  "py315",
+  "test",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "duckarray",
+] }
+test-py312-duckarray-min = { features = [
+  "test",
+  "numba",
+  "minimal",
+  "minimum-scipy",
+  "min-versions",
+  "duckarray-min",
+] }
+
 
 # Extra
 typing = { features = ["typing", "typing-stubs"] }
@@ -529,6 +560,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
+  "duckarray",
   "numba",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
@@ -542,6 +574,7 @@ default = { features = [
   "dask",
   "viz",
   "extras",
+  "duckarray",
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }

@@ -46,6 +46,7 @@ jobs:
 
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
 
     steps:
       - uses: actions/checkout@v7.0.1
@@ -84,7 +85,19 @@ jobs:
             os: ubuntu-latest
           - pixi-env: "test-py312-min-versions"
             os: ubuntu-latest
+          - pixi-env: "test-py312-duckarray-min"
+            os: ubuntu-latest
+            pytest-addopts: "duckarray"
           # Latest python version:
+          - pixi-env: "test-py315-duckarray"
+            os: ubuntu-latest
+            pytest-addopts: "duckarray"
+          - pixi-env: "test-py315-duckarray"
+            os: macos-latest
+            pytest-addopts: "duckarray"
+          - pixi-env: "test-py315-duckarray"
+            os: windows-latest
+            pytest-addopts: "duckarray"
           - pixi-env: "test-py315-no-numba"
             os: ubuntu-latest
           - pixi-env: "test-py315-no-dask"
@@ -126,8 +139,8 @@ jobs:
 
       - name: Set environment variables
         run: |
-          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "TODAY=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> "$GITHUB_ENV"
 
           if [[ "${{ matrix.pytest-addopts }}" != "" ]] ;
           then
@@ -135,15 +148,18 @@ jobs:
             then
               # The thread timeout method also kills tests stuck in C code or deadlocked
               # threads, which the default signal method cannot interrupt.
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> "$GITHUB_ENV"
             elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
-              echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> "$GITHUB_ENV"
+            elif [[ "${{ matrix.pytest-addopts }}" == "duckarray" ]] ;
+            then
+              echo "PYTEST_ADDOPTS=-m 'duckarray'" >> "$GITHUB_ENV"
             fi
             if [[ "${{ matrix.pixi-env }}" == "min-all-deps" ]] ;
             then
               # Don't raise on warnings
-              echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-W default" >> "$GITHUB_ENV"
             fi
           fi
 
@@ -162,6 +178,23 @@ jobs:
       - name: Import xarray
         run: |
           pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
+
+      - name: Import duck-array dependencies
+        if: matrix.pytest-addopts == 'duckarray'
+        run: |
+          pixi run -e ${{ matrix.pixi-env }} -- python - <<'PY'
+          import bottleneck
+          import dask.array
+          # test_dask.py requires dataframe support even for its array tests.
+          import dask.dataframe
+          import flox
+          import jax
+          import matplotlib.pyplot
+          import numbagg
+          import opt_einsum
+          import pint
+          import sparse
+          PY
 
       # caches are immutable, so use a unique key per job and restore the latest cache
       # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
