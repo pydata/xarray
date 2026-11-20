@@ -468,9 +468,12 @@ def ravel(array):
     return reshape(array, (-1,))
 
 
-def transpose(array, axes=None):
+def permute_dims(array, axes):
     xp = get_array_namespace(array)
-    return xp.transpose(array, axes)
+    if hasattr(xp, "permute_dims"):
+        return xp.permute_dims(array, tuple(axes))
+    # fall back for namespaces that predate the Array API name
+    return xp.transpose(array, tuple(axes))
 
 
 def moveaxis(array, source, destination):

@@ -67,8 +67,6 @@ iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
-# TODO: remove once https://github.com/xarray-contrib/flox/issues/520 is fixed
-numpy_groupies = "<0.14"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
@@ -203,7 +201,7 @@ rich = "*"                         # for Zarr tree()
 setuptools = "*"
 sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
-sphinx-design = "*"
+sphinx-design = ">=0.8"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=1.1"               # for llms_txt_suppress_unknown_node_warnings
 sphinx = ">=8,<9"
