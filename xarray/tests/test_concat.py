@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -41,6 +41,21 @@ from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
+
+
+@pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+@pytest.mark.parametrize("as_variable", [False, True], ids=["index", "variable"])
+def test_concat_pandas_string_dim_dtype_preserved(
+    na_value: Any, as_variable: bool
+) -> None:
+    string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+    index = pd.Index(["a", None], name="x", dtype=string_dtype)
+    dim = Variable("x", index) if as_variable else index
+
+    result = concat([DataArray(1), DataArray(2)], dim=dim)
+
+    assert result["x"].dtype == np.dtypes.StringDType(na_object=na_value)
+    assert result["x"].isnull().values.tolist() == [False, True]
 
 
 @pytest.mark.parametrize("reverse", [False, True])

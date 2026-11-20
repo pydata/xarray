@@ -117,13 +117,14 @@ class TestDataArray:
 
     def test_repr_multiindex(self) -> None:
         obj_size = np.dtype("O").itemsize
+        level_1 = self.mda["level_1"]
         expected = dedent(
             f"""\
             <xarray.DataArray (x: 4)> Size: 32B
             array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
               * x        (x) object {4 * obj_size}B MultiIndex
-              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
+              * level_1  (x) {level_1.dtype} {level_1.nbytes}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2"""
         )
         assert expected == repr(self.mda)
@@ -137,6 +138,11 @@ class TestDataArray:
             list(range(32)), coords={"x": mindex_long}, dims="x"
         ).astype(np.uint64)
         obj_size = np.dtype("O").itemsize
+        level_1 = mda_long["level_1"]
+        if isinstance(level_1.dtype, np.dtypes.StringDType):
+            labels = "'a' 'a' 'a' 'a' ... 'd' 'd' 'd'"
+        else:
+            labels = "'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'"
         expected = dedent(
             f"""\
             <xarray.DataArray (x: 32)> Size: 256B
@@ -145,7 +151,7 @@ class TestDataArray:
                   dtype=uint64)
             Coordinates:
               * x        (x) object {32 * obj_size}B MultiIndex
-              * level_1  (x) object {32 * obj_size}B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * level_1  (x) {level_1.dtype} {level_1.nbytes}B {labels}
               * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)

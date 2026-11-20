@@ -3768,10 +3768,10 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").count()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) int64 24B 1 2 2
         """
@@ -3864,10 +3864,10 @@ class DatasetGroupByAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").all()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) bool 3B False True True
         """
@@ -3960,10 +3960,10 @@ class DatasetGroupByAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").any()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) bool 3B True True True
         """
@@ -4062,20 +4062,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").max()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 2.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").max(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 2.0 3.0
         """
@@ -4176,20 +4176,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").min()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 2.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").min(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 2.0 0.0
         """
@@ -4292,20 +4292,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").mean()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 2.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").mean(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
@@ -4415,30 +4415,30 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").prod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 4.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 4.0 0.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 4.0 0.0
         """
@@ -4550,30 +4550,30 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").sum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 4.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 4.0 3.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 4.0 3.0
         """
@@ -4682,30 +4682,30 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").std()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 0.0 0.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 0.0 1.5
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 0.0 2.121
         """
@@ -4814,30 +4814,30 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").var()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 0.0 0.0 2.25
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 0.0 2.25
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 0.0 4.5
         """
@@ -4942,20 +4942,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").median()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B 1.0 2.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
@@ -6866,7 +6866,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1, 2, 2])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -6955,7 +6955,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 3B
         array([False,  True,  True])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7044,7 +7044,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 3B
         array([ True,  True,  True])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7139,7 +7139,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 2., 3.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7147,7 +7147,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  2.,  3.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7244,7 +7244,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 2., 0.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7252,7 +7252,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  2.,  0.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7351,7 +7351,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1. , 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7359,7 +7359,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7465,7 +7465,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 4., 0.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7473,7 +7473,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  0.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
@@ -7481,7 +7481,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  0.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7589,7 +7589,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 4., 3.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7597,7 +7597,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  3.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
@@ -7605,7 +7605,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  3.])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7710,7 +7710,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([0. , 0. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7718,7 +7718,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 0. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
@@ -7726,7 +7726,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([       nan, 0.        , 2.12132034])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7831,7 +7831,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([0.  , 0.  , 2.25])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7839,7 +7839,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([ nan, 0.  , 2.25])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
@@ -7847,7 +7847,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 0. , 4.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -7948,7 +7948,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1. , 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -7956,7 +7956,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 24B 'a' 'b' 'c'
+          * labels   (labels) ... 'a' 'b' 'c'
         """
         if (
             flox_available
