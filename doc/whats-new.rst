@@ -538,6 +538,10 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- Rolling reductions with bottleneck no longer fail for windows larger than the
+  array, or with dask larger than its first chunk, and no longer name the result
+  after the dask array.
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Documentation
@@ -654,6 +658,9 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
+  to the array directly, which undoes the slowdown from the fix for :issue:`11336`.
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
