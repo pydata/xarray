@@ -538,6 +538,12 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` work along
+  dimensions with a single coordinate value: a new coordinate equal to it gets
+  the data there, and other new coordinates are out of range. Previously this
+  often returned NaN with a ``RuntimeWarning`` from SciPy, or raised a
+  ``ValueError`` (:issue:`10747`).
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 
 
 Documentation
