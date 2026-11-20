@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
+  (:issue:`9322`).
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
