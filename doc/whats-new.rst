@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Assigning to a :py:class:`DataArray` with a ``(dims, data)`` tuple indexer,
+  e.g. ``da[("b", [0, 1, 0]),] += 1``, now works like indexing with the same
+  key, instead of raising a ``ValueError`` from NumPy (:issue:`10387`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
