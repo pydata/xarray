@@ -1097,7 +1097,9 @@ class TestDetermineCmapParams:
             assert cmap_params["vmin"] is None
             assert cmap_params["vmax"] is None
             assert cmap_params["norm"].vmin == cmap_params["levels"][0]
-            assert cmap_params["norm"].vmax == cmap_params["levels"][-1]
+            assert cmap_params["norm"].vmax == np.nextafter(
+                cmap_params["levels"][-1], np.inf
+            )
             assert cmap_params["extend"] == "neither"
 
         # with min max we are more strict
@@ -1107,9 +1109,11 @@ class TestDetermineCmapParams:
         assert cmap_params["vmin"] is None
         assert cmap_params["vmax"] is None
         assert cmap_params["norm"].vmin == 0
-        assert cmap_params["norm"].vmax == 5
+        assert cmap_params["norm"].vmax == np.nextafter(5, np.inf)
         assert cmap_params["norm"].vmin == cmap_params["levels"][0]
-        assert cmap_params["norm"].vmax == cmap_params["levels"][-1]
+        assert cmap_params["norm"].vmax == np.nextafter(
+            cmap_params["levels"][-1], np.inf
+        )
         assert cmap_params["cmap"].name == "Blues"
         assert cmap_params["extend"] == "neither"
         assert cmap_params["cmap"].N == 4
