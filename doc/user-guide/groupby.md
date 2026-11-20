@@ -36,6 +36,8 @@ by allowing grouping by multiple variables, and lazy grouping by dask arrays.
 If installed, Xarray will automatically use flox by default.
 ```
 
+A hands-on example of GroupBy can be found in Xarray's [Grouped Computations tutorial](https://tutorial.xarray.dev/fundamentals/03.2_groupby_with_xarray.html).
+
 ## Split
 
 Let's create a simple example dataset:
