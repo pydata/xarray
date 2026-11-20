@@ -9,12 +9,14 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast, overload, override
 
 import numpy as np
 import pandas as pd
 from numpy.typing import DTypeLike
 
+from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
@@ -696,7 +698,10 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     ) -> np.ndarray:
         return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
 
-    def get_duck_array(self):
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
+
+    def get_duck_array(self) -> duckarray:
         return self.array.get_duck_array()
 
     @override
@@ -955,6 +960,9 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     @override
     async def async_get_duck_array(self):
         return await self.array.async_get_duck_array()
+
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
 
     @override
     def _oindex_get(self, indexer: OuterIndexer):
@@ -1830,6 +1838,9 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
                 "implements the __array_function__ protocol"
             )
         self.array = array
+
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
 
 
 class ArrayApiIndexingAdapter(IndexingAdapter):

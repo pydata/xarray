@@ -959,7 +959,7 @@ class NamedArray(
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
 
             if is_dict_like(chunks):
                 chunks = tuple(starmap(chunks.get, enumerate(ndata.shape)))

@@ -136,7 +136,7 @@ def to_duck_array[ShapeType, DType: np.dtype[Any]](
         return loaded_data
 
     if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
-        return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
+        return data.get_duck_array()
     elif is_duck_array(data):
         return data
     else:
