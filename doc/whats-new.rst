@@ -535,6 +535,12 @@ Bug Fixes
   file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
   of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Decoding floating point timedeltas with fractional values in units of
+  ``seconds``, ``milliseconds`` or ``microseconds`` no longer modifies the
+  encoded values in place. Previously, repeated access to the lazily decoded
+  values of an in-memory variable gave different results, and read-only data
+  raised ``ValueError: output array is read-only`` (:pull:`11906`).
+  By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
