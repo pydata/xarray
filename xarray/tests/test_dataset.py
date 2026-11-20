@@ -5789,6 +5789,39 @@ class TestDataset:
         ds = ser.to_xarray()
         assert ds.coords.dtypes["index"] == ser.index.dtype
 
+    def test_from_dataframe_categorical_index_interval_categories(self) -> None:
+        # Regression test for GH4307: a DataFrame with a CategoricalIndex
+        # whose categories are an IntervalIndex used to raise
+        # "TypeError: data type not understood" because the interval dtype
+        # cannot be passed to np.dtype. The interval categories are now
+        # kept as a categorical coordinate.
+        df = pd.DataFrame({"name": list("abcdefghijk"), "age": range(11)})
+        df["age_group"] = pd.cut(df["age"], bins=5)
+        df = df.set_index(["name", "age_group"])
+        assert isinstance(df.index, pd.MultiIndex)
+
+        for ds in [df.to_xarray(), Dataset.from_dataframe(df)]:
+            assert ds.coords.dtypes["age_group"] == df.index.levels[1].dtype
+            assert list(ds.coords["age_group"].values) == list(df.index.levels[1])
+            assert ds.sizes["age_group"] == 5
+
+    def test_from_dataframe_categorical_index_interval_categories_single(
+        self,
+    ) -> None:
+        # Same as above, but with a single-level (non-MultiIndex) index.
+        cat = pd.CategoricalIndex(pd.cut(range(5), bins=3))
+        df = pd.DataFrame({"v": range(5)}, index=cat)
+        ds = df.to_xarray()
+        assert ds.coords.dtypes["index"] == cat.dtype
+        assert list(ds.coords["index"].values) == list(cat)
+        index_dtype = ds.coords["index"].dtype
+        assert isinstance(index_dtype, pd.CategoricalDtype)
+        assert list(index_dtype.categories) == list(cat.categories)
+        df.index.name = (
+            "index"  # restored gets the name because it has the coord with the name
+        )
+        pd.testing.assert_frame_equal(df, ds.to_dataframe())
+
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
         import sparse
