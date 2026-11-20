@@ -540,7 +540,7 @@ Bug Fixes
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 - Rolling reductions with bottleneck no longer fail for windows larger than the
   array, or with dask larger than its first chunk, and no longer name the result
-  after the dask array.
+  after the dask array (:pull:`11925`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
@@ -659,7 +659,8 @@ Performance
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
 - Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
-  to the array directly, which undoes the slowdown from the fix for :issue:`11336`.
+  to the array directly, which undoes the slowdown from the fix for :issue:`11336`
+  (:pull:`11925`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
