@@ -2026,6 +2026,23 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         assert arr is not None
         assert arr.size <= self.darray.size
 
+    @pytest.mark.parametrize("grid", [True, False])
+    def test_grid_follows_rcparams(self, grid: bool) -> None:
+        # Regression for GH 11919: the grid used to be unconditionally
+        # disabled, ignoring the ``axes.grid`` rcParam.
+        with mpl.rc_context({"axes.grid": grid}):
+            _, ax = plt.subplots()
+            self.plotmethod(ax=ax)
+        assert any(line.get_visible() for line in ax.get_xgridlines()) == grid
+        assert any(line.get_visible() for line in ax.get_ygridlines()) == grid
+
+    def test_grid_enabled_on_axes_is_kept(self) -> None:
+        ax = plt.gca()
+        ax.grid(True)
+        self.plotmethod(ax=ax)
+        assert any(line.get_visible() for line in ax.get_xgridlines())
+        assert any(line.get_visible() for line in ax.get_ygridlines())
+
 
 class TestPcolormeshLogscale(PlotTestCase):
     """Test pcolormesh axes when x and y are in logscale."""
