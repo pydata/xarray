@@ -654,6 +654,11 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Opening a Zarr dataset with datetime-encoded coordinates no longer reads the
+  time chunk three times: the first and last values that are decoded to infer
+  the dtype are now read with a single vectorized request, instead of one
+  request each (:issue:`10560`).
+  By `PStarH <https://github.com/PStarH>`_.
 
 
 Internal Changes
