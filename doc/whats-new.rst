@@ -88,6 +88,10 @@ New Features
   A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
+- Change behavior of ``chunks="auto"`` to guarantee that chunks in xarray
+  match on-disk chunks or multiples of them. No automatic chunk splitting allowed.
+  (:pull:`11060`).
+  By `Julia Signell <https://github.com/jsignell>`_
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 - The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
