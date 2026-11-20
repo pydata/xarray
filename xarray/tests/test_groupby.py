@@ -254,6 +254,191 @@ def test_groupby_map_change_group_size(obj) -> None:
     assert_identical(expected, actual)
 
 
+@requires_dask
+@pytest.mark.parametrize(
+    "obj",
+    [
+        xr.DataArray(
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dims="x", coords={"x": [1, 1, 2, 2, 1, 2]}
+        ),
+        xr.Dataset(
+            {
+                "foo": ("x", [1, 2, 3, 4, 5, 6]),
+                "bar": ("x", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            },
+            coords={"x": [1, 1, 2, 2, 1, 2]},
+        ),
+    ],
+)
+def test_groupby_map_shuffle(obj) -> None:
+    def center(group):
+        return group - group.mean("x")
+
+    expected = obj.groupby("x").map(center)
+    actual = obj.chunk(x=2).groupby("x").map(center, shuffle=True)
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_derived_grouper() -> None:
+    time = date_range("2000-01-01", periods=3 * 365 + 10, freq="D")
+    da = DataArray(
+        np.arange(time.size, dtype=float), dims="time", coords={"time": time}, name="a"
+    )
+
+    def center(group):
+        return group - group.mean("time")
+
+    gb = da.groupby("time.dayofyear")
+    expected = gb.map(center)
+    actual = da.chunk({"time": 365}).groupby("time.dayofyear").map(center, shuffle=True)
+    assert_identical(actual, expected)
+    assert "dayofyear" not in actual.coords
+
+
+@requires_dask
+def test_groupby_map_shuffle_reduction() -> None:
+    time = date_range("2000-01-01", periods=3 * 365 + 10, freq="D")
+    da = DataArray(
+        np.arange(time.size, dtype=float), dims="time", coords={"time": time}, name="a"
+    )
+    gb = da.groupby("time.dayofyear")
+    expected = gb.map(lambda group: group.mean("time"))
+    actual = (
+        da.chunk({"time": 365})
+        .groupby("time.dayofyear")
+        .map(lambda group: group.mean("time"), shuffle=True)
+    )
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_dataset_reduction() -> None:
+    time = date_range("2000-01-01", periods=3 * 365 + 10, freq="D")
+    ds = Dataset(
+        {
+            "a": ("time", np.arange(time.size, dtype=float)),
+            "b": (("time", "y"), np.arange(time.size * 2, dtype=float).reshape(-1, 2)),
+        },
+        coords={"time": time},
+    )
+    expected = ds.groupby("time.dayofyear").map(lambda group: group.mean("time"))
+    actual = (
+        ds.chunk({"time": 365})
+        .groupby("time.dayofyear")
+        .map(lambda group: group.mean("time"), shuffle=True)
+    )
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_graph() -> None:
+    time = date_range("2000-01-01", periods=3 * 365 + 10, freq="D")
+    da = DataArray(
+        np.arange(time.size, dtype=float), dims="time", coords={"time": time}, name="a"
+    ).chunk({"time": 365})
+
+    def center(group):
+        return group - group.mean("time")
+
+    with raise_if_dask_computes():
+        actual = da.groupby("time.dayofyear").map(center, shuffle=True)
+
+    graph = actual.data.__dask_graph__()
+    assert actual.data.numblocks == da.data.numblocks
+    assert len(graph.layers) < 20
+    assert len(graph) < 1000
+
+
+@requires_dask
+def test_groupby_map_shuffle_size_changing_not_supported() -> None:
+    da = DataArray(np.arange(6.0), dims="x", coords={"x": [1, 1, 1, 2, 2, 2]}).chunk(
+        x=2
+    )
+    with pytest.raises(NotImplementedError, match="preserve the size"):
+        da.groupby("x").map(lambda group: group.isel(x=[0]), shuffle=True)
+
+
+def test_groupby_map_shuffle_non_chunked() -> None:
+    da = DataArray([1.0, 2.0, 3.0, 4.0], dims="x", coords={"x": [1, 2, 1, 2]})
+
+    def center(group):
+        return group - group.mean("x")
+
+    expected = da.groupby("x").map(center)
+    actual = da.groupby("x").map(center, shuffle=True)
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_args() -> None:
+    da = DataArray([1.0, 2.0, 3.0, 4.0], dims="x", coords={"x": [1, 2, 1, 2]})
+
+    def add(group, value, offset=0):
+        return group + value + offset
+
+    expected = da.groupby("x").map(add, args=(1,), offset=2)
+    actual = da.chunk(x=2).groupby("x").map(add, args=(1,), offset=2, shuffle=True)
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_nan_groups() -> None:
+    labels = np.array([1.0, np.nan, 1, 2, np.nan, 2] * 2)
+    da = DataArray(
+        np.arange(labels.size, dtype=float),
+        dims="x",
+        coords={"x": np.arange(labels.size)},
+    )
+    expected = (
+        da.assign_coords(labels=("x", labels))
+        .groupby("labels")
+        .map(lambda g: g - g.mean("x"))
+    )
+    actual = (
+        da.chunk(x=3)
+        .assign_coords(labels=("x", labels))
+        .groupby("labels")
+        .map(lambda g: g - g.mean("x"), shuffle=True)
+    )
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_bins() -> None:
+    b = np.arange(20) % 7
+    da = DataArray(np.arange(20.0), dims="x", coords={"x": np.arange(20)})
+    expected = (
+        da.assign_coords(b=("x", b))
+        .groupby_bins("b", [0, 3, 6, 9])
+        .map(lambda g: g - g.mean("x"))
+    )
+    actual = (
+        da.chunk(x=4)
+        .assign_coords(b=("x", b))
+        .groupby_bins("b", [0, 3, 6, 9])
+        .map(lambda g: g - g.mean("x"), shuffle=True)
+    )
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_groupby_map_shuffle_bins_reduction() -> None:
+    b = np.arange(20) % 7
+    da = (
+        DataArray(np.arange(20.0), dims="x", coords={"x": np.arange(20)})
+        .chunk(x=4)
+        .assign_coords(b=("x", b))
+    )
+    expected = da.groupby_bins("b", [0, 3, 6, 9]).map(lambda g: g.mean("x")).compute()
+    actual = (
+        da.groupby_bins("b", [0, 3, 6, 9])
+        .map(lambda g: g.mean("x"), shuffle=True)
+        .compute()
+    )
+    assert_identical(actual, expected)
+
+
 def test_da_groupby_map_func_args() -> None:
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
