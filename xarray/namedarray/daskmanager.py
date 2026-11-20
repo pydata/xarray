@@ -85,10 +85,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         dask_array = da.from_array(data, chunks, **kwargs)  # type: ignore[no-untyped-call]
         try:
             backend: str = xp.__name__  # e.g. "numpy", "cupy"
-            da.backends.array_creation_dispatch.dispatch(backend=backend)
-            return dask_array.to_backend(  # https://github.com/dask/dask/pull/9914
-                backend=backend
-            )
+            return dask_array.to_backend(backend=backend)
         except (
             UnboundLocalError,  # cannot access local variable 'xp
             ValueError,  # No backend dispatch registered for <library>
