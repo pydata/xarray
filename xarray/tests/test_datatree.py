@@ -2923,6 +2923,27 @@ class TestDask:
 
         assert tree.chunksizes == original_chunksizes, "original tree was modified"
 
+    def test_dask_compute_and_persist_subtree(self) -> None:
+        import dask
+
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": np.arange(3)}),
+                "/a": xr.Dataset({"v": ("x", np.arange(3.0))}).chunk({"x": 2}),
+                "/a/b": xr.Dataset({"w": ("x", np.arange(3.0))}).chunk({"x": 2}),
+            }
+        )
+        sub = tree["a"]
+        expected = sub.compute()
+
+        computed = dask.compute(sub)[0]
+        assert_identical(computed, expected)
+        assert list(computed.children) == ["b"]
+        assert "x" in computed.coords
+
+        persisted = dask.persist(sub)[0]
+        assert_identical(persisted.compute(), expected)
+
     def test_dask_tokenize(self) -> None:
         from dask.base import tokenize
 

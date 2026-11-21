@@ -2604,19 +2604,23 @@ class DataTree(
         return new._persist_inplace(**kwargs)
 
     def _dask_datasets(self) -> list[tuple[str, Dataset]]:
-        """Return each node's data, keyed by path, excluding inherited coordinates."""
+        """Return each node's data, keyed by path relative to this node.
+
+        Excludes inherited coordinates, except on this node itself, which
+        keeps the coordinates it inherits (as compute() does on a subtree).
+        """
         datasets = []
-        for node in self.subtree:
-            # own data only, so inherited parent coordinates stay on the parent
-            ds = node.to_dataset(inherit=False)
-            datasets.append((node.path, ds))
+        for path, node in self.subtree_with_keys:
+            # only the starting node inherits, so descendants don't duplicate its coordinates
+            ds = node.to_dataset(inherit=node is self)
+            datasets.append((path, ds))
         return datasets
 
     def _dask_rebuild(self, nodes: Mapping[str, Dataset]) -> Self:
         new = type(self).from_dict(nodes, name=self.name)
-        # from_dict copies nodes, which drops the closers, so put them back
-        for node in self.subtree:
-            new[node.path].set_close(node._close)
+        for path, node in self.subtree_with_keys:
+            # from_dict copies nodes, which drops the closers, so put them back
+            new[path].set_close(node._close)
         return new
 
     def __dask_tokenize__(self) -> object:
