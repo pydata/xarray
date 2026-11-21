@@ -3489,12 +3489,28 @@ class Dataset(
         ...     coords={"station": ["b", "c"], "hour": [0, 1]},
         ... )
         >>> result = ds.broadcast_like(other)
-        >>> result.station.values.tolist()
-        ['a', 'b', 'c']
-        >>> result.temperature.sel(station="b").values.tolist()
-        [15.0, 15.0]
-        >>> result.temperature.sel(station="c").isnull().all().item()
-        True
+        >>> ds
+        <xarray.Dataset> Size: 24B
+        Dimensions:      (station: 2)
+        Coordinates:
+          * station      (station) <U1 8B 'a' 'b'
+        Data variables:
+            temperature  (station) int64 16B 10 15
+        >>> other
+        <xarray.DataArray (station: 2, hour: 2)> Size: 32B
+        array([[0, 0],
+               [0, 0]])
+        Coordinates:
+          * station  (station) <U1 8B 'b' 'c'
+          * hour     (hour) int64 16B 0 1
+        >>> result
+        <xarray.Dataset> Size: 76B
+        Dimensions:      (station: 3, hour: 2)
+        Coordinates:
+          * station      (station) <U1 12B 'a' 'b' 'c'
+          * hour         (hour) int64 16B 0 1
+        Data variables:
+            temperature  (station, hour) float64 48B 10.0 10.0 15.0 15.0 nan nan
 
         """
         if exclude is None:
