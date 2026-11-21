@@ -143,15 +143,12 @@ def test_get_default_netcdf_write_engine() -> None:
 
 
 @requires_h5netcdf
-def test_default_engine_h5netcdf(monkeypatch):
+def test_default_engine_h5netcdf(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test the default netcdf engine when h5netcdf is the only importable module."""
-    # ensure h5netcdf is imported
-    import h5netcdf  # noqa: F401
-
-    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
-    monkeypatch.delitem(sys.modules, "scipy", raising=False)
-    # clear meta_path to make sure only h5netcdf can be found
-    monkeypatch.setattr(sys, "meta_path", [])
+    # Pretend the other libraries are not installed: a None entry in sys.modules makes
+    # importlib.util.find_spec return None, while all other imports keep working.
+    monkeypatch.setitem(sys.modules, "netCDF4", None)
+    monkeypatch.setitem(sys.modules, "scipy", None)
 
     engine = get_default_netcdf_write_engine("", format=None)
     assert engine == "h5netcdf"
@@ -166,9 +163,10 @@ def test_default_engine_h5netcdf(monkeypatch):
         get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
 
 
-def test_default_engine_nczarr_no_netcdf4_python(monkeypatch):
-    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
-    monkeypatch.setattr(sys, "meta_path", [])
+def test_default_engine_nczarr_no_netcdf4_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "netCDF4", None)
 
     with pytest.raises(
         ValueError,
