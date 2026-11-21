@@ -625,10 +625,14 @@ class TestMergeMethod:
 
         with pytest.raises(ValueError, match="conflicting values for variable"):
             ds1.merge(ds2.rename({"var3": "var1"}), compat="no_conflicts")
-        with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.reset_coords().merge(data)
-        with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.merge(data.reset_coords())
+
+        with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+            out = data.reset_coords().merge(data)
+        assert "numbers" in out.data_vars
+
+        with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+            out = data.merge(data.reset_coords())
+        assert "numbers" in out.coords
 
     @pytest.mark.parametrize(
         "join", ["outer", "inner", "left", "right", "exact", "override"]
@@ -672,8 +676,9 @@ class TestMergeMethod:
 
         ds2 = xr.Dataset({"x": [0, 0]})
         for compat in ["equals", "identical"]:
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
+            assert "x" in out.data_vars
 
         ds2 = xr.Dataset({"x": ((), 0, {"foo": "bar"})})
         with pytest.raises(xr.MergeError):
@@ -826,10 +831,13 @@ class TestNewDefaults:
 
             ds1.merge(ds2.rename({"var3": "var1"}))
 
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                data.reset_coords().merge(data)
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                data.merge(data.reset_coords())
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = data.reset_coords().merge(data)
+            assert "numbers" in out.data_vars
+
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = data.merge(data.reset_coords())
+            assert "numbers" in out.coords
 
     def test_merge_broadcast_equals(self):
         ds1 = xr.Dataset({"x": 0})
