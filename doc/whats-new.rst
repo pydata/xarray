@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.plot.pcolormesh` preserves the Matplotlib axes grid
+  settings, including those set by a plotting style (:issue:`11919`).
+  By `Arham Begani <https://github.com/Arham-Begani>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
