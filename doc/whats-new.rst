@@ -657,6 +657,9 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Creating the first index no longer imports dask, pint and sparse if they are
+  installed, which took about half a second (:pull:`11838`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
