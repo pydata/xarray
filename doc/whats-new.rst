@@ -223,6 +223,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
+  ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
+  produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
+  ``OutOfBoundsDatetime`` for dates outside pandas' nanosecond range
+  (:issue:`10975`).
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
