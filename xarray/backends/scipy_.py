@@ -4,7 +4,16 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, ClassVar, Literal, overload, override
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 
@@ -16,6 +25,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    _raise_if_zarr_store,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
 from xarray.backends.locks import ensure_lock, get_write_lock
@@ -256,6 +266,9 @@ class ScipyDataStore(WritableCFDataStore):
         else:
             raise ValueError(f"invalid format for scipy.io.netcdf backend: {format!r}")
 
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename_or_obj = _normalize_path(filename_or_obj)
         if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
 
@@ -293,6 +306,17 @@ class ScipyDataStore(WritableCFDataStore):
             )
 
         self._manager = manager
+
+    def __dask_tokenize__(self) -> object:
+        """Token for dask, identifying the data by the type and file manager.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager))
 
     @property
     def ds(self) -> scipy.io.netcdf_file:
@@ -395,8 +419,10 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    else:
-        return _normalize_path(filename_or_obj)
+    _raise_if_zarr_store(filename_or_obj, "scipy")
+    return cast(
+        "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
+    )
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):

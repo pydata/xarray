@@ -5,6 +5,7 @@ import subprocess
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
 from itertools import starmap
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -24,6 +25,23 @@ from xarray.tests import (
 )
 
 importlib_metadata_mock = "importlib.metadata"
+
+
+@requires_netCDF4
+@requires_zarr
+@pytest.mark.parametrize("zarr_format", [2, 3])
+@pytest.mark.parametrize("path_as_string", [False, True])
+def test_guess_engine_local_zarr_directory(
+    tmp_path: Path, zarr_format: int, path_as_string: bool
+) -> None:
+    expected = xr.Dataset({"temperature": ("time", [1.0, 2.0, 3.0])})
+    path = tmp_path / "example.zarr"
+    expected.to_zarr(path, zarr_format=zarr_format, consolidated=False)
+    store = str(path) if path_as_string else path
+
+    assert plugins.guess_engine(store) == "zarr"
+    with xr.open_dataset(store, consolidated=False) as actual:
+        xr.testing.assert_identical(actual, expected)
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):

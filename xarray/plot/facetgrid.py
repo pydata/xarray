@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import functools
 import itertools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 
 from xarray.core.formatting import format_item
 from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
+from xarray.core.utils import emit_user_level_warning
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
+    _check_col_wrap,
     _determine_guide,
     _get_nice_quiver_magnitude,
     _group_hue_values,
@@ -81,9 +82,6 @@ def _auto_grid(
     return ncol, nrow
 
 
-T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
-
-
 class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     """Initialize the Matplotlib figure and FacetGrid object.
 
@@ -112,6 +110,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
+    axes : ndarray of matplotlib.axes.Axes
+        Alias of ``axs``, which is the preferred name.
     col_labels : list of matplotlib.text.Annotation
         Column titles.
     row_labels : list of matplotlib.text.Annotation
@@ -192,6 +192,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         """
         import matplotlib.pyplot as plt
 
+        _check_col_wrap(col_wrap, row, col)
+
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
         rep_row = row is not None and not data[row].to_index().is_unique
@@ -209,8 +211,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn(
-                    "Ignoring col_wrap since both col and row were passed", stacklevel=2
+                emit_user_level_warning(
+                    "Ignoring col_wrap since both col and row were passed"
                 )
         elif row and not col:
             single_group = row
@@ -318,26 +320,11 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
 
     @property
     def axes(self) -> np.ndarray:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
+        """Alias of :py:attr:`axs`, which is the preferred name."""
         return self.axs
 
     @axes.setter
     def axes(self, axs: np.ndarray) -> None:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
         self.axs = axs
 
     @property
@@ -349,12 +336,12 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         return self.axs[-1, :]
 
     def map_dataarray(
-        self: T_FacetGrid,
+        self: FacetGrid[DataArray],
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[DataArray]:
         """Apply a plotting function to a 2d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
@@ -425,7 +412,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         return self
 
     def map_plot1d(
-        self: T_FacetGrid,
+        self: FacetGrid[DataArray],
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
@@ -435,7 +422,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[DataArray]:
         """Apply a plotting function to a 1d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
@@ -608,7 +595,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         return self
 
     def map_dataarray_line(
-        self: T_FacetGrid,
+        self: FacetGrid[DataArray],
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
@@ -616,7 +603,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         add_legend: bool = True,
         _labels=None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[DataArray]:
         from xarray.plot.dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
@@ -650,7 +637,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         return self
 
     def map_dataset(
-        self: T_FacetGrid,
+        self: FacetGrid[Dataset],
         func: Callable,
         x: Hashable | None = None,
         y: Hashable | None = None,
@@ -658,7 +645,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         hue_style: HueStyleOptions = None,
         add_guide: bool | None = None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[Dataset]:
         from xarray.plot.dataset_plot import _infer_meta_data
 
         kwargs["add_guide"] = False
@@ -1012,9 +999,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             ):
                 tick.label1.set_fontsize(fontsize)
 
-    def map(
-        self: T_FacetGrid, func: Callable, *args: Hashable, **kwargs: Any
-    ) -> T_FacetGrid:
+    def map(self, func: Callable, *args: Hashable, **kwargs: Any) -> Self:
         """Apply a plotting function to each facet's subset of the data.
 
         Parameters
@@ -1102,18 +1087,17 @@ def _easy_facetgrid(
         subplot_kws=subplot_kws,
     )
 
+    # the kind says whether data is a DataArray or a Dataset
     if kind == "line":
-        return g.map_dataarray_line(plotfunc, x, y, **kwargs)
-
-    if kind == "dataarray":
-        return g.map_dataarray(plotfunc, x, y, **kwargs)
-
-    if kind == "plot1d":
-        return g.map_plot1d(plotfunc, x, y, **kwargs)
-
-    if kind == "dataset":
-        return g.map_dataset(plotfunc, x, y, **kwargs)
-
-    raise ValueError(
-        f"kind must be one of `line`, `dataarray`, `dataset` or `plot1d`, got {kind}"
-    )
+        cast("FacetGrid[DataArray]", g).map_dataarray_line(plotfunc, x, y, **kwargs)
+    elif kind == "dataarray":
+        cast("FacetGrid[DataArray]", g).map_dataarray(plotfunc, x, y, **kwargs)
+    elif kind == "plot1d":
+        cast("FacetGrid[DataArray]", g).map_plot1d(plotfunc, x, y, **kwargs)
+    elif kind == "dataset":
+        cast("FacetGrid[Dataset]", g).map_dataset(plotfunc, x, y, **kwargs)
+    else:
+        raise ValueError(
+            f"kind must be one of `line`, `dataarray`, `dataset` or `plot1d`, got {kind}"
+        )
+    return g

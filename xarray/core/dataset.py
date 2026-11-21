@@ -8,7 +8,6 @@ import datetime
 import io
 import math
 import sys
-import warnings
 from collections import defaultdict
 from collections.abc import (
     Callable,
@@ -31,6 +30,7 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload, override
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DatasetExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
@@ -65,6 +65,7 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
+    drop_scalar_index_coords,
     filter_indexes_from_coords,
     is_full_ordered_product,
     isel_indexes,
@@ -233,6 +234,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
+    DatasetExternalAccessorMixin,
     Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
@@ -875,6 +877,13 @@ class Dataset(
         Dataset.load_async
         DataArray.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> computed = ds.compute()
+        >>> type(computed["a"].data)
+        <class 'numpy.ndarray'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -919,6 +928,13 @@ class Dataset(
         See Also
         --------
         dask.persist
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> persisted = ds.persist()
+        >>> type(persisted["a"].data)
+        <class 'dask.array.core.Array'>
         """
         new = self.copy(deep=False)
         return new._persist_inplace(**kwargs)
@@ -2645,6 +2661,27 @@ class Dataset(
         Dataset.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", np.arange(6.0))},
+        ...     coords={"time": pd.date_range("2000-01-01", freq="MS", periods=6)},
+        ... )
+        >>> ds.chunk(time=2)
+        <xarray.Dataset> Size: 96B
+        Dimensions:      (time: 6)
+        Coordinates:
+          * time         (time) datetime64[us] 48B 2000-01-01 2000-02-01 ... 2000-06-01
+        Data variables:
+            temperature  (time) float64 48B dask.array<chunksize=(2,), meta=np.ndarray>
+
+        Along a datetime-like dimension, a resampler creates one chunk per period,
+        here one per quarter:
+
+        >>> from xarray.groupers import TimeResampler
+        >>> ds.chunk(time=TimeResampler("QS")).chunksizes
+        Frozen({'time': (3, 3)})
         """
         from xarray.groupers import Resampler
 
@@ -2949,6 +2986,10 @@ class Dataset(
         coord_names = self._coord_names.copy()
 
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, indexers
+            )
 
         for name, var in self._variables.items():
             # preserve variable order
@@ -2985,6 +3026,10 @@ class Dataset(
 
         variables: dict[Hashable, Variable] = {}
         indexes, index_variables = isel_indexes(self.xindexes, valid_indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, valid_indexers
+            )
 
         for name, var in self.variables.items():
             if name in index_variables:
@@ -3558,6 +3603,59 @@ class Dataset(
         Dataset.reindex
         DataArray.reindex_like
         align
+
+        Examples
+        --------
+        Reindex time-series observations to the time index of another dataset.
+        Values for new index labels are filled with ``NaN`` by default:
+
+        >>> observations = xr.Dataset(
+        ...     {"temperature": ("time", [18.0, 21.0])},
+        ...     coords={"time": [0, 2]},
+        ... )
+        >>> observations
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) int64 16B 0 2
+        Data variables:
+            temperature  (time) float64 16B 18.0 21.0
+        >>> target = xr.Dataset(coords={"time": [0, 1, 2]})
+        >>> target
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) int64 24B 0 1 2
+        Data variables:
+            *empty*
+        >>> observations.reindex_like(target)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 nan 21.0
+
+        Filling missing values with a specified value:
+
+        >>> observations.reindex_like(target, fill_value=0.0)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 0.0 21.0
+
+        Filling missing values with the previous valid index with respect to
+        the coordinates' value:
+
+        >>> observations.reindex_like(target, method="ffill")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 18.0 21.0
 
         """
         return alignment.reindex_like(
@@ -4231,6 +4329,49 @@ class Dataset(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": ("x", [10.0, 20.0, 30.0]),
+        ...         "pressure": ("x", [1.0, 2.0, 4.0]),
+        ...     },
+        ...     coords={"x": [0.0, 1.0, 2.0]},
+        ... )
+        >>> other = xr.Dataset(coords={"x": [0.5, 1.5, 2.5]})
+
+        Interpolate all variables to the coordinates of ``other``. Values
+        outside of the original coordinates are ``NaN``:
+
+        >>> ds.interp_like(other)
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 nan
+            pressure     (x) float64 24B 1.5 3.0 nan
+
+        Use another method, or pass options to the interpolator, e.g. to
+        extrapolate:
+
+        >>> ds.interp_like(other, method="nearest")
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 10.0 20.0 nan
+            pressure     (x) float64 24B 1.0 2.0 nan
+        >>> ds.interp_like(other, kwargs={"fill_value": "extrapolate"})
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 35.0
+            pressure     (x) float64 24B 1.5 3.0 5.0
         """
         if kwargs is None:
             kwargs = {}
@@ -4357,12 +4498,11 @@ class Dataset(
                     create_dim_coord = True
 
             if create_dim_coord:
-                warnings.warn(
+                emit_user_level_warning(
                     f"rename {k!r} to {name_dict[k]!r} does not create an index "
                     "anymore. Try using swap_dims instead or use set_index "
                     "after rename to create an indexed coordinate.",
                     UserWarning,
-                    stacklevel=3,
                 )
 
         variables, coord_names, dims, indexes = self._rename_all(
@@ -4823,11 +4963,10 @@ class Dataset(
                     variables.update(index_vars)
                 else:
                     if create_index_for_new_dim:
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"No index created for dimension {k} because variable {k} is not a coordinate. "
                             f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
                             UserWarning,
-                            stacklevel=2,
                         )
 
                     # create 1D variable without creating a new index
@@ -6167,11 +6306,10 @@ class Dataset(
                 labels = [labels]
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
-            warnings.warn(
+            emit_user_level_warning(
                 "dropping labels using list-like labels is deprecated; using "
                 "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
                 FutureWarning,
-                stacklevel=2,
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
@@ -6346,6 +6484,50 @@ class Dataset(
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions).
+
+        See Also
+        --------
+        Dataset.drop_vars
+        DataArray.drop_vars
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "a": (("x", "y"), [[1.0, 2.0], [3.0, 4.0]]),
+        ...         "b": (("x",), [5.0, 6.0]),
+        ...     },
+        ...     coords={"x": ["a", "b"], "y": ["c", "d"]},
+        ... )
+        >>> ds
+        <xarray.Dataset> Size: 64B
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) <U1 8B 'c' 'd'
+        Data variables:
+            a        (x, y) float64 32B 1.0 2.0 3.0 4.0
+            b        (x) float64 16B 5.0 6.0
+
+        Drop ``y`` and the variables that use it:
+
+        >>> ds.drop_dims("y")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
+
+        Dimensions that don't exist raise an error, unless ``errors="ignore"``:
+
+        >>> ds.drop_dims(["y", "z"], errors="ignore")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -6928,6 +7110,42 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        Dataset.fillna
+        Dataset.merge
+        DataArray.combine_first
+
+        Notes
+        -----
+        See :ref:`combine` for more on combining objects with missing values.
+
+        Examples
+        --------
+        Fill missing temperatures from a second dataset while keeping existing
+        values in the calling dataset. The result includes the union of station
+        labels and data variables from both datasets.
+
+        >>> observations = xr.Dataset(
+        ...     {"temperature": ("station", [12.0, np.nan])},
+        ...     coords={"station": ["A", "B"]},
+        ... )
+        >>> fallback = xr.Dataset(
+        ...     {
+        ...         "temperature": ("station", [99.0, 15.0, 18.0]),
+        ...         "rainfall": ("station", [0.0, 2.0, 1.0]),
+        ...     },
+        ...     coords={"station": ["A", "B", "C"]},
+        ... )
+        >>> observations.combine_first(fallback)
+        <xarray.Dataset> Size: 60B
+        Dimensions:      (station: 3)
+        Coordinates:
+          * station      (station) <U1 12B 'A' 'B' 'C'
+        Data variables:
+            temperature  (station) float64 24B 12.0 15.0 18.0
+            rainfall     (station) float64 24B 0.0 2.0 1.0
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
@@ -9685,13 +9903,12 @@ class Dataset(
             student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
         """
         if dim is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
-                stacklevel=2,
             )
         if (
             dim is None
@@ -9777,13 +9994,12 @@ class Dataset(
 
         """
         if dim is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Once the behaviour of DataArray.argmax() and Variable.argmax() without "
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmax() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
-                stacklevel=2,
             )
         if (
             dim is None
@@ -10330,6 +10546,24 @@ class Dataset(
             will be dropped as there are no equivalent dates in a standard calendar.
 
             This option is best used with data on a frequency coarser than daily.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", [10.0, 11.0, 12.0])},
+        ...     coords={"time": pd.date_range("2000-01-29", periods=3)},
+        ... )
+
+        The ``"360_day"`` calendar has no 31st, so with ``align_on="date"`` the
+        31st of January is dropped:
+
+        >>> ds.convert_calendar("360_day", align_on="date")
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) object 16B 2000-01-29 00:00:00 2000-01-30 00:00:00
+        Data variables:
+            temperature  (time) float64 16B 10.0 11.0
         """
         return convert_calendar(
             self,

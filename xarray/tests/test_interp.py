@@ -228,6 +228,7 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
 
     if use_dask:
         da = da.chunk({"y": 5})
+    da_in_memory = da.compute()
 
     # xdest is 1d but has different dimension
     xdest = xr.DataArray(
@@ -236,17 +237,17 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
         coords={"z": np.random.randn(30), "z2": ("z", np.random.randn(30))},
     )
 
-    actual = da.interp(x=xdest, method=method)
+    actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da, "x", xdest, method),
+        func(da_in_memory, "x", xdest, method),
         dims=["z", "y"],
         coords={
             "z": xdest["z"],
             "z2": xdest["z2"],
             "y": da["y"],
             "x": ("z", xdest.values),
-            "x2": ("z", func(da["x2"], "x", xdest, method)),
+            "x2": ("z", func(da_in_memory["x2"], "x", xdest, method)),
         },
     )
     assert_allclose(actual, expected.transpose("z", "y", transpose_coords=True))
@@ -262,18 +263,18 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
         },
     )
 
-    actual = da.interp(x=xdest, method=method)
+    actual = da.interp(x=xdest, method=method).compute()
 
     expected = xr.DataArray(
-        func(da, "x", xdest, method),
+        func(da_in_memory, "x", xdest, method),
         dims=["z", "w", "y"],
         coords={
             "z": xdest["z"],
             "w": xdest["w"],
             "z2": xdest["z2"],
-            "y": da["y"],
+            "y": da_in_memory["y"],
             "x": (("z", "w"), xdest.data),
-            "x2": (("z", "w"), func(da["x2"], "x", xdest, method)),
+            "x2": (("z", "w"), func(da_in_memory["x2"], "x", xdest, method)),
         },
     )
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
@@ -1300,3 +1301,30 @@ def test_dataset_interp_datetime_dask() -> None:
     computed = result.compute()
     expected_time = np.datetime64("2024-01-01") + np.timedelta64(3, "D")
     np.testing.assert_equal(computed["time"].values[0, 0], expected_time)
+
+
+@requires_scipy
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+def test_interp_empty_new_coords(method) -> None:
+    da = xr.DataArray(np.arange(5.0), dims="x", coords={"x": np.arange(5)})
+    actual = da.interp(x=np.array([], dtype=float), method=method)
+    expected = xr.DataArray(
+        np.array([], dtype=float), dims="x", coords={"x": np.array([], dtype=float)}
+    )
+    assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp_vectorized_empty_dim(use_dask: bool) -> None:
+    # the new coordinates vary along the empty dimension "t"
+    da = xr.DataArray(
+        np.zeros((0, 3, 5)),
+        dims=("t", "r", "z"),
+        coords={"z": np.linspace(0, 1, 5)},
+    )
+    if use_dask:
+        da = da.chunk()
+    new_z = xr.DataArray(np.array([], dtype=float), dims="t")
+    actual = da.interp(z=new_z)
+    expected = xr.DataArray(np.zeros((0, 3)), dims=("t", "r"), coords={"z": new_z})
+    assert_identical(actual.compute(), expected)

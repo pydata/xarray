@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from collections.abc import Set as AbstractSet
 from contextlib import suppress
@@ -12,8 +11,6 @@ from typing import (
     Any,
     Concatenate,
     Generic,
-    ParamSpec,
-    TypeVar,
     Union,
     overload,
     override,
@@ -29,6 +26,7 @@ from xarray.core.types import ResampleCompatible
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     is_scalar,
 )
 from xarray.namedarray._typing import DimType_co
@@ -57,7 +55,6 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
-        Self,
         SideOptions,
         T_Chunks,
         T_DataWithCoords,
@@ -68,11 +65,7 @@ if TYPE_CHECKING:
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
-
-T_Resample = TypeVar("T_Resample", bound="Resample")
-C = TypeVar("C")
-T = TypeVar("T")
-P = ParamSpec("P")
+    from typing import Self
 
 
 class ImplementsArrayReduce:
@@ -166,7 +159,12 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def __bool__(self: Any) -> bool:
-        return bool(self.values)
+        data = self.data
+        if isinstance(data, pd.api.extensions.ExtensionArray):
+            # bool(pd.array([False])) is True because it falls back to len().
+            # Convert to preserve NumPy's scalar and ambiguous truth semantics.
+            return bool(self.values)
+        return bool(data)
 
     def __float__(self: Any) -> float:
         return float(self.values)
@@ -275,22 +273,9 @@ class AttrAccessMixin:
     __slots__ = ()
 
     def __init_subclass__(cls, **kwargs):
-        """Verify that all subclasses explicitly define ``__slots__``.
-
-        If they don't, raise error in the core xarray module and a FutureWarning in
-        third-party extensions.
-        """
-        if not hasattr(object.__new__(cls), "__dict__"):
-            pass
-        elif cls.__module__.startswith("xarray."):
+        """Verify that all subclasses explicitly define ``__slots__``."""
+        if hasattr(object.__new__(cls), "__dict__"):
             raise AttributeError(f"{cls.__name__} must explicitly define __slots__")
-        else:
-            cls.__setattr__ = cls._setattr_dict
-            warnings.warn(
-                f"xarray subclass {cls.__name__} should explicitly define __slots__",
-                FutureWarning,
-                stacklevel=2,
-            )
         super().__init_subclass__(**kwargs)
 
     @property
@@ -313,27 +298,6 @@ class AttrAccessMixin:
         raise AttributeError(
             f"{type(self).__name__!r} object has no attribute {name!r}"
         )
-
-    # This complicated two-method design boosts overall performance of simple operations
-    # - particularly DataArray methods that perform a _to_temp_dataset() round-trip - by
-    # a whopping 8% compared to a single method that checks hasattr(self, "__dict__") at
-    # runtime before every single assignment. All of this is just temporary until the
-    # FutureWarning can be changed into a hard crash.
-    def _setattr_dict(self, name: str, value: Any) -> None:
-        """Set an attribute on a deprecated third party subclass.
-
-        See ``__init_subclass__`` above.
-        """
-        object.__setattr__(self, name, value)
-        if name in self.__dict__:
-            # Custom, non-slotted attr, or improperly assigned variable?
-            warnings.warn(
-                f"Setting attribute {name!r} on a {type(self).__name__!r} object. Explicitly define __slots__ "
-                "to suppress this warning for legitimate custom attributes and "
-                "raise an error when attempting variables assignments.",
-                FutureWarning,
-                stacklevel=2,
-            )
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Set an attribute, improving the error message for undeclared attributes.
@@ -529,8 +493,8 @@ class DataWithCoords(AttrAccessMixin):
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
-    def _calc_assign_results(
-        self: C, kwargs: Mapping[Any, T | Callable[[C], T]]
+    def _calc_assign_results[T](
+        self, kwargs: Mapping[Any, T | Callable[[Self], T]]
     ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
@@ -737,7 +701,7 @@ class DataWithCoords(AttrAccessMixin):
         return out
 
     @overload
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T],
         *args: P.args,
@@ -745,14 +709,14 @@ class DataWithCoords(AttrAccessMixin):
     ) -> T: ...
 
     @overload
-    def pipe(
+    def pipe[T](
         self,
         func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
     ) -> T: ...
 
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T] | tuple[Callable[P, T], str],
         *args: P.args,
@@ -917,11 +881,10 @@ class DataWithCoords(AttrAccessMixin):
         core.rolling_exp.RollingExp
         """
         if "keep_attrs" in window_kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
                 " ``keep_attrs`` directly to the applied function, e.g."
                 " ``rolling_exp(...).mean(keep_attrs=False)``.",
-                stacklevel=2,
             )
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
@@ -930,7 +893,7 @@ class DataWithCoords(AttrAccessMixin):
 
         return RollingExp(self, window, window_type)
 
-    def _resample(
+    def _resample[T_Resample: "Resample"](
         self,
         resample_cls: type[T_Resample],
         indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None,

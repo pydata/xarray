@@ -815,6 +815,19 @@ class TestPlot(PlotTestCase):
         expected = "dim_0_bins_center [m]"
         assert actual == expected
 
+    def test_coord_with_unplottable_interval_raises(self) -> None:
+        # GH4378: intervals are plotted at their midpoints, so intervals whose
+        # midpoints can't be plotted should get an error that says so
+        intervals = [
+            pd.Interval(pd.Timedelta(hours=i), pd.Timedelta(hours=i + 1))
+            for i in range(3)
+        ]
+        da = DataArray(np.arange(3), dims="x", coords={"x": intervals})
+        with pytest.raises(
+            TypeError, match=r"pandas.Interval values are plotted at their midpoints"
+        ):
+            da.plot()  # type: ignore[call-arg]
+
     def test_multiplot_over_length_one_dim(self) -> None:
         a = easy_array((3, 1, 1, 1))
         d = DataArray(a, dims=("x", "col", "row", "hue"))
@@ -1951,7 +1964,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             self.plotmethod(colors="k", cmap="RdBu")
 
-    def list_of_colors_in_cmap_raises_error(self) -> None:
+    def test_list_of_colors_in_cmap_raises_error(self) -> None:
         with pytest.raises(ValueError, match=r"list of colors"):
             self.plotmethod(cmap=["k", "b"])
 
@@ -3618,18 +3631,15 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 
 @requires_matplotlib
-def test_facetgrid_axes_raises_deprecation_warning() -> None:
+def test_facetgrid_axes_is_alias_of_axs() -> None:
     with figure_context():
         ds = xr.tutorial.scatter_example_dataset()
         g = ds.plot.scatter(x="A", y="B", col="x")
-        with pytest.warns(
-            FutureWarning,
-            match=(
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-        ):
-            _ = g.axes
+        with assert_no_warnings():
+            assert g.axes is g.axs
+            axs = g.axs
+            g.axes = axs[:1]
+            assert g.axs is g.axes
 
 
 @requires_matplotlib
@@ -3873,3 +3883,47 @@ def test_facetgrid_figsize_rcparams() -> None:
             g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
             actual_figsize = g.fig.get_size_inches()
             np.testing.assert_allclose(actual_figsize, explicit_size)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("col_wrap", ["z", 2.5, True])
+def test_col_wrap_invalid_type_raises(col_wrap: Any) -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        with pytest.raises(TypeError, match=r"col_wrap must be an integer or 'auto'"):
+            da.plot(col="z", col_wrap=col_wrap)  # type: ignore[call-arg]
+        with pytest.raises(TypeError, match=r"col_wrap must be an integer or 'auto'"):
+            xplt.FacetGrid(da, col="z", col_wrap=col_wrap)
+
+
+@requires_matplotlib
+def test_col_wrap_not_positive_raises() -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        with pytest.raises(ValueError, match=r"col_wrap must be a positive integer"):
+            da.plot(col="z", col_wrap=0)  # type: ignore[call-arg]
+
+
+@requires_matplotlib
+def test_col_wrap_without_facets_raises() -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    ds = Dataset({"a": da, "b": da})
+    match = r"col_wrap can only be used with faceted plots"
+    with figure_context():
+        with pytest.raises(ValueError, match=match):
+            da.plot(col_wrap=2)  # type: ignore[call-arg]
+        with pytest.raises(ValueError, match=match):
+            da.isel(z=0).plot.pcolormesh(col_wrap=2)
+        with pytest.raises(ValueError, match=match):
+            da.plot.scatter(col_wrap=2)
+        with pytest.raises(ValueError, match=match):
+            ds.plot.scatter(x="a", y="b", col_wrap=2)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("col_wrap", [2, np.int64(2), "auto"])
+def test_col_wrap_valid(col_wrap: int | np.integer | str) -> None:
+    da = DataArray(np.ones((2, 3, 4)), dims=("x", "y", "z"))
+    with figure_context():
+        g = da.plot(col="z", col_wrap=col_wrap)  # type: ignore[call-arg]
+        assert isinstance(g, xplt.FacetGrid)
