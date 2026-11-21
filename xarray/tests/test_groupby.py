@@ -2911,15 +2911,12 @@ def test_groupby_binary_op_regression() -> None:
 
 
 def test_groupby_binary_op_preserves_scalar_coords() -> None:
-    # regression test for #11878: binary op with groupby must not mutate right-hand operand
-    ds = xr.DataArray([1, 2, 3, 4], dims="time").rename("foo")
-    ds = ds.assign_coords({"spare_scalar": 1})
-
-    gb_1 = ds.groupby(ds.time % 2).mean()
-    assert gb_1["spare_scalar"].ndim == 0
-
-    _ = ds.groupby(ds.time % 2) - gb_1
-    assert gb_1["spare_scalar"].ndim == 0
+    # GH11878
+    da = xr.DataArray([1, 2, 3, 4], dims="time", coords={"spare_scalar": 1}, name="foo")
+    mean = da.groupby(da.time % 2).mean()
+    expected = mean.copy()
+    _ = da.groupby(da.time % 2) - mean
+    assert_identical(mean, expected)
 
 
 def test_groupby_multiindex_level() -> None:
