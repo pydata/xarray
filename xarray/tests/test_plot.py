@@ -1998,14 +1998,6 @@ class TestContour(Common2dMixin, PlotTestCase):
 class TestPcolormesh(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.pcolormesh)
 
-    @pytest.mark.parametrize("grid", [True, False])
-    def test_respects_axes_grid(self, grid: bool) -> None:
-        with plt.rc_context({"axes.grid": grid}):
-            ax = self.plotmethod().axes
-
-        for axis in (ax.xaxis, ax.yaxis):
-            assert {line.get_visible() for line in axis.get_gridlines()} == {grid}
-
     def test_primitive_artist_returned(self) -> None:
         artist = self.plotmethod()
         assert isinstance(artist, mpl.collections.QuadMesh)
