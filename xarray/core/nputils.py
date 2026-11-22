@@ -178,6 +178,9 @@ def _create_method(name, npmodule=np) -> Callable:
             and (dtype is None or np.dtype(dtype) == values.dtype)
             # numbagg.nanquantile only supports the linear method
             and (name != "nanquantile" or kwargs.get("method", "linear") == "linear")
+            # numbagg < 0.9.6 reduces over all axes instead of none for axis=()
+            # TODO: remove once we require numbagg >= 0.9.6
+            and axis != ()
         ):
             import numbagg  # type: ignore[import-not-found, unused-ignore]
 

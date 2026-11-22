@@ -6730,6 +6730,23 @@ class TestDataset:
         actual = ds.var("a")
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["std", "var"])
+    def test_reduce_variable_without_dim(
+        self, func: str, compute_backend: str | None
+    ) -> None:
+        # numbagg < 0.9.6 reduced variables without the reduced dimension over all of
+        # their dimensions instead of none
+        ds = Dataset(
+            {
+                "a": (("x", "y"), np.arange(6.0).reshape(2, 3)),
+                "b": ("y", [1.0, 2.0, 4.0]),
+            }
+        )
+        actual = getattr(ds, func)("x")
+        # like reducing over a dimension of size 1
+        expected = getattr(ds["b"].expand_dims("x"), func)("x")
+        assert_identical(actual["b"], expected)
+
     def test_reduce_only_one_axis(self) -> None:
         def mean_only_one_axis(x, axis):
             if not isinstance(axis, integer_types):
