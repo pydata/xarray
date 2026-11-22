@@ -6734,8 +6734,8 @@ class TestDataset:
     def test_reduce_variable_without_dim(
         self, func: str, compute_backend: str | None
     ) -> None:
-        # numbagg reduced variables without the reduced dimension over all of their
-        # dimensions instead of none
+        # numbagg < 0.9.6 reduced variables without the reduced dimension over all of
+        # their dimensions instead of none
         ds = Dataset(
             {
                 "a": (("x", "y"), np.arange(6.0).reshape(2, 3)),
