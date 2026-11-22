@@ -1113,6 +1113,32 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
         assert encoded.dtype == np.float64
 
 
+def test_encode_cf_datetime_units_finer_than_data() -> None:
+    times = np.array(["2000-01-02T00:00:01", "NaT"], dtype="datetime64[s]")
+    with pytest.raises(ValueError, match="finer than the resolution of the data"):
+        encode_cf_datetime(times, "milliseconds since 2000-01-01")
+
+
+def test_encode_cf_timedelta_units_finer_than_data() -> None:
+    timedeltas = np.array([86401, "NaT"], dtype="timedelta64[s]")
+    with pytest.raises(ValueError, match="finer than the resolution of the data"):
+        encode_cf_timedelta(timedeltas, "milliseconds")
+
+
+def test_encode_cf_times_units_finer_than_data_without_valid_values() -> None:
+    # nothing is lost without valid values, e.g. for an all-NaT variable that was
+    # decoded with a coarser time_unit than its units
+    expected = np.full(2, np.iinfo(np.int64).min)
+
+    times = np.array(["NaT", "NaT"], dtype="datetime64[s]")
+    encoded, _, _ = encode_cf_datetime(times, "milliseconds since 2000-01-01")
+    assert_array_equal(expected, encoded)
+
+    timedeltas = np.array(["NaT", "NaT"], dtype="timedelta64[s]")
+    encoded, _ = encode_cf_timedelta(timedeltas, "milliseconds")
+    assert_array_equal(expected, encoded)
+
+
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 def test_encode_decode_roundtrip_datetime64(
     freq, time_unit: PDDatetimeUnitOptions

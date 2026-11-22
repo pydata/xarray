@@ -12,6 +12,7 @@ from collections import ChainMap
 from collections.abc import Iterator, Mapping
 from importlib import import_module
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal, overload
 from unittest.mock import patch
 
@@ -29,7 +30,7 @@ from xarray import (
     open_dataset,
     open_mfdataset,
 )
-from xarray.backends.zarr import ZarrStore
+from xarray.backends.zarr import ZarrArrayWrapper, ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.variables import SerializationWarning
@@ -2058,6 +2059,14 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             # we assert that the number of calls has not increased after fetchhing the array
             xrds.test.compute(scheduler="sync")
             assert mock.call_count == call_count
+
+
+@pytest.mark.parametrize("attr", ["async_array", "_async_array"])
+def test_zarr_array_wrapper_async_array(attr: str) -> None:
+    # zarr.Array.async_array is public since zarr 3.1.4
+    array = SimpleNamespace(shape=(10,), dtype=np.dtype("int64"), serializer=None)
+    setattr(array, attr, "async array")
+    assert ZarrArrayWrapper(array)._async_array == "async array"
 
 
 @pytest.fixture(params=["tmp_path", "ZipStore", "Dict"])
