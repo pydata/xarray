@@ -3479,6 +3479,20 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
+    def test_isel_drops_stale_chunksizes_encoding(self) -> None:
+        # GH#11028: chunksizes is positional, so it is no longer valid when
+        # indexing removes a dimension.
+        ds = xr.Dataset({"images": (("time", "y", "x"), np.zeros((5, 10, 20)))})
+        ds["images"].encoding = {"chunksizes": (1, 10, 20), "_FillValue": 0}
+
+        dropped = ds.isel(time=2)
+        assert dropped["images"].dims == ("y", "x")
+        assert dropped["images"].encoding == {"_FillValue": 0}
+
+        kept = ds.isel(time=slice(0, 2))
+        assert kept["images"].dims == ("time", "y", "x")
+        assert kept["images"].encoding == {"chunksizes": (1, 10, 20), "_FillValue": 0}
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {

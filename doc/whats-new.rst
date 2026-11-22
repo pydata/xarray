@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Indexing a variable with :py:meth:`DataArray.isel` or :py:meth:`Dataset.isel`
+  now drops a stale ``encoding["chunksizes"]`` when the operation removes or
+  reorders dimensions. Other encoding entries are preserved, and ``chunksizes``
+  is kept when the dimensions do not change (:issue:`11028`).
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
