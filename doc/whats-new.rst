@@ -83,6 +83,10 @@ New Features
   accessor's methods. These packages are not new
   dependencies (:issue:`11078`, :pull:`11087`).
   By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
+- When merging, if a variable appears as a coordinate on one input and as a data
+  variable on another, the coordinate "status" is chosen by looking at the first object.
+  A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -221,6 +225,9 @@ Bug Fixes
 ~~~~~~~~~
 - :py:meth:`DataArray.chunk` and :py:meth:`Dataset.chunk` now convert scalar data
   variables to chunked arrays, preserving eager scalar coordinates (:issue:`8251`).
+- :py:meth:`DataArray.plot.pcolormesh` preserves the Matplotlib axes grid
+  settings, including those set by a plotting style (:issue:`11919`).
+  By `Arham Begani <https://github.com/Arham-Begani>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
@@ -515,6 +522,12 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Encoding ``datetime64`` and ``timedelta64`` values with ``units`` finer than
+  the resolution of the data, e.g. ``datetime64[s]`` values with
+  ``"milliseconds since 2000-01-01"``, now raises a ``ValueError``. Previously
+  every value was silently encoded as ``NaT``, or as ``inf`` for a floating point
+  ``dtype`` (:pull:`11907`).
+  By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 - Weighted reductions (e.g. :py:meth:`DataArray.weighted` ``.mean()``,
   ``.sum()`` and ``.sum_of_weights()``) no longer overflow with bool or small
   integer dtypes, e.g. ``uint8`` weights summing past 255. They now promote
