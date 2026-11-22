@@ -224,7 +224,7 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 - :py:meth:`Dataset.std` and :py:meth:`Dataset.var` no longer fail with numbagg
-  for variables without the reduced dimensions (:pull:`XXXXX`).
+  for variables without the reduced dimensions (:pull:`11926`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
