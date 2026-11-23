@@ -220,6 +220,14 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
             da = da.fillna(0.0)
 
+        # `dot` accumulates in the input dtype, so promote bool and small
+        # integers like `sum` does; else e.g. uint8 weights overflow (GH11867)
+        dtype = np.result_type(da.dtype, weights.dtype)
+        if dtype.kind in "biu" and dtype.itemsize < 8:
+            dtype = np.dtype(np.uint64 if dtype.kind == "u" else np.int64)
+            da = da.astype(dtype)
+            weights = weights.astype(dtype)
+
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
         return dot(da, weights, dim=dim)
@@ -254,10 +262,13 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
+        squared = (
+            (demeaned.conj() * demeaned).real if da.dtype.kind == "c" else demeaned**2
+        )
 
         # TODO: unsure why mypy complains about these being DataArray return types
         # rather than T_DataArray?
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
+        return self._reduce(squared, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,
