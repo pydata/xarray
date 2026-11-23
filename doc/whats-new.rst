@@ -239,7 +239,7 @@ Bug Fixes
   :py:meth:`Dataset.drop_indexes`, :py:meth:`DataArray.drop_indexes`, and
   :py:meth:`DataTree.drop_nodes` now raise a ``ValueError`` for invalid
   ``errors`` values instead of silently treating them as ``"ignore"``
-  (:pull:`11896`).
+  (:pull:`11930`).
   By `Yuen Li <https://github.com/yuenlii>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
