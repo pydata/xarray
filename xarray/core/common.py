@@ -1111,6 +1111,7 @@ class DataWithCoords(AttrAccessMixin):
         cond: Any,
         other: Any = dtypes.NA,
         drop: bool = False,
+        *,
         drop_outer: bool = False,
     ) -> Self:
         """Filter elements from this object according to a condition.
@@ -1144,7 +1145,9 @@ class DataWithCoords(AttrAccessMixin):
             ``drop``, which labels are dropped is decided by ``cond`` alone, not
             by missing values in this object or in ``other``. If ``other`` is
             given, the remaining False locations are filled with it. Cannot be
-            combined with ``drop=True``.
+            combined with ``drop=True``. If ``cond`` is backed by a lazy array
+            (e.g. dask), it is reduced and computed along each dimension to find
+            the bounds, while the result stays lazy.
 
         Returns
         -------
@@ -1251,10 +1254,12 @@ class DataWithCoords(AttrAccessMixin):
             )
 
             def _outer_slice(keep: DataArray) -> slice:
-                (true_positions,) = np.nonzero(np.asarray(keep.values))
-                if true_positions.size == 0:
+                keep_np = keep.to_numpy()
+                if not keep_np.any():
                     return slice(0, 0)
-                return slice(int(true_positions[0]), int(true_positions[-1]) + 1)
+                start = int(keep_np.argmax())
+                stop = keep_np.size - int(keep_np[::-1].argmax())
+                return slice(start, stop)
 
             indexers: dict[Hashable, DataArray | slice] = {}
             for dim in cond.sizes.keys():
