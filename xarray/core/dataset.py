@@ -3462,16 +3462,55 @@ class Dataset(
         other: T_DataArrayOrSet,
         exclude: Iterable[Hashable] | None = None,
     ) -> Self:
-        """Broadcast this DataArray against another Dataset or DataArray.
+        """Broadcast this Dataset against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1].
 
         Parameters
         ----------
         other : Dataset or DataArray
-            Object against which to broadcast this array.
+            Object against which to broadcast this dataset.
         exclude : iterable of hashable, optional
             Dimensions that must not be broadcasted
+
+        Examples
+        --------
+        The result gains the other object's ``hour`` dimension and aligns on
+        the shared ``station`` coordinate. Stations not present in the
+        original dataset have missing values.
+
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("station", [10, 15])},
+        ...     coords={"station": ["a", "b"]},
+        ... )
+        >>> other = xr.DataArray(
+        ...     [[0, 0], [0, 0]],
+        ...     dims=("station", "hour"),
+        ...     coords={"station": ["b", "c"], "hour": [0, 1]},
+        ... )
+        >>> result = ds.broadcast_like(other)
+        >>> ds
+        <xarray.Dataset> Size: 24B
+        Dimensions:      (station: 2)
+        Coordinates:
+          * station      (station) <U1 8B 'a' 'b'
+        Data variables:
+            temperature  (station) int64 16B 10 15
+        >>> other
+        <xarray.DataArray (station: 2, hour: 2)> Size: 32B
+        array([[0, 0],
+               [0, 0]])
+        Coordinates:
+          * station  (station) <U1 8B 'b' 'c'
+          * hour     (hour) int64 16B 0 1
+        >>> result
+        <xarray.Dataset> Size: 76B
+        Dimensions:      (station: 3, hour: 2)
+        Coordinates:
+          * station      (station) <U1 12B 'a' 'b' 'c'
+          * hour         (hour) int64 16B 0 1
+        Data variables:
+            temperature  (station, hour) float64 48B 10.0 10.0 15.0 15.0 nan nan
 
         """
         if exclude is None:
