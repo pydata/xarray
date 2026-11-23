@@ -92,13 +92,7 @@ body:
     attributes:
       label: Environment
       description: |
-        Replace the `<details>` block below with the output of `xr.show_versions(markdown=True)`, which already includes the `<details>` tags.
-        Older versions of xarray do not support `markdown=True`; then paste the output of `xr.show_versions()` between the `<details>` tags, leaving an empty line following the opening tag.
-      value: |
-        <details>
-
-
-
-        </details>
+        Paste the output of `xr.show_versions(markdown=True)`, which is already wrapped in `<details>` tags.
+        For older versions that lack `markdown=True`, wrap the output of `xr.show_versions()` in `<details>` and `</details>` tags. Leave a blank line after the opening tag.
     validations:
       required: true
