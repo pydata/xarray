@@ -1850,15 +1850,13 @@ class DataTree(
         The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
         descendant nodes. The returned tree will have the same structure as the original subtree.
 
-        func needs to return a Dataset in order to rebuild the subtree.
-
         Parameters
         ----------
         func : callable
-            Function to apply to datasets with signature:
-            `func(node.dataset, *args, **kwargs) -> Dataset`.
-
-            Function will not be applied to any nodes without datasets.
+            Function called as ``func(node.dataset, *args, **kwargs)``. Return
+            a Dataset or None for each node to produce one tree, or return a
+            fixed-length tuple of these values to produce one tree per position.
+            None leaves the corresponding node without local data.
         *args : tuple, optional
             Positional arguments passed on to `func`. Any DataTree arguments will be
             converted to Dataset objects via `.dataset`.

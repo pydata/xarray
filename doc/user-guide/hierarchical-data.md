@@ -561,12 +561,13 @@ See that the same change (fast-forwarding by adding 10 years to the age of each 
 ### Mapping Custom Functions Over Trees
 
 You can map custom computation over each node in a tree using {py:meth}`xarray.DataTree.map_over_datasets`.
-You can map any function, so long as it takes {py:class}`xarray.Dataset` objects as one (or more) of the input arguments,
-and returns one (or more) xarray datasets.
+The function receives a {py:class}`xarray.Dataset` for each tree argument.
+It can return a dataset for the corresponding node or `None` to leave the node without local data.
+Returning a fixed-length tuple of these values at every node produces one tree per tuple position.
+See {py:func}`xarray.map_over_datasets` for examples.
 
 ```{note}
-Functions passed to {py:func}`~xarray.DataTree.map_over_datasets` cannot alter nodes in-place.
-Instead they must return new {py:class}`xarray.Dataset` objects.
+Functions passed to {py:meth}`~xarray.DataTree.map_over_datasets` cannot alter nodes in-place.
 ```
 
 For example, we can define a function to calculate the Root Mean Square of a timeseries

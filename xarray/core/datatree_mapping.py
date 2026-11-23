@@ -52,12 +52,6 @@ def map_over_datasets(
     the trees. The returned trees will have the same structure as the supplied
     trees.
 
-    ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
-    to be able to rebuild the subtrees after mapping, as each result will be
-    assigned to its respective node of a new tree via `DataTree.from_dict`. Any
-    returned value that is one of these types will be stacked into a separate
-    tree before returning all of them.
-
     ``map_over_datasets`` is essentially syntactic sugar for the combination of
     ``group_subtrees`` and ``DataTree.from_dict``. For example, in the case of
     a two argument function that return one result, it is equivalent to::
@@ -70,11 +64,10 @@ def map_over_datasets(
     Parameters
     ----------
     func : callable
-        Function to apply to datasets with signature:
-
-        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
-
-        (i.e. func must accept at least one Dataset and return at least one Dataset.)
+        Function called with the datasets at each matching node. Return a Dataset
+        to store it at that path, or None to leave the node without local data.
+        For multiple outputs, return a tuple of the same length at every node.
+        Each element may be a Dataset or None.
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
@@ -83,16 +76,41 @@ def map_over_datasets(
 
     Returns
     -------
-    Result of applying `func` to each node in the provided trees, packed back
-    into DataTree objects via `DataTree.from_dict`.
+    DataTree or tuple of DataTree
+        One tree if ``func`` returns a Dataset or None. If it returns a tuple,
+        each position in the tuple produces a separate tree.
 
     See Also
     --------
     DataTree.map_over_datasets
     group_subtrees
     DataTree.from_dict
+
+    Examples
+    --------
+    Keep only datasets containing temperature readings. Returning None for the
+    root preserves its path and its child while dropping the root dataset.
+
+    >>> tree = xr.DataTree.from_dict(
+    ...     {
+    ...         "/": xr.Dataset({"elevation": 350}),
+    ...         "/station": xr.Dataset({"temperature": ("time", [8, 12])}),
+    ...     }
+    ... )
+    >>> readings = xr.map_over_datasets(
+    ...     lambda ds: ds if "temperature" in ds else None, tree
+    ... )
+    >>> readings.groups
+    ('/', '/station')
+    >>> list(readings.data_vars)
+    []
+
+    Return two datasets per node to collect minima and maxima in separate trees.
+
+    >>> lows, highs = xr.map_over_datasets(lambda ds: (ds.min(), ds.max()), readings)
+    >>> lows["station/temperature"].item(), highs["station/temperature"].item()
+    (8, 12)
     """
-    # TODO examples in the docstring
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     from xarray.core.datatree import DataTree
