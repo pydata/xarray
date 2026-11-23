@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:func:`map_blocks` raising an assertion error when chunking along a
+  pandas MultiIndex, preserving each block's index and level coordinates
+  (:issue:`8745`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
