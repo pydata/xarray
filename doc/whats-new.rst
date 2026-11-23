@@ -91,7 +91,7 @@ New Features
   ``drop_outer=True``, which only drops the leading and trailing coordinate
   labels where ``cond`` is all False, trimming the result to the bounding box of
   the True values. Unlike ``drop=True``, interior gaps are kept (:issue:`11883`).
-  By `YOUR NAME <https://github.com/YOUR_GITHUB_USERNAME>`_.
+  By `Aman Sreejesh <https://github.com/AmanSreejesh>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
