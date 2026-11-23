@@ -602,9 +602,9 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
             start = np.datetime64(start).astype(f"M8[{unit}]")
         if isinstance(stop, str):
             # like pandas, include the whole period of a partial string
-            stop = (np.datetime64(stop) + 1).astype(f"M8[{unit}]") - np.timedelta64(
-                1, unit
-            )
+            stop = np.datetime64(stop)
+            period = np.timedelta64(1, np.datetime_data(stop.dtype)[0])
+            stop = (stop + period).astype(f"M8[{unit}]") - np.timedelta64(1, unit)
         indexer = index.slice_indexer(start, stop, step)
     if not isinstance(indexer, slice):
         # unlike pandas, in xarray we never want to silently convert a
