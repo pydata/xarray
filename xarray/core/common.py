@@ -1106,7 +1106,13 @@ class DataWithCoords(AttrAccessMixin):
             restore_coord_dims=restore_coord_dims,
         )
 
-    def where(self, cond: Any, other: Any = dtypes.NA, drop: bool = False) -> Self:
+    def where(
+        self,
+        cond: Any,
+        other: Any = dtypes.NA,
+        drop: bool = False,
+        drop_outer: bool = False,
+    ) -> Self:
         """Filter elements from this object according to a condition.
 
         Returns elements from 'DataArray', where 'cond' is True,
@@ -1128,6 +1134,17 @@ class DataWithCoords(AttrAccessMixin):
         drop : bool, default: False
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result.
+        drop_outer : bool, default: False
+            If True, only the leading and trailing coordinate labels that
+            correspond to False values of the condition are dropped from the
+            result, i.e. the result is trimmed to the smallest bounding box
+            containing all True values of the condition. Unlike ``drop=True``,
+            labels between the first and last True value are kept, so interior
+            gaps (and the spacing of regular coordinates) are preserved. Like
+            ``drop``, which labels are dropped is decided by ``cond`` alone, not
+            by missing values in this object or in ``other``. If ``other`` is
+            given, the remaining False locations are filled with it. Cannot be
+            combined with ``drop=True``.
 
         Returns
         -------
@@ -1177,6 +1194,17 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
+        >>> b = xr.DataArray(np.arange(7), dims="x")
+        >>> b.where((b == 1) | (b == 4), drop=True)
+        <xarray.DataArray (x: 2)> Size: 16B
+        array([1., 4.])
+        Dimensions without coordinates: x
+
+        >>> b.where((b == 1) | (b == 4), drop_outer=True)
+        <xarray.DataArray (x: 4)> Size: 32B
+        array([ 1., nan, nan,  4.])
+        Dimensions without coordinates: x
+
         >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
         <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[  0,   1,   2,   3,  -4],
@@ -1195,7 +1223,12 @@ class DataWithCoords(AttrAccessMixin):
         if callable(other):
             other = other(self)
 
-        if drop:
+        if drop and drop_outer:
+            raise ValueError(
+                "drop and drop_outer cannot both be True; pass only one of them."
+            )
+
+        if drop or drop_outer:
             if not isinstance(cond, Dataset | DataArray):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
@@ -1217,12 +1250,19 @@ class DataWithCoords(AttrAccessMixin):
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
             )
 
-            indexers = {}
-            for dim in cond.sizes.keys():
-                indexers[dim] = _get_indexer(dim)
+            def _outer_slice(keep: DataArray) -> slice:
+                (true_positions,) = np.nonzero(np.asarray(keep.values))
+                if true_positions.size == 0:
+                    return slice(0, 0)
+                return slice(int(true_positions[0]), int(true_positions[-1]) + 1)
 
-            self = self.isel(**indexers)
-            cond = cond.isel(**indexers)
+            indexers: dict[Hashable, DataArray | slice] = {}
+            for dim in cond.sizes.keys():
+                keep = _get_indexer(dim)
+                indexers[dim] = _outer_slice(keep) if drop_outer else keep
+
+            self = self.isel(indexers)
+            cond = cond.isel(indexers)
 
         from xarray.computation import ops
 
