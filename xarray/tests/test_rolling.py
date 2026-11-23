@@ -564,6 +564,21 @@ class TestDataArrayRolling:
         assert computed.dtype == expected.dtype
         assert_allclose(computed, expected)
 
+    @requires_bottleneck
+    @pytest.mark.parametrize("window", [3, 4, 8])
+    def test_rolling_bottleneck_vs_numpy(self, window: int, use_dask: bool) -> None:
+        # bottleneck failed for windows larger than the array, or with dask than its
+        # first chunk, and named the result after the dask array
+        da = DataArray(np.arange(7.0), dims="x")
+        if use_dask:
+            da = da.chunk(x=3)
+        rolling_obj = da.rolling(x=window, min_periods=1)
+        with set_options(use_bottleneck=False, use_numbagg=False):
+            expected = rolling_obj.max()
+        with set_options(use_bottleneck=True, use_numbagg=False):
+            actual = rolling_obj.max()
+        assert_identical(actual, expected)
+
     def test_rolling_mean_bool(self) -> None:
         bool_raster = DataArray(
             data=[0, 1, 1, 0, 1, 0],

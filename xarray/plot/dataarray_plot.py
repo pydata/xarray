@@ -2503,7 +2503,6 @@ def pcolormesh(
             y = _infer_interval_breaks(y, axis=1, scale=yscale)
             y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
-    ax.grid(False)
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
     # by default, pcolormesh picks "round" values for bounds

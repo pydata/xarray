@@ -633,6 +633,18 @@ def test_weighted_var_equal_weights(da, skipna, factor):
 
 
 @pytest.mark.parametrize(
+    ("operation", "expected"),
+    (("sum_of_squares", 6.0), ("var", 1.5), ("std", np.sqrt(1.5))),
+)
+def test_weighted_complex_variance(operation: str, expected: float) -> None:
+    da = DataArray([1 + 1j, 3 + 3j], dims="x")
+    weights = DataArray([1.0, 3.0], dims="x")
+    result = getattr(da.weighted(weights), operation)()
+    assert_allclose(result, DataArray(expected))
+    assert result.dtype.kind == "f"
+
+
+@pytest.mark.parametrize(
     ("weights", "expected"), (([4, 6], 0.24), ([1, 0], 0.0), ([0, 0], np.nan))
 )
 def test_weighted_var_no_nan(weights, expected):

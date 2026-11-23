@@ -83,6 +83,10 @@ New Features
   accessor's methods. These packages are not new
   dependencies (:issue:`11078`, :pull:`11087`).
   By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
+- When merging, if a variable appears as a coordinate on one input and as a data
+  variable on another, the coordinate "status" is chosen by looking at the first object.
+  A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -222,6 +226,13 @@ Bug Fixes
 - Dataset weighted arithmetic reductions now select data variables with numeric,
   boolean, or timedelta dtypes and skip variables such as datetimes and strings
   (:issue:`9322`).
+- Weighted variance, standard deviation and sums of squared deviations now
+  use conjugated deviations for complex data, matching unweighted reductions
+  and correcting weighted self-correlation.
+  By `zhouziyu-cn <https://github.com/zhouziyu-cn>`_.
+- :py:meth:`DataArray.plot.pcolormesh` preserves the Matplotlib axes grid
+  settings, including those set by a plotting style (:issue:`11919`).
+  By `Arham Begani <https://github.com/Arham-Begani>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
@@ -516,6 +527,12 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Encoding ``datetime64`` and ``timedelta64`` values with ``units`` finer than
+  the resolution of the data, e.g. ``datetime64[s]`` values with
+  ``"milliseconds since 2000-01-01"``, now raises a ``ValueError``. Previously
+  every value was silently encoded as ``NaT``, or as ``inf`` for a floating point
+  ``dtype`` (:pull:`11907`).
+  By `Prawal Pokharel <https://github.com/prawalpokharel>`_.
 - Weighted reductions (e.g. :py:meth:`DataArray.weighted` ``.mean()``,
   ``.sum()`` and ``.sum_of_weights()``) no longer overflow with bool or small
   integer dtypes, e.g. ``uint8`` weights summing past 255. They now promote
@@ -531,6 +548,10 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- Rolling reductions with bottleneck no longer fail for windows larger than the
+  array, or with dask larger than its first chunk, and no longer name the result
+  after the dask array (:pull:`11925`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Documentation
@@ -647,6 +668,10 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
+  to the array directly, which undoes the slowdown from the fix for :issue:`11336`
+  (:pull:`11925`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
