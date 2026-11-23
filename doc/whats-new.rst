@@ -227,6 +227,13 @@ Bug Fixes
   now drops a stale ``encoding["chunksizes"]`` when the operation removes or
   reorders dimensions. Other encoding entries are preserved, and ``chunksizes``
   is kept when the dimensions do not change (:issue:`11028`).
+- Weighted variance, standard deviation and sums of squared deviations now
+  use conjugated deviations for complex data, matching unweighted reductions
+  and correcting weighted self-correlation.
+  By `zhouziyu-cn <https://github.com/zhouziyu-cn>`_.
+- :py:meth:`DataArray.plot.pcolormesh` preserves the Matplotlib axes grid
+  settings, including those set by a plotting style (:issue:`11919`).
+  By `Arham Begani <https://github.com/Arham-Begani>`_.
 - The error raised when plotting coordinates of an unsupported type now lists
   every supported type, including ``numpy.timedelta64`` and strings, and
   explains that ``pandas.Interval`` values are plotted at their midpoints or
