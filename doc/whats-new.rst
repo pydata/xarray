@@ -87,6 +87,11 @@ New Features
   variable on another, the coordinate "status" is chosen by looking at the first object.
   A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- :py:meth:`DataArray.where` and :py:meth:`Dataset.where` accept
+  ``drop_outer=True``, which only drops the leading and trailing coordinate
+  labels where ``cond`` is all False, trimming the result to the bounding box of
+  the True values. Unlike ``drop=True``, interior gaps are kept (:issue:`11883`).
+  By `Aman Sreejesh <https://github.com/AmanSreejesh>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

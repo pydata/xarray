@@ -6470,6 +6470,132 @@ class TestDataset:
         actual = ds.where(ds == 1, drop=True)
         assert_identical(expected, actual)
 
+    def test_where_drop_outer(self, use_dask: bool) -> None:
+        # 1d: outer labels are dropped, the interior gap is kept
+        array = DataArray(
+            [0, 1, 2, 3, 4, 5, 6], coords={"x": [0, 10, 20, 30, 40, 50, 60]}, dims="x"
+        )
+        if use_dask:
+            array = array.chunk(x=3)
+        cond = (array == 1) | (array == 4)
+        expected1 = DataArray(
+            [1, np.nan, np.nan, 4], coords={"x": [10, 20, 30, 40]}, dims="x"
+        )
+        actual1 = array.where(cond, drop_outer=True)
+        assert_identical(expected1, actual1)
+        assert_identical(array.where(cond).isel(x=slice(1, 5)), actual1)
+
+        # dataset case
+        ds = Dataset({"a": array})
+        assert_identical(Dataset({"a": expected1}), ds.where(cond, drop_outer=True))
+        ds_cond = Dataset({"a": cond})
+        assert_identical(Dataset({"a": expected1}), ds.where(ds_cond, drop_outer=True))
+
+        # 2d: bounding box of the True values, interior row and column kept
+        data = np.arange(25).reshape(5, 5)
+        array2d = DataArray(
+            data, coords={"x": range(5), "y": range(5)}, dims=["x", "y"]
+        )
+        if use_dask:
+            array2d = array2d.chunk(x=2, y=2)
+        mask = np.zeros((5, 5), dtype=bool)
+        mask[1, 1] = mask[3, 3] = True
+        cond2d = array2d.copy(data=mask)
+        if use_dask:
+            cond2d = cond2d.chunk(x=2, y=2)
+        actual2 = array2d.where(cond2d, drop_outer=True)
+        assert actual2.sizes == {"x": 3, "y": 3}
+        assert (actual2.chunks is not None) == use_dask
+        assert_identical(
+            array2d.where(cond2d).isel(x=slice(1, 4), y=slice(1, 4)), actual2
+        )
+        # drop=True would also drop the interior row and column
+        assert array2d.where(cond2d.compute(), drop=True).sizes == {"x": 2, "y": 2}
+
+        # 2d with a condition along only one dimension
+        cond_x = array2d.x.isin([1, 3])
+        actual3 = array2d.where(cond_x, drop_outer=True)
+        assert actual3.sizes == {"x": 3, "y": 5}
+        assert_identical(array2d.where(cond_x).isel(x=slice(1, 4)), actual3)
+
+        # mixed dimensions
+        ds = Dataset(
+            {
+                "a": ("x", [1, 2, 3, 4]),
+                "b": ("y", [0, 5, 0]),
+                "c": (("x", "y"), np.zeros((4, 3), dtype=int)),
+            }
+        )
+        if use_dask:
+            ds = ds.chunk()
+        actual4 = ds.where(ds > 1, drop_outer=True)
+        assert actual4.sizes == {"x": 3, "y": 1}
+        assert_identical(ds.where(ds > 1).isel(x=slice(1, 4), y=slice(1, 2)), actual4)
+
+    def test_where_drop_outer_alignment(self) -> None:
+        # cond is aligned with the object before the outer labels are dropped
+        array = DataArray([0, 1, 2, 3, 4], coords={"x": [0, 1, 2, 3, 4]}, dims="x")
+        cond = DataArray(
+            [True, False, False, True, False], coords={"x": [4, 3, 2, 1, 0]}, dims="x"
+        )
+        expected = DataArray(
+            [1, np.nan, np.nan, 4], coords={"x": [1, 2, 3, 4]}, dims="x"
+        )
+        assert_identical(expected, array.where(cond, drop_outer=True))
+
+        # partially overlapping coordinates: the inner join is trimmed
+        cond = DataArray(
+            [False, True, False, True], coords={"x": [2, 3, 4, 5]}, dims="x"
+        )
+        expected = DataArray([3.0], coords={"x": [3]}, dims="x")
+        assert_identical(expected, array.where(cond, drop_outer=True))
+
+    def test_where_drop_outer_0d_cond(self) -> None:
+        # a 0-d cond has no dimensions to trim, like drop=True
+        array = DataArray([0, 1, 2], dims="x")
+        cond = DataArray(False)
+        assert_identical(array.where(cond), array.where(cond, drop_outer=True))
+        assert_identical(
+            array.where(cond, drop=True), array.where(cond, drop_outer=True)
+        )
+
+    def test_where_drop_outer_other(self) -> None:
+        array = DataArray([0, 1, 2, 3, 4], coords={"x": range(5)}, dims="x")
+        cond = (array == 1) | (array == 3)
+        expected = DataArray([1, -1, 3], coords={"x": [1, 2, 3]}, dims="x")
+        actual = array.where(cond, -1, drop_outer=True)
+        assert_identical(expected, actual)
+        assert actual.dtype == array.dtype
+
+    def test_where_drop_outer_uses_cond_not_data(self) -> None:
+        # missing values in the data at the edges are kept if cond is True there
+        array = DataArray([np.nan, 1.0, 2.0, np.nan], dims="x")
+        actual = array.where(
+            array.copy(data=[True, False, True, True]), drop_outer=True
+        )
+        assert_identical(
+            array.where(array.copy(data=[True, False, True, True])), actual
+        )
+
+    def test_where_drop_outer_all_false_or_true(self) -> None:
+        array = DataArray(np.arange(12.0).reshape(4, 3), dims=["x", "y"])
+
+        all_false = DataArray(np.zeros((4,), dtype="bool"), dims="x")
+        actual = array.where(all_false, drop_outer=True)
+        assert_identical(DataArray(np.zeros((0, 3)), dims=["x", "y"]), actual)
+
+        all_true = DataArray(np.ones((4,), dtype="bool"), dims="x")
+        assert_identical(array.where(all_true), array.where(all_true, drop_outer=True))
+
+    def test_where_drop_outer_errors(self) -> None:
+        ds = Dataset({"a": ("x", range(5))})
+        with pytest.raises(ValueError, match=r"drop and drop_outer cannot both"):
+            ds.where(ds > 1, drop=True, drop_outer=True)
+        with pytest.raises(TypeError, match=r"must be a"):
+            ds.where(np.arange(5) > 1, drop_outer=True)
+        with pytest.raises(TypeError):
+            ds.where(ds > 1, -1, False, True)  # type: ignore[call-arg]
+
     def test_reduce(self) -> None:
         data = create_test_data()
 
