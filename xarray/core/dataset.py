@@ -7632,9 +7632,13 @@ class Dataset(
         from xarray.core.extension_array import PandasExtensionArray
 
         # All and only non-index arrays (whether data or coordinates) should
-        # become columns in the output DataFrame. Excluding indexes rather
-        # than dims handles the case of a MultiIndex along a single dimension.
-        columns_in_order = [k for k in self.variables if k not in self.xindexes]
+        # become columns in the output DataFrame. Excluding only the dimensions
+        # and index levels ensures that indexed coordinates whose name differs
+        # from their dimension are preserved as columns (GH10851).
+        index_names = set(ordered_dims) | set(
+            self.coords.to_index([*ordered_dims]).names
+        )
+        columns_in_order = [k for k in self.variables if k not in index_names]
         non_extension_array_columns = [
             k
             for k in columns_in_order

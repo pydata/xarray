@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Preserve indexed coordinates whose name differs from their dimension as
+  columns in :py:meth:`Dataset.to_dataframe` (:issue:`10851`).
+  By `Yuvraj Lamba <https://github.com/uvcode01-max>`_.
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
