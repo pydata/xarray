@@ -5,7 +5,7 @@ import functools
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, override
 
 import numpy as np
@@ -2010,6 +2010,7 @@ def _zip_missing_key_store_cls() -> type[Any]:
 
     base_get_partial = getattr(WrapperStore, "get_partial", None)
     if base_get_partial is not None:
+        _base_get_partial: Callable[..., Any] = base_get_partial
 
         class _ZipMissingKeyStoreWithGetPartial(_ZipMissingKeyStore):
             async def get_partial(
@@ -2019,7 +2020,7 @@ def _zip_missing_key_store_cls() -> type[Any]:
                 **kwargs: Any,
             ) -> Any:
                 try:
-                    return await base_get_partial(self, key, *args, **kwargs)
+                    return await _base_get_partial(self, key, *args, **kwargs)
                 except KeyError:
                     if not await self._store.exists(key):
                         return None

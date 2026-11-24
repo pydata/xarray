@@ -2669,15 +2669,25 @@ def test_load_dataarray_fsspec_zip_coordinates(tmp_path: Path) -> None:
         )
 
     # A KeyError from the inner store for a key that exists still propagates
-    async def _raise_key_error(*args: Any, **kwargs: Any) -> Any:
+    nonzero_zip_fs = fsspec.filesystem("zip", fo=str(nonzero_zip))
+    nonzero_store = FsspecStore(
+        AsyncFileSystemWrapper(nonzero_zip_fs, asynchronous=True),
+        path="nested",
+        read_only=True,
+    )
+    original_cat_file = nonzero_store.fs._cat_file
+
+    async def _raise_key_error(path: str, *args: Any, **kwargs: Any) -> bytes:
+        if path.endswith(("zarr.json", ".zarray", ".zattrs", ".zgroup", ".zmetadata")):
+            return await original_cat_file(path, *args, **kwargs)
         raise KeyError("unexpected key error")
 
     with (
-        patch.object(fsspec_store.fs, "_cat_file", side_effect=_raise_key_error),
+        patch.object(nonzero_store.fs, "_cat_file", side_effect=_raise_key_error),
         pytest.raises(KeyError, match="unexpected key error"),
     ):
         xr.load_dataarray(
-            fsspec_store, engine="zarr", zarr_format=3, consolidated=False
+            nonzero_store, engine="zarr", zarr_format=3, consolidated=False
         )
 
 
