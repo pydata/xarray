@@ -1396,7 +1396,7 @@ ds_kerchunked
 ```
 
 ```{note}
-You can refer to the [project pythia kerchunk cookbook](https://projectpythia.org/kerchunk-cookbook/README.html)
+You can refer to the [project pythia kerchunk cookbook](https://projectpythia.org/kerchunk-cookbook/)
 and the [pangeo guide on kerchunk](https://guide.cloudnativegeo.org/kerchunk/intro.html) for more information.
 ```
 
