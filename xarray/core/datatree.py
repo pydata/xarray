@@ -1025,7 +1025,7 @@ class DataTree(
         # __getattr__ without changing the stored data. Dataset already rejects
         # this; do the same here instead of leaving the two access paths
         # inconsistent (GH#9928).
-        if isinstance(name, str) and not name.startswith("_"):
+        if not name.startswith("_"):
             sources = (
                 getattr(self, "_data_variables", None),
                 getattr(self, "_node_coord_variables", None),
