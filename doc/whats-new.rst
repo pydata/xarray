@@ -223,6 +223,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Opening Zarr stores backed by ``fsspec`` zip filesystems (such as
+  ``zip:///::...`` URLs or ``zarr.storage.FsspecStore`` wrapping a zip
+  filesystem) now treats missing archive members as absent Zarr keys instead of
+  raising ``KeyError`` when reading fill-value-only variables or coordinates
+  (:issue:`10950`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.

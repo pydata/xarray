@@ -8,6 +8,7 @@ import re
 import tempfile
 import uuid
 import warnings
+import zipfile
 from collections import ChainMap
 from collections.abc import Iterator, Mapping
 from importlib import import_module
@@ -2576,6 +2577,108 @@ def test_open_fsspec(fsspec_memory_zarr_stores) -> None:
     url = "simplecache::memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
+
+
+@requires_zarr
+@requires_fsspec
+def test_load_dataarray_fsspec_zip_coordinates(tmp_path: Path) -> None:
+    import fsspec
+    from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+    from zarr.storage import FsspecStore, ZipStore
+
+    da = DataArray(np.zeros(1), dims="foo", coords={"foo": [0]})
+    store_dir = tmp_path / "store.zarr"
+    da.to_zarr(store_dir, zarr_format=3, consolidated=False)
+
+    zip_path = tmp_path / "store.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for file_path in store_dir.rglob("*"):
+            if file_path.is_file():
+                zf.write(file_path, arcname=file_path.relative_to(store_dir).as_posix())
+
+    zip_url = f"zip:///::{zip_path.as_posix()}"
+    assert_identical(
+        da,
+        xr.load_dataarray(zip_url, engine="zarr", zarr_format=3, consolidated=False),
+    )
+
+    # Default consolidated=None probe falls back to non-consolidated metadata
+    with pytest.warns(RuntimeWarning, match="consolidated metadata"):
+        assert_identical(
+            da,
+            xr.load_dataarray(zip_url, engine="zarr", zarr_format=3, consolidated=None),
+        )
+
+    # FsspecStore around fsspec's zip filesystem via AsyncFileSystemWrapper
+    zip_fs = fsspec.filesystem("zip", fo=str(zip_path))
+    fsspec_store = FsspecStore(
+        AsyncFileSystemWrapper(zip_fs, asynchronous=True), read_only=True
+    )
+    assert_identical(
+        da,
+        xr.load_dataarray(
+            fsspec_store, engine="zarr", zarr_format=3, consolidated=False
+        ),
+    )
+
+    # Directory path and ZipStore still round-trip identically
+    assert_identical(
+        da,
+        xr.load_dataarray(store_dir, engine="zarr", zarr_format=3, consolidated=False),
+    )
+    with contextlib.closing(ZipStore(zip_path, mode="r")) as zip_store:
+        assert_identical(
+            da,
+            xr.load_dataarray(
+                zip_store, engine="zarr", zarr_format=3, consolidated=False
+            ),
+        )
+
+    # Non-fill coordinate value and archive path prefix are read rather than replaced by fill
+    da_nonzero = DataArray(np.zeros(1), dims="foo", coords={"foo": [1]})
+    nonzero_dir = tmp_path / "nonzero.zarr"
+    da_nonzero.to_zarr(nonzero_dir, zarr_format=3, consolidated=False)
+    nonzero_zip = tmp_path / "nonzero.zip"
+    with zipfile.ZipFile(nonzero_zip, "w") as zf:
+        for file_path in nonzero_dir.rglob("*"):
+            if file_path.is_file():
+                zf.write(
+                    file_path,
+                    arcname=f"nested/{file_path.relative_to(nonzero_dir).as_posix()}",
+                )
+    assert_identical(
+        da_nonzero,
+        xr.load_dataarray(
+            f"zip:///nested::{nonzero_zip.as_posix()}",
+            engine="zarr",
+            zarr_format=3,
+            consolidated=False,
+        ),
+    )
+
+    # A zip archive that is not a zarr store still fails to open
+    not_zarr_zip = tmp_path / "not_zarr.zip"
+    with zipfile.ZipFile(not_zarr_zip, "w") as zf:
+        zf.writestr("readme.txt", "not a zarr store")
+    with pytest.raises(FileNotFoundError):
+        xr.load_dataarray(
+            f"zip:///::{not_zarr_zip.as_posix()}",
+            engine="zarr",
+            zarr_format=3,
+            consolidated=False,
+        )
+
+    # A KeyError from the inner store for a key that exists still propagates
+    async def _raise_key_error(*args: Any, **kwargs: Any) -> Any:
+        raise KeyError("unexpected key error")
+
+    with (
+        patch.object(fsspec_store.fs, "_cat_file", side_effect=_raise_key_error),
+        pytest.raises(KeyError, match="unexpected key error"),
+    ):
+        xr.load_dataarray(
+            fsspec_store, engine="zarr", zarr_format=3, consolidated=False
+        )
 
 
 @requires_zarr
