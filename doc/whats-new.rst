@@ -223,6 +223,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Reductions on :py:meth:`DataArray.coarsen` and :py:meth:`Dataset.coarsen`
+  no longer pass their keyword arguments, e.g. ``min_count`` or ``skipna``, on to
+  ``coord_func``.
+  Previously, ``da.coarsen(time=2).sum(min_count=1)`` raised a ``TypeError`` if
+  ``da`` had a coordinate along ``time`` (:issue:`8059`).
+  By `Tushar Sharma <https://github.com/tushar-mahalya>`_.
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
