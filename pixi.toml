@@ -130,7 +130,7 @@ iris = "3.13.*"
 # https://github.com/SciTools/iris/issues/7251
 # TODO: remove once the minimum version of iris is >= 3.16.1
 python-xxhash = ">=3.0,<4.0"
-lxml = "6.0.*"             # Optional dep of pydap
+lxml = "6.0.*"               # Optional dep of pydap
 matplotlib-base = "3.10.*"
 nc-time-axis = "1.4.*"
 # netcdf follows a 1.major.minor[.patch] convention
