@@ -31,6 +31,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_cftime,
     requires_pint,
+    requires_pyarrow,
     requires_scipy_or_netCDF4,
 )
 from xarray.tests.backends.base import create_tmp_file
@@ -869,11 +870,14 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(actual.compute(), expected.compute())
 
-    @pytest.mark.xfail(
-        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
-        "which causes the `y` column to have a different type depending on whether pyarrow is installed"
+    @pytest.mark.parametrize(
+        "convert_string",
+        [
+            pytest.param(False, id="object"),
+            pytest.param(True, marks=requires_pyarrow, id="pyarrow"),
+        ],
     )
-    def test_to_dask_dataframe_2D(self):
+    def test_to_dask_dataframe_2D(self, convert_string: bool) -> None:
         # Test if 2-D dataset is supplied
         w = np.random.randn(2, 3)
         ds = Dataset({"w": (("x", "y"), da.from_array(w, chunks=(1, 2)))})
@@ -888,10 +892,15 @@ class TestToDaskDataFrame:
         expected = pd.DataFrame({"w": w.reshape(-1)}, index=exp_index)
         # so for now, reset the index
         expected = expected.reset_index(drop=False)
-        actual = ds.to_dask_dataframe(set_index=False)
+        string_dtype = pd.StringDtype("pyarrow") if convert_string else object
+        expected["y"] = expected["y"].astype(string_dtype)
 
-        assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(actual.compute(), expected)
+        with dask.config.set({"dataframe.convert-string": convert_string}):
+            with raise_if_dask_computes():
+                actual = ds.to_dask_dataframe(set_index=False)
+
+            assert isinstance(actual, dd.DataFrame)
+            assert_frame_equal(actual.compute(), expected)
 
     @pytest.mark.xfail(raises=NotImplementedError)
     def test_to_dask_dataframe_2D_set_index(self):
@@ -924,11 +933,14 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected.compute(), actual.compute())
 
-    @pytest.mark.xfail(
-        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
-        "which causes the index to have a different type depending on whether pyarrow is installed"
+    @pytest.mark.parametrize(
+        "convert_string",
+        [
+            pytest.param(False, id="object"),
+            pytest.param(True, marks=requires_pyarrow, id="pyarrow"),
+        ],
     )
-    def test_to_dask_dataframe_not_daskarray(self):
+    def test_to_dask_dataframe_not_daskarray(self, convert_string: bool) -> None:
         # Test if DataArray is not a dask array
         x = np.random.randn(10)
         y = np.arange(10, dtype="uint8")
@@ -936,11 +948,17 @@ class TestToDaskDataFrame:
 
         ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
-        expected = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
+        string_dtype = pd.StringDtype("pyarrow") if convert_string else object
+        expected = pd.DataFrame(
+            {"a": x, "b": y}, index=pd.Index(t, dtype=string_dtype, name="t")
+        )
 
-        actual = ds.to_dask_dataframe(set_index=True)
-        assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(expected, actual.compute())
+        with dask.config.set({"dataframe.convert-string": convert_string}):
+            with raise_if_dask_computes():
+                actual = ds.to_dask_dataframe(set_index=True)
+
+            assert isinstance(actual, dd.DataFrame)
+            assert_frame_equal(expected, actual.compute())
 
     def test_to_dask_dataframe_no_coordinate(self):
         x = da.from_array(np.random.randn(10), chunks=4)
