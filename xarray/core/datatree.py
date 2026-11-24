@@ -1019,6 +1019,26 @@ class DataTree(
         else:
             return default
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        # DataTree has a __dict__ for dynamically defined attributes, so assigning
+        # `tree.variable = value` would silently shadow the variable lookup in
+        # __getattr__ without changing the stored data. Dataset already rejects
+        # this; do the same here instead of leaving the two access paths
+        # inconsistent (GH#9928).
+        if isinstance(name, str) and not name.startswith("_"):
+            sources = (
+                getattr(self, "_data_variables", None),
+                getattr(self, "_node_coord_variables", None),
+                getattr(self, "_children", None),
+            )
+            if any(source is not None and name in source for source in sources):
+                raise AttributeError(
+                    f"cannot set attribute {name!r} on a 'DataTree' object. "
+                    "Use __setitem__ style assignment (e.g., `dt['name'] = ...`) "
+                    "instead of assigning variables."
+                )
+        super().__setattr__(name, value)
+
     def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
         """Access child nodes, variables, or coordinates stored anywhere in this tree.
 

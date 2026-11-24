@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Assigning to a :py:class:`DataTree` attribute whose name matches a variable or
+  child no longer silently shadows that entry. It now raises an ``AttributeError``
+  directing users to item assignment, matching :py:class:`Dataset` behaviour
+  (:issue:`9928`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
