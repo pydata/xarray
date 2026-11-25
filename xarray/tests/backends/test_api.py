@@ -100,6 +100,9 @@ def test_get_default_netcdf_write_engine() -> None:
     engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
     assert engine == "netcdf4"
 
+    engine = get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
+    assert engine == "netcdf4"
+
     engine = get_default_netcdf_write_engine(io.BytesIO(), format=None)
     assert engine == "h5netcdf"
 
@@ -138,6 +141,9 @@ def test_get_default_netcdf_write_engine() -> None:
         engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
         assert engine == "scipy"
 
+        engine = get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
+        assert engine == "netcdf4"
+
         engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF3_CLASSIC")
         assert engine == "scipy"
 
@@ -160,6 +166,15 @@ def test_default_engine_h5netcdf(monkeypatch):
         ).replace("SUITABLE_BACKENDS", r"(scipy, netCDF4)|(netCDF4, scipy)"),
     ):
         get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "cannot write NetCDF files with format='NETCDF3_64BIT_DATA' because "
+            "none of the suitable backend libraries (netCDF4) are installed"
+        ),
+    ):
+        get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
 
 
 def test_default_engine_nczarr_no_netcdf4_python(monkeypatch):

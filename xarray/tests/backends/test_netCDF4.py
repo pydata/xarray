@@ -541,6 +541,18 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open(path)
 
 
+@requires_netCDF4
+def test_to_netcdf_cdf5_default_engine(tmp_path: Path) -> None:
+    # GH8985
+    ds = create_test_data()
+    path = tmp_path / "cdf5.nc"
+    ds.to_netcdf(path, format="NETCDF3_64BIT_DATA")
+    with nc4.Dataset(path) as nc:
+        assert nc.data_model == "NETCDF3_64BIT_DATA"
+    with open_dataset(path) as actual:
+        assert_identical(ds, actual)
+
+
 @pytest.mark.parametrize(
     "engine",
     [
