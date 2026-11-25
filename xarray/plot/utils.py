@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import itertools
 import textwrap
-import warnings
 from collections.abc import (
     Callable,
     Hashable,
@@ -22,6 +21,7 @@ from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
 from xarray.core.utils import (
     attempt_import,
+    emit_user_level_warning,
     is_scalar,
     module_available,
 )
@@ -379,12 +379,11 @@ def _infer_xy_labels_3d(
     if rgb is None:
         assert len(could_be_color) in (2, 3)
         rgb = could_be_color[-1]
-        warnings.warn(
+        emit_user_level_warning(
             "Several dimensions of this array could be colors.  Xarray "
             f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
             "and/or rgb dimensions to override this guess.",
-            stacklevel=2,
         )
     assert rgb is not None
 
@@ -717,10 +716,11 @@ def _ensure_plottable(*args) -> None:
             or _valid_other_type(np.asarray(x), other_types)
         ):
             raise TypeError(
-                "Plotting requires coordinates to be numeric, boolean, "
-                "or dates of type numpy.datetime64, "
-                "datetime.datetime, cftime.datetime or "
-                f"pandas.Interval. Received data of type {np.asarray(x).dtype} instead."
+                "Plotting requires coordinates to be numeric, boolean, strings, "
+                "or dates or times of type numpy.datetime64, numpy.timedelta64, "
+                "datetime.datetime or cftime.datetime. pandas.Interval values are "
+                "plotted at their midpoints or bounds, which must be one of these "
+                f"types. Received data of type {np.asarray(x).dtype} instead."
             )
         if _valid_other_type(np.asarray(x), cftime_datetime_types):
             if nc_time_axis_available:
@@ -1071,11 +1071,10 @@ def legend_elements(
     if prop == "colors":
         arr = self.get_array()
         if arr is None:
-            warnings.warn(
+            emit_user_level_warning(
                 "Collection without array used. Make sure to "
                 "specify the values to be colormapped via the "
                 "`c` argument.",
-                stacklevel=2,
             )
             return handles, labels
         _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])

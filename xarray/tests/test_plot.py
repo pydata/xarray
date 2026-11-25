@@ -815,6 +815,19 @@ class TestPlot(PlotTestCase):
         expected = "dim_0_bins_center [m]"
         assert actual == expected
 
+    def test_coord_with_unplottable_interval_raises(self) -> None:
+        # GH4378: intervals are plotted at their midpoints, so intervals whose
+        # midpoints can't be plotted should get an error that says so
+        intervals = [
+            pd.Interval(pd.Timedelta(hours=i), pd.Timedelta(hours=i + 1))
+            for i in range(3)
+        ]
+        da = DataArray(np.arange(3), dims="x", coords={"x": intervals})
+        with pytest.raises(
+            TypeError, match=r"pandas.Interval values are plotted at their midpoints"
+        ):
+            da.plot()  # type: ignore[call-arg]
+
     def test_multiplot_over_length_one_dim(self) -> None:
         a = easy_array((3, 1, 1, 1))
         d = DataArray(a, dims=("x", "col", "row", "hue"))
@@ -1951,7 +1964,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             self.plotmethod(colors="k", cmap="RdBu")
 
-    def list_of_colors_in_cmap_raises_error(self) -> None:
+    def test_list_of_colors_in_cmap_raises_error(self) -> None:
         with pytest.raises(ValueError, match=r"list of colors"):
             self.plotmethod(cmap=["k", "b"])
 

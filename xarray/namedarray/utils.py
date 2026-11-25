@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import itertools
 import sys
-import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
 from numbers import Number
@@ -104,7 +103,11 @@ def to_0d_object_array(
 
 
 def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+    # Look up the methods on the type: a DataArray is not dict-like, but
+    # attribute access on an instance falls back to its coordinates and
+    # attributes, which may be named "keys".
+    cls = type(value)
+    return hasattr(cls, "keys") and hasattr(cls, "__getitem__")
 
 
 def drop_missing_dims[DimType: Hashable](
@@ -122,6 +125,8 @@ def drop_missing_dims[DimType: Hashable](
     dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
+    from xarray.core.utils import emit_user_level_warning
+
     supplied_dims_tuple = tuple(supplied_dims)
     supplied_dims_set = {val for val in supplied_dims_tuple if val is not ...}
     dims_set = set(dims)
@@ -131,7 +136,7 @@ def drop_missing_dims[DimType: Hashable](
             msg = f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             if missing_dims == "raise":
                 raise ValueError(msg)
-            warnings.warn(msg, stacklevel=2)
+            emit_user_level_warning(msg)
 
         if missing_dims == "raise":
             return supplied_dims_tuple

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import functools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
 
-from xarray.core.utils import attempt_import
+from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _CYCLE_PROPS,
@@ -970,7 +969,7 @@ artist :
             if len(args) > 4:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 
@@ -1657,7 +1656,7 @@ artist :
             if len(args) > 2:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 
@@ -2504,7 +2503,6 @@ def pcolormesh(
             y = _infer_interval_breaks(y, axis=1, scale=yscale)
             y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
-    ax.grid(False)
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
     # by default, pcolormesh picks "round" values for bounds

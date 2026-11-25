@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import itertools
 import math
-import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, TypeVar, override
 
@@ -15,6 +14,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.core.utils import (
     either_dict_or_kwargs,
+    emit_user_level_warning,
     is_duck_dask_array,
     module_available,
 )
@@ -209,12 +209,11 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
             if "keepdims" in kwargs:
-                warnings.warn(
+                emit_user_level_warning(
                     "Reductions are applied along the rolling dimension. "
                     "Passing the 'keepdims' kwarg to reduction is not "
                     "supported and will be ignored.",
                     FutureWarning,
-                    stacklevel=3,
                 )
                 del kwargs["keepdims"]
 
@@ -679,9 +678,9 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return self.obj.__class__(
-            values, self.obj.coords, attrs=attrs, name=self.obj.name
-        )
+        # the constructor would take the name of a dask array as the name
+        variable = self.obj.variable._replace(data=values, attrs=attrs, encoding={})
+        return self.obj._replace(variable)
 
     def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         # bottleneck doesn't allow min_count to be 0, although it should
@@ -723,43 +722,22 @@ class DataArrayRolling(Rolling["DataArray"]):
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
             )
-        # index 0 is at the rightmost edge of the window
-        # need to reverse index here
-        # see GH #8541
+        # index 0 is at the rightmost edge of the window, count from the first value
+        # of the window inside the array instead, which is at most window - 1 before
+        # the rightmost edge (GH #8541, #11336)
         if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
-            values = self.window[0] - 1 - values
+            size = values.shape[axis]
+            first = np.minimum(np.arange(size), self.window[0] - 1)
+            values = first.reshape((-1,) + (1,) * (values.ndim - axis - 1)) - values
 
         if self.center[0]:
             values = values[valid]
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return self.obj.__class__(
-            values, self.obj.coords, attrs=attrs, name=self.obj.name
-        )
-
-    def _array_reduce(
-        self,
-        array_agg_func,
-        bottleneck_move_func,
-        numbagg_move_func,
-        rolling_agg_func,
-        keep_attrs,
-        fillna,
-        **kwargs,
-    ):
-        result = self._array_reduce_impl(
-            array_agg_func,
-            bottleneck_move_func,
-            numbagg_move_func,
-            rolling_agg_func,
-            keep_attrs,
-            fillna,
-            **kwargs,
-        )
-        if array_agg_func in (duck_array_ops.argmin, duck_array_ops.argmax):
-            result = self._unpad_window_index(result)
-        return result
+        # the constructor would take the name of a dask array as the name
+        variable = self.obj.variable._replace(data=values, attrs=attrs, encoding={})
+        return self.obj._replace(variable)
 
     def _unpad_window_index(self, result: DataArray) -> DataArray:
         """Make indices within the padded windows relative to the array.
@@ -783,9 +761,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         axis = result.get_axis_num(dim)
         n_pad = n_pad.reshape((-1,) + (1,) * (result.ndim - axis - 1))
         n_pad = duck_array_ops.astype(n_pad, result.dtype)
-        return result.copy(data=result.data - n_pad)
+        # A real value tied with the padding sentinel selects the padding, which
+        # lies before the array: the first value of the window is then the answer.
+        return result.copy(data=duck_array_ops.clip(result.data - n_pad, min=0))
 
-    def _array_reduce_impl(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -796,12 +776,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         **kwargs,
     ):
         if "dim" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 f"Reductions are applied along the rolling dimension(s) "
                 f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
                 f"operations has no effect.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["dim"]
 
@@ -844,6 +823,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             )
             and self.ndim == 1
             and xp is np
+            # bottleneck refuses windows larger than the array
+            and self.window[0] <= self.obj.sizes[self.dim[0]]
         ):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
@@ -860,7 +841,10 @@ class DataArrayRolling(Rolling["DataArray"]):
             kwargs.setdefault("skipna", False)
             kwargs.setdefault("fillna", fillna)
 
-        return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
+        result = self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
+        if array_agg_func in (duck_array_ops.argmin, duck_array_ops.argmax):
+            result = self._unpad_window_index(result)
+        return result
 
 
 class DatasetRolling(Rolling["Dataset"]):

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, ove
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DataArrayExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
@@ -284,6 +285,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    DataArrayExternalAccessorMixin,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -2176,6 +2178,11 @@ class DataArray(
         exclude_vars: frozenset[Hashable],
     ) -> Self:
         """Create a new reindexed DataArray (callback called from ``Aligner``)."""
+        if not dim_pos_indexers and indexes.keys() <= self._indexes.keys():
+            # fast path for no reindexing necessary and no index to add: skip
+            # the conversion to and from a temporary dataset
+            return self.copy(deep=aligner.copy)
+
         if isinstance(fill_value, dict):
             fill_value = fill_value.copy()
             sentinel = object()

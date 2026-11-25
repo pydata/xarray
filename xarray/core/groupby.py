@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import functools
 import itertools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
@@ -1151,12 +1150,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         from flox.xarray import xarray_reduce
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -1844,12 +1842,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
@@ -2020,12 +2017,11 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             keep_attrs = _get_keep_attrs(default=True)
 
         if "keepdims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
-                stacklevel=3,
             )
             del kwargs["keepdims"]
 
