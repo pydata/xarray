@@ -618,11 +618,9 @@ def _interp_single_point(
     method: InterpOptions,
     kwargs: dict[str, Any],
 ) -> Variable:
-    """Interpolate along the dimensions that have a single source point.
+    """Interpolate along the dimensions that have a single source point (GH10747).
 
-    The interpolants need two points or more (GH10747). With one point, a new
-    coordinate equal to it gets the data there, and any other new coordinate is
-    out of range.
+    A new coordinate equal to that point gets its data, any other is out of range.
     """
     single = [dim for dim, (x, _) in indexes_coords.items() if x.size == 1]
     result = interp(
