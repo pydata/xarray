@@ -228,6 +228,9 @@ Bug Fixes
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
   ``OutOfBoundsDatetime`` for dates outside pandas' nanosecond range
   (:issue:`10975`).
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
+  (:issue:`9322`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
@@ -243,6 +246,10 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Performing a binary operation with a :py:class:`~xarray.core.groupby.DataArrayGroupBy`
+  object no longer mutates scalar coordinates on the right-hand operand in-place
+  (:issue:`11878`).
+  By `uvcode01-max <https://github.com/uvcode01-max>`_.
 - Indexed coordinates can now have non-string names, e.g. integers or tuples,
   instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
