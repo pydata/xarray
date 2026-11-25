@@ -223,6 +223,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Selecting a single element of a timezone-aware datetime index with
+  :py:meth:`Dataset.isel` no longer drops the timezone (:issue:`9307`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.

@@ -1292,3 +1292,12 @@ def test_pandas_StringDtype_index_coerces_to_numpy() -> None:
     da = DataArray([0, 1], coords={"x": ["x1", "x2"]})
     actual = concat([da, da], dim=pd.Index(["y1", "y2"], name="y"))
     assert isinstance(actual["y"].dtype, np.dtypes.StringDType)
+
+
+def test_pandas_indexing_adapter_scalar_keeps_timezone() -> None:
+    # https://github.com/pydata/xarray/issues/9307
+    index = pd.date_range("2020-01-01", periods=3, tz="US/Eastern")
+    da = DataArray([1, 2, 3], dims="time", coords={"time": index})
+    actual = da.isel(time=1).time.item()
+    assert actual == index[1]
+    assert actual.tzinfo is not None
