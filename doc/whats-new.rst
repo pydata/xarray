@@ -683,6 +683,8 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Creating the first index no longer imports dask, pint and sparse if they are
+  installed, which took about half a second (:pull:`11838`).
 - Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
   to the array directly, which undoes the slowdown from the fix for :issue:`11336`
   (:pull:`11925`).
