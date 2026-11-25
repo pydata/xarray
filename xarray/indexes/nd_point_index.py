@@ -294,7 +294,7 @@ class NDPointIndex[T_TreeAdapter: TreeAdapter](Index):
                 # returned by NDPointIndex.rename()
                 if var.dims != self._dims:
                     var.dims = self._dims
-            return dict(**variables)
+            return dict(variables)
         else:
             return {}
 
