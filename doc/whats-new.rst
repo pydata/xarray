@@ -227,6 +227,9 @@ Bug Fixes
   as when the masked array is first wrapped in a :py:class:`DataArray`, so
   comparisons return booleans (:issue:`1792`).
   By `Zackary Loevseth <https://github.com/ZackaryLoevseth>`_.
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
+  (:issue:`9322`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
@@ -242,6 +245,10 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Performing a binary operation with a :py:class:`~xarray.core.groupby.DataArrayGroupBy`
+  object no longer mutates scalar coordinates on the right-hand operand in-place
+  (:issue:`11878`).
+  By `uvcode01-max <https://github.com/uvcode01-max>`_.
 - Indexed coordinates can now have non-string names, e.g. integers or tuples,
   instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -549,6 +556,12 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- :py:meth:`Dataset.to_netcdf` and :py:meth:`DataArray.to_netcdf` accept
+  ``format="NETCDF3_64BIT_DATA"`` (CDF5) without an ``engine`` and use the
+  netCDF4 engine, the only one that writes it. Previously this raised
+  ``ValueError: unexpected format``. The ``format`` docstrings now list it
+  (:issue:`8985`).
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 - Rolling reductions with bottleneck no longer fail for windows larger than the
   array, or with dask larger than its first chunk, and no longer name the result
   after the dask array (:pull:`11925`).
