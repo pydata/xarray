@@ -223,6 +223,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
+  ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
+  produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
+  ``OutOfBoundsDatetime`` for dates outside pandas' nanosecond range
+  (:issue:`10975`).
 - Dataset weighted arithmetic reductions now select data variables with numeric,
   boolean, or timedelta dtypes and skip variables such as datetimes and strings
   (:issue:`9322`).
