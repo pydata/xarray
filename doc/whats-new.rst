@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
+  (:issue:`9322`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
