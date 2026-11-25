@@ -2050,11 +2050,15 @@ def get_chunksizes(
 
 def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types."""
+    if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+        return False
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
     """Check whether dtype is of the timedelta64 dtype."""
+    if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+        return False
     return np.issubdtype(dtype, np.timedelta64)
 
 

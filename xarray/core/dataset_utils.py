@@ -81,7 +81,9 @@ def _get_virtual_variable(
     ref_name, var_name = split_key
     ref_var = variables[ref_name]
 
-    if _contains_datetime_like_objects(ref_var):
+    if isinstance(ref_var.dtype, pd.PeriodDtype) or _contains_datetime_like_objects(
+        ref_var
+    ):
         ref_var = DataArray(ref_var)
         data = getattr(ref_var.dt, var_name).data
     else:
