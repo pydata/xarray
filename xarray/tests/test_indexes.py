@@ -709,12 +709,14 @@ def test_safe_cast_to_index() -> None:
     x = np.arange(5)
     td = x * np.timedelta64(1, "D")
     struct = np.array([(1, "a"), (2, "b")], dtype=[("x", int), ("y", "U1")])
+    big_endian = np.arange(3, dtype=">i2")
     for expected, array in [
         (dates, dates.values),
         (pd.Index(x, dtype=object), x.astype(object)),
         (pd.Index(td), td),
         (pd.Index(td, dtype=object), td.astype(object)),
         (pd.Index(struct.astype(object)), struct),
+        (pd.Index(big_endian.astype("=i2")), big_endian),
     ]:
         actual = safe_cast_to_index(array)
         assert_array_equal(expected, actual)
