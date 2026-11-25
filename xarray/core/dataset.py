@@ -5699,25 +5699,6 @@ class Dataset(
             join="outer",
         )
 
-        # pandas < 3 promotes index levels to object when concatenating the
-        # empty levels used for missing dimensions. Restore the level dtypes
-        # produced when stacking a variable that has the dimension.
-        level_dtypes: dict[Hashable, np.dtype | pd.api.extensions.ExtensionDtype] = {}
-        for da, stacked in zip(self.data_vars.values(), stackable_vars, strict=True):
-            stacked_index = stacked.xindexes[new_dim].to_pandas_index()
-            for dim, level in zip(stacking_dims, stacked_index.levels[1:], strict=True):
-                if dim in da.dims:
-                    level_dtypes.setdefault(dim, level.dtype)
-        index = data_array._indexes[new_dim]
-        assert isinstance(index, PandasMultiIndex)
-        levels = [index.index.levels[0].array] + [
-            level.astype(level_dtypes[dim], copy=False).array
-            for dim, level in zip(stacking_dims, index.index.levels[1:], strict=True)
-        ]
-        index = index._replace(index.index.set_levels(levels))
-        coords = index.create_variables(data_array._coords)
-        data_array = data_array._overwrite_indexes(dict.fromkeys(coords, index), coords)
-
         if name is not None:
             data_array.name = name
 
