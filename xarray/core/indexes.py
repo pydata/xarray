@@ -550,6 +550,9 @@ def safe_cast_to_index(array: Any) -> pd.Index:
         if values.dtype.names is not None:
             # pandas deprecates creating an index from a structured array
             values = values.astype(object)
+        if not values.dtype.isnative:
+            # pandas deprecates storing data with non-native byte order
+            values = values.astype(values.dtype.newbyteorder("="))
         try:
             index = pd.Index(values, **kwargs)
         except UnicodeEncodeError:
