@@ -1089,6 +1089,14 @@ ds.isel(x=slice(10, 20)).to_zarr(zarr_filename, region={"x": "auto"}, consolidat
 ds.isel(x=slice(20, 30)).to_zarr(zarr_filename, region={"x": slice(20, 30)}, consolidated=False)
 ```
 
+Explicit slices are positions, not labels. Xarray does not compare the
+coordinate labels of the new data with those in the store and does not write
+index coordinates, so data with the same labels in a different order is written
+in its own order and ends up under the wrong labels. `"auto"` matches the labels
+instead. It raises an error if a label is missing from the store or if the
+labels are not a contiguous run in the store's order. Use
+{py:meth}`Dataset.reindex` to put the data in the store's order first.
+
 Concurrent writes with `region` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate `lock`).
 

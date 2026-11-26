@@ -2399,6 +2399,15 @@ class Dataset(
             written to the region ``0:1000`` along ``x`` and ``10000:11000`` along
             ``y``.
 
+            Explicit slices are positions, not labels. Xarray does not compare
+            the coordinate labels of this dataset with those in the store and
+            does not write index coordinates, so data with the same labels in a
+            different order is written in its own order and ends up under the
+            wrong labels. ``"auto"`` matches the labels instead. It raises an
+            error if a label is missing from the store or if the labels are not
+            a contiguous run in the store's order. Use :py:meth:`Dataset.reindex`
+            to put the data in the store's order first.
+
             Two restrictions apply to the use of ``region``:
 
             - If ``region`` is set, _all_ variables in a dataset must have at
