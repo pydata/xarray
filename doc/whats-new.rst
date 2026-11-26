@@ -567,6 +567,13 @@ Bug Fixes
   array, or with dask larger than its first chunk, and no longer name the result
   after the dask array (:pull:`11925`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`
+  and :py:meth:`Dataset.bfill` now work for ``datetime64``, ``timedelta64``,
+  ``bool``, string and ``object`` dtypes (e.g. to fill ``NaT``), also with dask.
+  These dtypes are filled with NumPy, so they don't need numbagg or bottleneck.
+  With dask, integer arrays now also keep their dtype if ``limit`` is larger
+  than a chunk, instead of becoming ``float64`` (:issue:`4587`).
+  By `Lance Li <https://github.com/lance-lii>`_.
 
 
 Documentation
