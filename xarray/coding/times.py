@@ -519,7 +519,8 @@ def _check_higher_resolution(
     for new_time_unit in new_units:
         if not ((np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns"):
             break
-        flat_num_dates *= 1000
+        # not in-place, the array can be the (read-only) input of the caller
+        flat_num_dates = flat_num_dates * 1000
     return flat_num_dates, new_time_unit
 
 

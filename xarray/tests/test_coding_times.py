@@ -637,6 +637,25 @@ def test_cf_timedelta_2d() -> None:
     assert expected.dtype == actual.dtype
 
 
+@pytest.mark.parametrize(
+    ["units", "needed_unit"],
+    [("seconds", "ms"), ("milliseconds", "us"), ("microseconds", "ns")],
+)
+@pytest.mark.parametrize("writeable", [True, False])
+def test_decode_cf_timedelta_fractional_values_keeps_input(
+    units: str, needed_unit: PDDatetimeUnitOptions, writeable: bool
+) -> None:
+    # fractional values are decoded with a higher resolution than the units
+    numbers = np.array([1.5, 2.25, np.nan])
+    numbers.setflags(write=writeable)
+    expected = np.array([1500, 2250, "NaT"], dtype=f"timedelta64[{needed_unit}]")
+
+    actual = decode_cf_timedelta(numbers, units)
+
+    assert_array_equal(expected, actual)
+    assert_array_equal(np.array([1.5, 2.25, np.nan]), numbers)
+
+
 @pytest.mark.parametrize("encoding_unit", FREQUENCIES_TO_ENCODING_UNITS.values())
 def test_decode_cf_timedelta_time_unit(
     time_unit: PDDatetimeUnitOptions, encoding_unit
@@ -2060,6 +2079,18 @@ def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
     decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
     with assert_no_warnings():
         decoded.load()
+
+
+def test_decode_floating_point_timedelta_repeated_access() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, 0.1, 0.2], attrs=attrs)
+    decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
+    expected = np.array([0, 100, 200], dtype="timedelta64[ms]")
+
+    # the lazily decoded values must not depend on previous accesses
+    assert_array_equal(expected, decoded.values)
+    assert_array_equal(expected, decoded.values)
+    assert_array_equal(np.array([0, 0.1, 0.2]), encoded.values)
 
 
 def test_timedelta64_coding_via_dtype(time_unit: PDDatetimeUnitOptions) -> None:
