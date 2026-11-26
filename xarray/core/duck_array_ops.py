@@ -881,8 +881,39 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
 
 
-def _push(array, n: int | None = None, axis: int = -1):
-    """Use either bottleneck or numbagg depending on options & what's available."""
+def _push_numpy(array: np.ndarray, n: int | None, axis: int) -> np.ndarray:
+    """Forward fill with plain NumPy, for dtypes numbagg and bottleneck can't fill.
+
+    Missing values are those flagged by ``isnull``, e.g. NaT, None or NaN.
+    """
+    axis = normalize_axis_index(axis, array.ndim)
+    positions = np.arange(array.shape[axis]).reshape(
+        (-1,) + (1,) * (array.ndim - axis - 1)
+    )
+    # position of the last non-missing value up to each element, -1 if there is none
+    last_valid = np.maximum.accumulate(
+        np.where(isnull(array), -1, positions), axis=axis
+    )
+    fill = last_valid >= 0
+    if n is not None:
+        fill &= positions - last_valid <= n
+    return np.where(fill, np.take_along_axis(array, last_valid, axis=axis), array)
+
+
+def _requires_numbagg_or_bottleneck(dtype: Any) -> bool:
+    # numbagg and bottleneck only fill numeric dtypes, _push_numpy fills the other
+    # NumPy dtypes, e.g. datetime64, timedelta64, bool, str or object (but not
+    # pandas extension dtypes)
+    return not isinstance(dtype, np.dtype) or dtypes.isdtype(dtype, "numeric")
+
+
+def _push(array: np.ndarray, n: int | None = None, axis: int = -1) -> np.ndarray:
+    """Use either bottleneck or numbagg depending on options & what's available.
+
+    Dtypes they can't fill, e.g. datetime64 or object, are filled with NumPy.
+    """
+    if not _requires_numbagg_or_bottleneck(array.dtype):
+        return _push_numpy(array, n, axis)
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
@@ -901,8 +932,12 @@ def _push(array, n: int | None = None, axis: int = -1):
     return bn.push(array, limit, axis)
 
 
-def push(array, n, axis, method="blelloch"):
-    if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
+def push(array: Any, n: int | None, axis: int, method: str = "blelloch") -> Any:
+    if (
+        not OPTIONS["use_bottleneck"]
+        and not OPTIONS["use_numbagg"]
+        and _requires_numbagg_or_bottleneck(array.dtype)
+    ):
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."

@@ -22,6 +22,7 @@ from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
+    assert_identical,
     dask_array_type,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -556,6 +557,78 @@ def test_ffill_limit():
         [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims="time"
     )
     assert_array_equal(result, expected)
+
+
+non_float_fill_params = pytest.mark.parametrize(
+    "dtype, a, b",
+    [
+        ("datetime64[ns]", "2000-01-01", "2000-01-05"),
+        ("timedelta64[ns]", 1, 5),
+        (object, "a", "b"),
+    ],
+)
+
+
+def assert_filled(
+    actual: xr.DataArray, dtype: np.typing.DTypeLike, *expected: Any
+) -> None:
+    assert actual.dtype == dtype
+    assert_identical(actual, xr.DataArray(np.array(expected, dtype=dtype), dims="x"))
+
+
+@non_float_fill_params
+def test_ffill_bfill_non_float(
+    dtype: np.typing.DTypeLike,
+    a: str | int,
+    b: str | int,
+    use_dask: bool,
+    compute_backend: str | None,
+) -> None:
+    # GH4587: filled with NumPy, so this works with any compute_backend
+    # (None is NaT for datetime64 and timedelta64)
+    da = xr.DataArray(
+        np.array([None, a, None, None, None, b, None], dtype=dtype), dims="x"
+    )
+    if use_dask:
+        # values are filled across the chunks, but limit=2 fits in each chunk:
+        # a larger limit needs numbagg or bottleneck with dask (see below)
+        da = da.chunk(x=4)
+
+    assert_filled(da.ffill("x"), dtype, None, a, a, a, a, b, b)
+    assert_filled(da.ffill("x", limit=2), dtype, None, a, a, a, None, b, b)
+    assert_filled(da.bfill("x"), dtype, a, a, b, b, b, b, None)
+    assert_filled(da.bfill("x", limit=2), dtype, a, a, None, b, b, b, None)
+
+
+@requires_dask
+@requires_numbagg_or_bottleneck
+@non_float_fill_params
+def test_ffill_bfill_non_float_dask_limit_larger_than_chunks(
+    dtype: np.typing.DTypeLike, a: str | int, b: str | int
+) -> None:
+    # dask then also forward fills float positions to find the gap lengths
+    da = xr.DataArray(
+        np.array([None, a, None, None, None, b, None], dtype=dtype), dims="x"
+    ).chunk(x=1)
+
+    assert_filled(da.ffill("x", limit=2), dtype, None, a, a, a, None, b, b)
+    assert_filled(da.bfill("x", limit=2), dtype, a, a, None, b, b, b, None)
+
+
+@pytest.mark.parametrize(
+    "values", [[True, False, True], ["a", "", "b"]], ids=["bool", "str"]
+)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_dtypes_without_missing_values(
+    values: list[Any], method: str, use_dask: bool, compute_backend: str | None
+) -> None:
+    da = xr.DataArray(np.array(values), dims="x")
+    if use_dask:
+        da = da.chunk(x=1)
+
+    actual = getattr(da, method)("x")
+    assert actual.dtype == da.dtype
+    assert_identical(actual, da)
 
 
 def test_interpolate_dataset(ds):

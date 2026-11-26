@@ -103,10 +103,12 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
 def _fill_with_last_one(a, b):
     import numpy as np
 
+    from xarray.core.duck_array_ops import isnull
+
     # cumreduction apply the push func over all the blocks first so,
     # the only missing part is filling the missing values using the
     # last data of the previous chunk
-    return np.where(np.isnan(b), a, b)
+    return np.where(isnull(b), a, b)
 
 
 def _dtype_push(a, axis, dtype=None):
@@ -120,7 +122,7 @@ def push(array, n, axis, method="blelloch"):
     """Dask-aware bottleneck.push."""
     import numpy as np
 
-    from xarray.core.duck_array_ops import _push
+    from xarray.core.duck_array_ops import _push, isnull
     from xarray.core.nputils import nanlast
 
     chunkmanager = get_chunked_array_type(array)
@@ -145,10 +147,10 @@ def push(array, n, axis, method="blelloch"):
 
     if n is not None and 0 < n < array.shape[axis] - 1:
         # The idea is to calculate a cumulative sum of a bitmask
-        # created from the isnan method, but every time a False is found the sum
+        # created from the isnull method, but every time a False is found the sum
         # must be restarted, and the final result indicates the amount of contiguous
         # nan values found in the original array on every position
-        nan_bitmask = da.isnan(array, dtype=int)
+        nan_bitmask = chunkmanager.map_blocks(isnull, array, dtype=bool)
         cumsum_nan = nan_bitmask.cumsum(axis=axis, method=method)
         valid_positions = da.where(nan_bitmask == 0, cumsum_nan, np.nan)
         valid_positions = push(valid_positions, None, axis, method=method)
@@ -156,6 +158,7 @@ def push(array, n, axis, method="blelloch"):
         valid_positions = da.nan_to_num(valid_positions)
         valid_positions = cumsum_nan - valid_positions
         valid_positions = valid_positions <= n
-        pushed_array = da.where(valid_positions, pushed_array, np.nan)
+        # keep the original (missing) values in gaps longer than n
+        pushed_array = da.where(valid_positions, pushed_array, array)
 
     return pushed_array
