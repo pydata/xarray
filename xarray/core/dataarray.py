@@ -4427,14 +4427,18 @@ class DataArray(
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
-                  "NETCDF3_CLASSIC"}, optional
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT_DATA", \
+                  "NETCDF3_64BIT", "NETCDF3_CLASSIC"}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
               features.
             * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
               netCDF 3 compatible API features.
+            * NETCDF3_64BIT_DATA: 64-bit data version of the netCDF 3 file
+              format, also called CDF5. It allows 64-bit dimension sizes and
+              needs netCDF version 4.4.0 or later. xarray writes it with the
+              same data types as the other netCDF 3 formats.
             * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
               which fully supports 2+ GB files, but is only compatible with
               clients linked against netCDF version 3.6.0 or later.

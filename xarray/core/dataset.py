@@ -2177,14 +2177,18 @@ class Dataset(
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
-                  "NETCDF3_CLASSIC"}, optional
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT_DATA", \
+                  "NETCDF3_64BIT", "NETCDF3_CLASSIC"}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
               features.
             * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
               netCDF 3 compatible API features.
+            * NETCDF3_64BIT_DATA: 64-bit data version of the netCDF 3 file
+              format, also called CDF5. It allows 64-bit dimension sizes and
+              needs netCDF version 4.4.0 or later. xarray writes it with the
+              same data types as the other netCDF 3 formats.
             * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
               which fully supports 2+ GB files, but is only compatible with
               clients linked against netCDF version 3.6.0 or later.
@@ -3463,16 +3467,55 @@ class Dataset(
         other: T_DataArrayOrSet,
         exclude: Iterable[Hashable] | None = None,
     ) -> Self:
-        """Broadcast this DataArray against another Dataset or DataArray.
+        """Broadcast this Dataset against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1].
 
         Parameters
         ----------
         other : Dataset or DataArray
-            Object against which to broadcast this array.
+            Object against which to broadcast this dataset.
         exclude : iterable of hashable, optional
             Dimensions that must not be broadcasted
+
+        Examples
+        --------
+        The result gains the other object's ``hour`` dimension and aligns on
+        the shared ``station`` coordinate. Stations not present in the
+        original dataset have missing values.
+
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("station", [10, 15])},
+        ...     coords={"station": ["a", "b"]},
+        ... )
+        >>> other = xr.DataArray(
+        ...     [[0, 0], [0, 0]],
+        ...     dims=("station", "hour"),
+        ...     coords={"station": ["b", "c"], "hour": [0, 1]},
+        ... )
+        >>> result = ds.broadcast_like(other)
+        >>> ds
+        <xarray.Dataset> Size: 24B
+        Dimensions:      (station: 2)
+        Coordinates:
+          * station      (station) <U1 8B 'a' 'b'
+        Data variables:
+            temperature  (station) int64 16B 10 15
+        >>> other
+        <xarray.DataArray (station: 2, hour: 2)> Size: 32B
+        array([[0, 0],
+               [0, 0]])
+        Coordinates:
+          * station  (station) <U1 8B 'b' 'c'
+          * hour     (hour) int64 16B 0 1
+        >>> result
+        <xarray.Dataset> Size: 76B
+        Dimensions:      (station: 3, hour: 2)
+        Coordinates:
+          * station      (station) <U1 12B 'a' 'b' 'c'
+          * hour         (hour) int64 16B 0 1
+        Data variables:
+            temperature  (station, hour) float64 48B 10.0 10.0 15.0 15.0 nan nan
 
         """
         if exclude is None:
