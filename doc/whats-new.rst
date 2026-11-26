@@ -223,6 +223,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.chunk` and :py:meth:`Dataset.chunk` now convert scalar data
+  variables to chunked arrays, preserving eager scalar coordinates (:issue:`8251`).
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
