@@ -918,6 +918,115 @@ def test_weighted_bad_dim(operation, as_dataset):
 
 
 @pytest.mark.parametrize(
+    "operation, expected",
+    [
+        pytest.param(
+            "mean",
+            Dataset({"a": ("x", [1.0, 2.0]), "scalar": ("x", [1.0, 1.0])}),
+            id="mean",
+        ),
+        pytest.param(
+            "sum",
+            Dataset({"a": ("x", [1, 4]), "scalar": ("x", [1, 2])}),
+            id="sum",
+        ),
+        pytest.param(
+            "sum_of_weights",
+            Dataset({"a": ("x", [1.0, 2.0]), "scalar": ("x", [1.0, 2.0])}),
+            id="sum_of_weights",
+        ),
+    ],
+)
+def test_weighted_dataset_dim_not_on_weights_or_variable(
+    operation: str, expected: Dataset
+) -> None:
+    # GH8679: reducing a Dataset over a dimension that is neither on the
+    # weights nor on one of the variables used to work before GH8606 made
+    # ``dot`` raise for dimensions missing from both of its inputs.
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    weights = DataArray([1, 2], dims="x")
+
+    result = getattr(ds.weighted(weights), operation)("y")
+    assert_identical(result, expected)
+
+
+def test_weighted_dataset_dim_missing_on_some_variables() -> None:
+    # GH8679: only some variables have the reduction dimension; the others
+    # are combined with the weights without reducing.
+    ds = Dataset({"a": (("y",), [1.0, 3.0]), "b": (("x",), [10.0, 20.0])})
+    weights = DataArray([1, 2], dims="x")
+
+    result = ds.weighted(weights).mean("y")
+    expected = Dataset({"a": ("x", [2.0, 2.0]), "b": ("x", [10.0, 20.0])})
+    assert_identical(result, expected)
+
+    # reducing over both dimensions at once only drops the missing ones
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    result = ds.weighted(weights).mean(["y", "x"])
+    expected = Dataset({"a": 5.0 / 3.0, "scalar": 1.0})
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("dim", (["bad_dim"], ["y", "bad_dim"]))
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_dim_list_with_fully_missing_dim(dim, as_dataset) -> None:
+    # GH8679: dropping per-variable dimensions in ``Weighted._reduce`` must
+    # not swallow dimensions that are missing from the whole object and the
+    # weights; those are still rejected up front by ``_check_dim``, also
+    # when mixed with valid dimensions in a list.
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    weights = DataArray([1, 2], dims="x")
+    data: DataArray | Dataset = ds if as_dataset else ds["a"]
+
+    with pytest.raises(ValueError, match=r"Dimensions \('bad_dim',\) not found in"):
+        data.weighted(weights).mean(dim)
+
+
+def test_weighted_dim_only_on_weights() -> None:
+    # GH8679: a reduction dimension that only exists on the weights is
+    # kept; the variable is broadcast against the weights along it.
+    weights = DataArray([[1.0, 2.0], [1.0, 2.0]], dims=("x", "w"))
+
+    da = DataArray([10.0, 20.0], dims="x")
+    assert_identical(da.weighted(weights).mean("w"), da)
+    assert_identical(da.weighted(weights).sum("w"), DataArray([30.0, 60.0], dims="x"))
+
+    ds = Dataset({"a": ("x", [1.0, 2.0])})
+    assert_identical(ds.weighted(weights).mean("w"), ds)
+    assert_identical(ds.weighted(weights).sum("w"), Dataset({"a": ("x", [3.0, 6.0])}))
+
+
+def test_weighted_dataset_dim_order_does_not_matter() -> None:
+    # GH8679: ``Weighted._reduce`` passes the filtered dimensions to
+    # ``dot`` as a set-derived tuple, so the order of the requested
+    # dimensions must not affect the result.
+    ds = Dataset(
+        {"a": (("y", "x"), [[1.0, 2.0], [3.0, 4.0]]), "b": ("x", [10.0, 20.0])}
+    )
+    weights = DataArray([1, 2], dims="x")
+
+    forward = ds.weighted(weights).mean(["y", "x"])
+    backward = ds.weighted(weights).mean(["x", "y"])
+    assert_identical(forward, backward)
+
+    # "b" has no "y" dimension: it is only reduced over "x"
+    expected = Dataset({"a": 8.0 / 3.0, "b": 50.0 / 3.0})
+    assert_allclose(forward, expected)
+
+
+def test_weighted_dataset_ellipsis_reduces_all_dims() -> None:
+    # GH8679: ``...`` is not filtered per variable; it reduces over all
+    # dimensions of each variable and the weights, as before the fix.
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    weights = DataArray([1, 2], dims="x")
+
+    result = ds.weighted(weights).mean(...)
+    assert_identical(result, ds.weighted(weights).mean(["x", "y"]))
+    expected = Dataset({"a": 5.0 / 3.0, "scalar": 1.0})
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize(
     "operation", ["sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"]
 )
 @pytest.mark.parametrize(
