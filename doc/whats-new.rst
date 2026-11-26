@@ -223,6 +223,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Opening Zarr stores backed by ``fsspec`` zip filesystems (such as
+  ``zip:///::...`` URLs or ``zarr.storage.FsspecStore`` wrapping a zip
+  filesystem) now treats missing archive members as absent Zarr keys instead of
+  raising ``KeyError`` when reading fill-value-only variables or coordinates
+  (:issue:`10950`).
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

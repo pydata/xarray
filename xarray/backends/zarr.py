@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import base64
+import functools
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, override
 
 import numpy as np
@@ -36,6 +37,7 @@ from xarray.core.utils import (
     attempt_import,
     close_on_error,
     emit_user_level_warning,
+    is_remote_uri,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -1926,6 +1928,135 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
         yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
+def _is_zip_fsspec_url(store: str) -> bool:
+    if not is_remote_uri(store):
+        return False
+    first_segment = store.split("::", 1)[0]
+    protocol = (
+        first_segment.split("://", 1)[0] if "://" in first_segment else first_segment
+    )
+    return protocol == "zip"
+
+
+def _is_zip_fsspec_fs(fs: Any) -> bool:
+    zip_fs_cls: type[Any] | tuple[type[Any], ...] = ()
+    async_wrapper_cls: type[Any] | tuple[type[Any], ...] = ()
+    try:
+        from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+        from fsspec.implementations.zip import ZipFileSystem
+    except ImportError:
+        pass
+    else:
+        zip_fs_cls = ZipFileSystem
+        async_wrapper_cls = AsyncFileSystemWrapper
+
+    seen: set[int] = set()
+    while fs is not None and id(fs) not in seen:
+        seen.add(id(fs))
+        if isinstance(fs, zip_fs_cls):
+            return True
+        protocol = getattr(fs, "protocol", None)
+        if protocol == "zip" or (
+            isinstance(protocol, tuple | list | set | frozenset) and "zip" in protocol
+        ):
+            return True
+        if isinstance(fs, async_wrapper_cls):
+            fs = fs.sync_fs
+        else:
+            fs = getattr(fs, "sync_fs", None)
+    return False
+
+
+@functools.cache
+def _zip_missing_key_store_cls() -> type[Any]:
+    from zarr.storage import WrapperStore
+
+    class _ZipMissingKeyStore(WrapperStore):
+        """WrapperStore that maps missing-member KeyError from fsspec zip stores to None."""
+
+        def with_read_only(self, read_only: bool = False) -> Self:
+            return type(self)(self._store.with_read_only(read_only))
+
+        async def get(
+            self,
+            key: str,
+            prototype: Any,
+            byte_range: Any = None,
+        ) -> Any:
+            try:
+                return await super().get(
+                    key, prototype=prototype, byte_range=byte_range
+                )
+            except KeyError:
+                if not await self._store.exists(key):
+                    return None
+                raise
+
+        async def get_partial_values(
+            self,
+            prototype: Any,
+            key_ranges: Iterable[tuple[str, Any]],
+        ) -> list[Any]:
+            key_ranges_list = list(key_ranges)
+            try:
+                return await super().get_partial_values(
+                    prototype=prototype, key_ranges=key_ranges_list
+                )
+            except KeyError:
+                return [
+                    await self.get(key, prototype=prototype, byte_range=byte_range)
+                    for key, byte_range in key_ranges_list
+                ]
+
+    base_get_partial = getattr(WrapperStore, "get_partial", None)
+    if base_get_partial is not None:
+        _base_get_partial: Callable[..., Any] = base_get_partial
+
+        class _ZipMissingKeyStoreWithGetPartial(_ZipMissingKeyStore):
+            async def get_partial(
+                self,
+                key: str,
+                *args: Any,
+                **kwargs: Any,
+            ) -> Any:
+                try:
+                    return await _base_get_partial(self, key, *args, **kwargs)
+                except KeyError:
+                    if not await self._store.exists(key):
+                        return None
+                    raise
+
+        return _ZipMissingKeyStoreWithGetPartial
+
+    return _ZipMissingKeyStore
+
+
+def _normalize_zip_fsspec_store(
+    store: Any,
+    *,
+    mode: str,
+    storage_options: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any] | None, bool]:
+    """Normalize read-only fsspec zip stores so missing archive members return None."""
+    if mode != "r":
+        return store, storage_options, False
+
+    from zarr.storage import FsspecStore
+
+    if isinstance(store, str) and _is_zip_fsspec_url(store):
+        fsspec_store = FsspecStore.from_url(
+            store,
+            storage_options=storage_options,
+            read_only=True,
+        )
+        return _zip_missing_key_store_cls()(fsspec_store), None, True
+
+    if isinstance(store, FsspecStore) and _is_zip_fsspec_fs(store.fs):
+        return _zip_missing_key_store_cls()(store), storage_options, False
+
+    return store, storage_options, False
+
+
 def _get_open_params(
     store,
     mode,
@@ -1944,6 +2075,10 @@ def _get_open_params(
     # zarr doesn't support pathlib.Path objects yet. zarr-python#601
     if isinstance(store, os.PathLike):
         store = os.fspath(store)
+
+    store, storage_options, opened_new_store = _normalize_zip_fsspec_store(
+        store, mode=mode, storage_options=storage_options
+    )
 
     open_kwargs = dict(
         # mode='a-' is a handcrafted xarray specialty
@@ -2004,7 +2139,7 @@ def _get_open_params(
         open_kwargs["use_consolidated"] = False
         zarr_group = zarr.open_group(store, **open_kwargs)
 
-    close_store_on_close = zarr_group.store is not store
+    close_store_on_close = opened_new_store or zarr_group.store is not store
 
     # we use this to determine how to handle fill_value
     if use_zarr_fill_value_as_mask is None:
