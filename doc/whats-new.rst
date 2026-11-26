@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Assigning to a :py:class:`DataTree` attribute whose name matches a variable or
+  child no longer silently shadows that entry. It now raises an ``AttributeError``
+  directing users to item assignment, matching :py:class:`Dataset` behaviour
+  (:issue:`9928`).
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

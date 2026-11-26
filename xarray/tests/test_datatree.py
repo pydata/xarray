@@ -1253,6 +1253,15 @@ class TestAccess:
         assert dt.attrs["meta"] == "NASA"
         assert "meta" in dir(dt)
 
+    def test_attribute_assignment_does_not_shadow_variables(self) -> None:
+        # GH#9928: assigning to an attribute with the name of a variable used to
+        # silently shadow the variable instead of changing the stored data.
+        dt = xr.DataTree(xr.Dataset({"a": ("x", [1, 2, 3])}))
+        with pytest.raises(AttributeError, match="cannot set attribute 'a'"):
+            dt.a = xr.DataArray([4, 5, 6], dims="x")
+        assert "a" not in dt.__dict__
+        assert_equal(dt.a, dt["a"])
+
     def test_ipython_key_completions_complex(self, create_test_datatree) -> None:
         dt = create_test_datatree()
         key_completions = dt._ipython_key_completions_()
