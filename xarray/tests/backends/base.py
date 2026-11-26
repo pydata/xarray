@@ -2147,16 +2147,18 @@ class NetCDF4Base(NetCDFBase):
 class InMemoryNetCDF:
     engine: T_NetcdfEngine | None
 
-    def test_roundtrip_via_memoryview(self) -> None:
+    def test_roundtrip_via_memoryview(self, use_dask: bool) -> None:
+        chunks: dict[str, int] | None = {} if use_dask else None
         original = create_test_data()
         result = original.to_netcdf(engine=self.engine)
-        roundtrip = load_dataset(result, engine=self.engine)
+        roundtrip = load_dataset(result, engine=self.engine, chunks=chunks)
         assert_identical(roundtrip, original)
 
-    def test_roundtrip_via_bytes(self) -> None:
+    def test_roundtrip_via_bytes(self, use_dask: bool) -> None:
+        chunks: dict[str, int] | None = {} if use_dask else None
         original = create_test_data()
         result = bytes(original.to_netcdf(engine=self.engine))
-        roundtrip = load_dataset(result, engine=self.engine)
+        roundtrip = load_dataset(result, engine=self.engine, chunks=chunks)
         assert_identical(roundtrip, original)
 
     def test_pickle_open_dataset_from_bytes(self) -> None:

@@ -67,8 +67,6 @@ iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
-# TODO: remove once https://github.com/xarray-contrib/flox/issues/520 is fixed
-numpy_groupies = "<0.14"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
@@ -128,7 +126,11 @@ h5netcdf = "1.8.*"
 h5py = "3.14.*"
 hdf5 = "1.14.*"
 iris = "3.13.*"
-lxml = "6.0.*"             # Optional dep of pydap
+# iris < 3.16.1 breaks with python-xxhash >= 4 (it no longer accepts str):
+# https://github.com/SciTools/iris/issues/7251
+# TODO: remove once the minimum version of iris is >= 3.16.1
+python-xxhash = ">=3.0,<4.0"
+lxml = "6.0.*"               # Optional dep of pydap
 matplotlib-base = "3.10.*"
 nc-time-axis = "1.4.*"
 # netcdf follows a 1.major.minor[.patch] convention
@@ -203,7 +205,7 @@ rich = "*"                         # for Zarr tree()
 setuptools = "*"
 sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
-sphinx-design = "*"
+sphinx-design = ">=0.8"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=1.1"               # for llms_txt_suppress_unknown_node_warnings
 sphinx = ">=8,<9"
@@ -232,7 +234,7 @@ linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in 
 
 
 [feature.typing.dependencies]
-mypy = "==2.4.0"
+mypy = "==2.4.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"

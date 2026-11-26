@@ -760,11 +760,6 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         This is used to determine the chunk size when opening a dataset with
         ``chunks="auto"`` or when rechunking an array with ``chunks="auto"``.
 
-        Parameters
-        ----------
-        target_chunksize : int, optional
-            The target chunk size in bytes. If not provided, a default value is used.
-
         Returns
         -------
         chunk_size : int

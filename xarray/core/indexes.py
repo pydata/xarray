@@ -6,10 +6,11 @@ import inspect
 import math
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
+from typing import TYPE_CHECKING, Any, cast, overload, override
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
@@ -26,12 +27,17 @@ from xarray.core.utils import (
     get_valid_numpy_dtype,
     is_allowed_extension_array_dtype,
     is_dict_like,
+    is_duck_array,
     is_scalar,
 )
+from xarray.namedarray.pycompat import to_numpy
 
 if TYPE_CHECKING:
-    from xarray.core.types import ErrorOptions, JoinOptions, Self
+    from typing import Self
+
+    from xarray.core.types import ErrorOptions, JoinOptions
     from xarray.core.variable import Variable
+    from xarray.namedarray._typing import duckarray
 
 
 IndexVars = dict[Any, "Variable"]
@@ -196,7 +202,7 @@ class Index:
         """
         if variables is not None:
             # pass through
-            return dict(**variables)
+            return dict(variables)
         else:
             return {}
 
@@ -320,7 +326,7 @@ class Index:
         ----------
         other : Index
             The other Index object to combine with this index.
-        join : str, optional
+        how : str, optional
             Method for joining the two indexes (see :py:func:`~xarray.align`).
 
         Returns
@@ -542,6 +548,9 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         values = to_numpy(array)
+        if values.dtype.names is not None:
+            # pandas deprecates creating an index from a structured array
+            values = values.astype(object)
         try:
             index = pd.Index(values, **kwargs)
         except UnicodeEncodeError:
@@ -575,11 +584,28 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
         raise NotImplementedError(
             "cannot use ``method`` argument if any indexers are slice objects"
         )
-    indexer = index.slice_indexer(
-        _sanitize_slice_element(label.start),
-        _sanitize_slice_element(label.stop),
-        _sanitize_slice_element(label.step),
-    )
+    start = _sanitize_slice_element(label.start)
+    stop = _sanitize_slice_element(label.stop)
+    step = _sanitize_slice_element(label.step)
+    try:
+        indexer = index.slice_indexer(start, stop, step)
+    except OutOfBoundsDatetime:
+        # pandas parses string bounds at nanosecond resolution, which overflows
+        # for dates outside 1677-2262 even when the index uses a coarser unit.
+        # Convert them to the index unit before asking pandas to slice again.
+        if not isinstance(index, pd.DatetimeIndex) or index.dtype == np.dtype(
+            "datetime64[ns]"
+        ):
+            raise
+        unit = np.datetime_data(index.dtype)[0]
+        if isinstance(start, str):
+            start = np.datetime64(start).astype(f"M8[{unit}]")
+        if isinstance(stop, str):
+            # like pandas, include the whole period of a partial string
+            stop = np.datetime64(stop)
+            period = np.timedelta64(1, np.datetime_data(stop.dtype)[0])
+            stop = (stop + period).astype(f"M8[{unit}]") - np.timedelta64(1, unit)
+        indexer = index.slice_indexer(start, stop, step)
     if not isinstance(indexer, slice):
         # unlike pandas, in xarray we never want to silently convert a
         # slice indexer into an array indexer
@@ -640,9 +666,6 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     )
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
-
-
-T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
 
 
 class PandasIndex(Index):
@@ -836,6 +859,9 @@ class PandasIndex(Index):
         if isinstance(indxr, slice) and indxr == slice(None):
             return self
 
+        if is_duck_array(indxr) and not isinstance(indxr, np.ndarray):
+            indxr = to_numpy(cast("duckarray[Any, Any]", indxr))
+
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
     @override
@@ -956,9 +982,7 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     @override
-    def _copy(
-        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
-    ) -> T_PandasIndex:
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Self:
         if deep:
             # pandas is not using the memo
             index = self.index.copy(deep=True)
@@ -1810,8 +1834,8 @@ class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping)
             )
 
         self._index_type = index_type
-        self._indexes = dict(**indexes)
-        self._variables = dict(**variables)
+        self._indexes = dict(indexes)
+        self._variables = dict(variables)
 
         self._dims: Mapping[Hashable, int] | None = None
         self.__coord_name_id: dict[Any, int] | None = None
@@ -2276,6 +2300,31 @@ def isel_indexes(
         return _apply_indexes(indexes, indexers, "isel")
     else:
         return _apply_indexes_fast(indexes, indexers, "isel")
+
+
+def drop_scalar_index_coords(
+    indexes: dict[Hashable, Index],
+    index_variables: dict[Hashable, Variable],
+    coordinates: Mapping[Hashable, Variable],
+    indexers: Mapping[Hashable, Any],
+) -> None:
+    """Drop scalar coordinates rebuilt by indexes, rejecting partial drops."""
+    drop_names = {
+        name
+        for name, var in index_variables.items()
+        if name in coordinates
+        and coordinates[name].ndim > 0
+        and set(coordinates[name].dims) & set(indexers)
+        and var.ndim == 0
+    }
+    if drop_names:
+        assert_no_index_corrupted(
+            Indexes({k: indexes[k] for k in index_variables}, index_variables),
+            drop_names,
+        )
+        for name in drop_names:
+            del indexes[name]
+            del index_variables[name]
 
 
 def roll_indexes(

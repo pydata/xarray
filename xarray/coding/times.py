@@ -197,7 +197,7 @@ def _ensure_padded_year(ref_date: str) -> str:
         "To remove this message, remove the ambiguity by padding your reference "
         "date strings with zeros."
     )
-    warnings.warn(warning_msg, SerializationWarning, stacklevel=2)
+    emit_user_level_warning(warning_msg, SerializationWarning)
 
     return ref_date_padded
 
@@ -1070,6 +1070,17 @@ def cast_to_int_if_safe(num) -> np.ndarray:
     return num
 
 
+def _units_finer_than_data(
+    time_delta: np.timedelta64, time_deltas: pd.TimedeltaIndex
+) -> bool:
+    """Check if time_delta is truncated to zero in the unit of time_deltas.
+
+    Without valid values nothing is lost in the division, so this is False then.
+    """
+    finer = time_delta < np.timedelta64(1, time_deltas.unit)
+    return bool(finer) and len(time_deltas.dropna()) > 0
+
+
 def _division(deltas, delta, floor):
     if floor:
         # calculate int64 floor division
@@ -1145,6 +1156,7 @@ def _eagerly_encode_cf_datetime(
 
     raise_incompatible_units_error = False
     raise_gregorian_proleptic_gregorian_mismatch_error = False
+    raise_units_finer_than_data_error = False
     try:
         if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
@@ -1201,10 +1213,16 @@ def _eagerly_encode_cf_datetime(
 
         # get resolution of TimedeltaIndex and align time_delta
         # todo: check, if this works in any case
-        num = _division(
-            time_deltas, time_delta.astype(f"=m8[{time_deltas.unit}]"), floor_division
-        )
-        num = reshape(num.values, dates.shape)
+        if _units_finer_than_data(time_delta, time_deltas):
+            raise_units_finer_than_data_error = True
+            data_resolution = _numpy_to_netcdf_timeunit(time_deltas.unit)
+        else:
+            num = _division(
+                time_deltas,
+                time_delta.astype(f"=m8[{time_deltas.unit}]"),
+                floor_division,
+            )
+            num = reshape(num.values, dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):
         time_units, ref_date = _unpack_time_units_and_ref_date_cftime(units, calendar)
@@ -1239,6 +1257,13 @@ def _eagerly_encode_cf_datetime(
             f"Consider setting encoding['dtype'] to a floating point dtype to serialize with "
             f"units {units!r}. Consider setting encoding['units'] to {new_units!r} to "
             f"serialize with an integer dtype."
+        )
+    if raise_units_finer_than_data_error:
+        raise ValueError(
+            f"Times can't be serialized with requested units {units!r}, because these "
+            f"units are finer than the resolution of the data ({data_resolution!r}). "
+            f"Consider setting encoding['units'] to units of {data_resolution!r} or "
+            f"coarser, or casting the data to a finer resolution."
         )
     if raise_gregorian_proleptic_gregorian_mismatch_error:
         raise ValueError(
@@ -1334,6 +1359,15 @@ def _eagerly_encode_cf_timedelta(
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
     # get resolution of TimedeltaIndex and align time_delta
     deltas_unit = time_deltas.unit
+    if _units_finer_than_data(time_delta, time_deltas):
+        data_resolution = _numpy_to_netcdf_timeunit(deltas_unit)
+        raise ValueError(
+            f"Timedeltas can't be serialized with requested units {units!r}, because "
+            f"these units are finer than the resolution of the data "
+            f"({data_resolution!r}). Consider setting encoding['units'] to units of "
+            f"{data_resolution!r} or coarser, or casting the data to a finer "
+            f"resolution."
+        )
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 
     # retrieve needed units to faithfully encode to int64

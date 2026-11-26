@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
+import sys
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
@@ -39,7 +41,7 @@ from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence
+    from xarray.core.types import NestedSequence, ZarrStoreLike
 
     T_Name = Union[Hashable, None]
 
@@ -48,6 +50,25 @@ logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _raise_if_zarr_store(filename_or_obj: object, engine: str) -> None:
+    """Raise a helpful error if a backend other than zarr gets a zarr store."""
+    # zarr stores can only exist if zarr has been imported already
+    zarr_store = sys.modules.get("zarr.abc.store")
+    zarr_storage = sys.modules.get("zarr.storage")
+    if (
+        isinstance(filename_or_obj, Mapping)
+        or (zarr_store is not None and isinstance(filename_or_obj, zarr_store.Store))
+        or (
+            zarr_storage is not None
+            and isinstance(filename_or_obj, zarr_storage.StorePath)
+        )
+    ):
+        raise TypeError(
+            f"the {engine} backend cannot open zarr stores, got {filename_or_obj!r}. "
+            "Use engine='zarr' instead."
+        )
 
 
 @overload
@@ -87,6 +108,24 @@ def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
         path = os.path.abspath(os.path.expanduser(path))
 
     return path  # type: ignore[return-value]
+
+
+def _get_mtime(filename_or_obj: Any) -> float | None:
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    mtime = None
+
+    try:
+        path = os.fspath(filename_or_obj)
+    except TypeError:
+        path = None
+
+    # bytes are the contents of a file, not a path
+    if isinstance(path, str) and not is_remote_uri(path):
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(path))
+
+    return mtime
 
 
 @overload
@@ -380,7 +419,13 @@ class AbstractDataStore:
 
 
 type T_PathFileOrDataStore = (
-    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+    str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore
+    | ZarrStoreLike
 )
 
 

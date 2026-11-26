@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
 
 import numpy as np
 
@@ -14,6 +13,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     _is_likely_dap_url,
     _normalize_path,
+    _raise_if_zarr_store,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
 )
@@ -28,11 +28,8 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
-    import os
-
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
 
 
 class PydapArrayWrapper(BackendArray):
@@ -144,12 +141,15 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
+        else:
+            _raise_if_zarr_store(url, "pydap")
+            raise TypeError(f"invalid url for pydap backend: {url!r}")
         args = {"dataset": dataset, "checksums": checksums}
         if group:
             args["group"] = group
-        if url.startswith(("http", "dap2")):
+        if isinstance(url, str) and url.startswith(("http", "dap2")):
             args["protocol"] = "dap2"
-        elif url.startswith("dap4"):
+        elif isinstance(url, str) and url.startswith("dap4"):
             args["protocol"] = "dap4"
         return cls(**args)
 
@@ -264,9 +264,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     @override
     def open_dataset(
         self,
-        filename_or_obj: (
-            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
-        ),
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

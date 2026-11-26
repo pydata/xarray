@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import indexing
 
 cp = pytest.importorskip("cupy")
 
@@ -90,3 +91,92 @@ def test_isel_0d_cupy_indexer(
     assert actual.dims == expected_dims
     assert isinstance(actual.data, cp.ndarray)
     np.testing.assert_array_equal(actual.data.get(), expected)
+
+
+def test_isel_cupy_vector_indexer_with_pandas_index() -> None:
+    da = xr.DataArray(
+        cp.arange(24).reshape(4, 6),
+        dims=("x", "y"),
+        coords={"x": [10, 20, 30, 40]},
+    )
+
+    actual = da.isel(x=cp.array([1, 2]))
+    expected_data = cp.arange(24).reshape(4, 6)[cp.array([1, 2])]
+
+    assert actual.get_index("x").equals(pd.Index([20, 30]))
+    np.testing.assert_array_equal(actual.data.get(), expected_data.get())
+
+
+def test_isel_cupy_multidimensional_vector_indexer_with_pandas_index() -> None:
+    da = xr.DataArray(
+        cp.arange(4),
+        dims="x",
+        coords={"x": [10, 20, 30, 40]},
+    )
+    indexer = xr.DataArray(cp.array([[0, 2], [3, 1]]), dims=("row", "col"))
+
+    actual = da.isel(x=indexer)
+
+    assert actual.dims == ("row", "col")
+    np.testing.assert_array_equal(actual.data.get(), [[0, 2], [3, 1]])
+    np.testing.assert_array_equal(actual.coords["x"].data, [[10, 30], [40, 20]])
+
+
+def test_isel_cupy_argmax_indexer_with_pandas_index() -> None:
+    da = xr.DataArray(
+        cp.arange(24).reshape(4, 6),
+        dims=("x", "y"),
+        coords={"x": [10, 20, 30, 40]},
+    )
+    indexer = da.argmax("x")
+
+    actual = da.isel(x=indexer)
+    expected_indexer = xr.DataArray(indexer.data.get(), dims=indexer.dims)
+    expected = da.isel(x=expected_indexer)
+
+    assert actual.dims == expected.dims
+    np.testing.assert_array_equal(actual.data.get(), expected.data.get())
+    np.testing.assert_array_equal(actual.coords["x"].data, expected.coords["x"].data)
+
+
+@pytest.mark.parametrize("indexer", [2, slice(1, 3)])
+def test_cupy_basic_indexer_assignment(indexer: int | slice) -> None:
+    data = cp.arange(12).reshape(4, 3)
+    da = xr.DataArray(data.copy(), dims=("x", "y"))
+    expected = data.copy()
+    expected[indexer] = -1
+
+    da[{"x": indexer}] = -1
+
+    np.testing.assert_array_equal(da.data.get(), expected.get())
+
+
+def test_cupy_loc_assignment() -> None:
+    data = cp.arange(12).reshape(4, 3)
+    da = xr.DataArray(data.copy(), dims=("x", "y"), coords={"x": [0, 1, 2, 3]})
+    expected = data.copy()
+    expected[2] = -1
+
+    da.loc[{"x": 2}] = -1
+
+    np.testing.assert_array_equal(da.data.get(), expected.get())
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_bool_zero_dim_cupy_dataarray(value: bool) -> None:
+    assert bool(xr.DataArray(cp.array(value))) is value
+
+
+@pytest.mark.parametrize(("method", "expected"), [("idxmax", 1), ("idxmin", 0)])
+def test_cupy_idxminmax_skipna(method: str, expected: int) -> None:
+    da = xr.DataArray(cp.array([1, 3, 2]), dims="x", coords={"x": [0, 1, 2]})
+
+    result = getattr(da, method)(skipna=True)
+
+    assert result.item() == expected
+
+
+def test_cupy_assignment_preserves_shape_error() -> None:
+    adapter = indexing.as_indexable(cp.zeros(2))
+    with pytest.raises(ValueError, match="operands could not be broadcast"):
+        adapter[indexing.BasicIndexer((slice(None),))] = cp.arange(3)

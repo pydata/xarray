@@ -360,8 +360,10 @@ class Aligner[T_Alignable: Alignable]:
                 all_indexes[key].append(idx)
             for key, index_vars in obj_index_vars.items():
                 all_index_vars[key].append(index_vars)
-                for dim, size in calculate_dimensions(index_vars).items():
-                    all_indexes_dim_sizes[key][dim].add(size)
+                if self.join == "override":
+                    # dimension sizes are only checked for join="override"
+                    for dim, size in calculate_dimensions(index_vars).items():
+                        all_indexes_dim_sizes[key][dim].add(size)
 
         self.objects_matching_indexes = tuple(objects_matching_indexes)
         self.objects_matching_index_vars = tuple(objects_matching_index_vars)
@@ -381,8 +383,9 @@ class Aligner[T_Alignable: Alignable]:
         unindexed_dim_sizes = defaultdict(set)
 
         for obj in self.objects:
+            indexed_dims = obj.xindexes.dims
             for dim in obj.dims:
-                if dim not in self.exclude_dims and dim not in obj.xindexes.dims:
+                if dim not in self.exclude_dims and dim not in indexed_dims:
                     unindexed_dim_sizes[dim].add(obj.sizes[dim])
 
         self.unindexed_dim_sizes = unindexed_dim_sizes
@@ -641,8 +644,23 @@ class Aligner[T_Alignable: Alignable]:
         matching_indexes: dict[MatchingIndexKey, Index],
         matching_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]],
     ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-        new_indexes = {}
-        new_variables = {}
+        new_indexes: dict[Hashable, Index] = {}
+        new_variables: dict[Hashable, Variable] = {}
+
+        obj_dims = set(obj.dims)
+
+        def is_unchanged(key: MatchingIndexKey) -> bool:
+            if key in matching_indexes:
+                return not self.reindex[key]
+            # the aligned index is not added to obj either (see below)
+            aligned_idx_vars = self.aligned_index_vars[key]
+            dims = {d for var in aligned_idx_vars.values() for d in var.dims}
+            return not dims <= obj_dims
+
+        if all(map(is_unchanged, self.aligned_indexes)):
+            # fast path: the object is only copied in this case and the aligned
+            # indexes and (copies of) their coordinate variables are not used
+            return new_indexes, new_variables
 
         for key, aligned_idx in self.aligned_indexes.items():
             aligned_idx_vars = self.aligned_index_vars[key]
@@ -655,6 +673,7 @@ class Aligner[T_Alignable: Alignable]:
                 if dims <= set(obj.dims):
                     if self.check_indexed_coords:
                         _warn_conflicting_unindexed_coords(obj, aligned_idx_vars)
+                if dims <= obj_dims:
                     obj_idx = aligned_idx
 
             if obj_idx is not None:

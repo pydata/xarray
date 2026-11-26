@@ -21,8 +21,22 @@ def dask_rolling_wrapper(
         ).dtype
     else:
         dtype, _ = dtypes.maybe_promote(a.dtype)
+
+    def moving_block(
+        block: np.ndarray, window: int, min_count: int | None, axis: int
+    ) -> np.ndarray:
+        # Only the first chunk, which isn't overlapped with a previous chunk, can be
+        # shorter than the window, which bottleneck refuses. Its windows are cut off
+        # by the start of the array, so a window of the chunk's size is equivalent.
+        size = block.shape[axis]
+        if size < window:
+            if min_count is None or min_count > size:
+                return np.full(block.shape, np.nan, dtype=dtype)
+            window = size
+        return moving_func(block, window=window, min_count=min_count, axis=axis)
+
     return a.data.map_overlap(
-        moving_func,
+        moving_block,
         depth={axis: (window - 1, 0)},
         axis=axis,
         dtype=dtype,

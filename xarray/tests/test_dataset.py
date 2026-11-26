@@ -4,7 +4,7 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable
+from collections.abc import Hashable, Mapping
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -37,10 +37,11 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
+from xarray.core.indexing import IndexSelResult
 from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
-from xarray.namedarray.pycompat import array_type, integer_types
+from xarray.namedarray.pycompat import integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
@@ -70,12 +71,72 @@ from xarray.tests import (
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
 
-sparse_array_type = array_type("sparse")
-
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
     pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
+
+
+class ScalarPreservingIndex(Index):
+    def __init__(
+        self,
+        axes: Mapping[Hashable, PandasIndex],
+        scalars: Mapping[Hashable, Variable] | None = None,
+    ) -> None:
+        self.axes = dict(axes)
+        self.scalars = dict(scalars or {})
+
+    @classmethod
+    def from_variables(
+        cls, variables: Mapping[Hashable, Variable], *, options: Mapping[str, Any]
+    ) -> ScalarPreservingIndex:
+        return cls(
+            {
+                name: PandasIndex.from_variables({name: var}, options={})
+                for name, var in variables.items()
+            }
+        )
+
+    def create_variables(
+        self, variables: Mapping[Hashable, Variable] | None = None
+    ) -> dict[Hashable, Variable]:
+        result = dict(self.scalars)
+        for name, axis in self.axes.items():
+            source = (
+                {name: variables[name]} if variables and name in variables else None
+            )
+            result.update(axis.create_variables(source))
+        return result
+
+    def isel(self, indexers: Mapping[Hashable, Any]) -> ScalarPreservingIndex:
+        axes = {}
+        scalars = dict(self.scalars)
+        for name, axis in self.axes.items():
+            if axis.dim in indexers:
+                reduced = axis.isel({axis.dim: indexers[axis.dim]})
+                if reduced is None:
+                    position = np.asarray(indexers[axis.dim]).item()
+                    scalars[name] = Variable((), axis.index[position])
+                else:
+                    axes[name] = reduced
+            else:
+                axes[name] = axis
+        return type(self)(axes, scalars)
+
+    def sel(self, labels: dict[Hashable, Any]) -> IndexSelResult:
+        indexers = {}
+        for name, label in labels.items():
+            indexers.update(self.axes[name].sel({name: label}).dim_indexers)
+        return IndexSelResult(indexers)
+
+
+def create_scalar_preserving_array() -> DataArray:
+    array = DataArray(
+        np.arange(6).reshape(2, 3),
+        dims=("y", "x"),
+        coords={"y": [0, 1], "x": [10, 20, 30]},
+    )
+    return array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], ScalarPreservingIndex)
 
 
 def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
@@ -2014,6 +2075,36 @@ class TestDataset:
         expected = Dataset({"foo": 1}, {"x": 0})
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
+
+    @pytest.mark.parametrize("method", ["isel", "sel"])
+    @pytest.mark.parametrize("as_dataset", [False, True])
+    def test_drop_scalar_coordinate_rejects_partial_index_drop(
+        self, method: str, as_dataset: bool
+    ) -> None:
+        array = create_scalar_preserving_array()
+        obj = array.to_dataset(name="data") if as_dataset else array
+
+        with pytest.raises(ValueError, match="would corrupt the following index"):
+            getattr(obj, method)(x=0 if method == "isel" else 10, drop=True)
+
+    @pytest.mark.parametrize("as_dataset", [False, True])
+    @pytest.mark.parametrize("indexer", [0, DataArray(0)])
+    @pytest.mark.parametrize("extra_index", [False, True])
+    def test_drop_all_scalar_index_coordinates(
+        self, as_dataset: bool, indexer: int | DataArray, extra_index: bool
+    ) -> None:
+        array = create_scalar_preserving_array()
+        if extra_index:
+            array = array.expand_dims(z=[0, 1])
+        obj = array.to_dataset(name="data") if as_dataset else array
+
+        result = obj.isel(x=indexer, y=0, drop=True)
+        expected_coords = {"z"} if extra_index else set()
+        assert set(result.coords) == expected_coords
+        assert set(result.xindexes) == expected_coords
+        if extra_index:
+            assert_identical(result["z"], obj["z"])
+            assert isinstance(result.xindexes["z"], PandasIndex)
 
     def test_head(self) -> None:
         data = create_test_data()
@@ -4365,6 +4456,8 @@ class TestDataset:
 
     @requires_sparse
     def test_unstack_sparse(self) -> None:
+        import sparse
+
         ds = xr.Dataset(
             {"var": (("x",), np.arange(6))},
             coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
@@ -4374,13 +4467,13 @@ class TestDataset:
         # test fill_value
         actual1 = ds.unstack("index", sparse=True)
         expected1 = ds.unstack("index")
-        assert isinstance(actual1["var"].data, sparse_array_type)
+        assert isinstance(actual1["var"].data, sparse.SparseArray)
         assert actual1["var"].variable._to_dense().equals(expected1["var"].variable)
         assert actual1["var"].data.density < 1.0
 
         actual2 = ds["var"].unstack("index", sparse=True)
         expected2 = ds["var"].unstack("index")
-        assert isinstance(actual2.data, sparse_array_type)
+        assert isinstance(actual2.data, sparse.SparseArray)
         assert actual2.variable._to_dense().equals(expected2.variable)
         assert actual2.data.density < 1.0
 
@@ -4392,7 +4485,7 @@ class TestDataset:
             {"var": (("z", "foo", "bar"), np.ones((3, 4, 5)))}, coords=coords
         )
         actual3 = ds_eye.unstack(sparse=True, fill_value=0)
-        assert isinstance(actual3["var"].data, sparse_array_type)
+        assert isinstance(actual3["var"].data, sparse.SparseArray)
         expected3 = xr.Dataset(
             {
                 "var": (
@@ -5388,10 +5481,12 @@ class TestDataset:
             data.merge(other)
 
         other = Dataset({"level_1": ("x", range(4))})
-        with pytest.raises(
-            ValueError, match=r"unable to determine.*coordinates or not.*"
+        with pytest.warns(
+            UserWarning,
+            match=r"unable to unambiguously determine.*coordinates or not.*",
         ):
-            data.merge(other)
+            out = data.merge(other)
+        assert "level_1" in out.coords
 
         # A plain coordinate cannot silently replace an indexed level
         # coordinate with the same name and dimensions.
@@ -8658,12 +8753,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that Dataset subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that Dataset subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyDS(Dataset):

@@ -86,6 +86,16 @@ class TestDataArray:
             np.uint64
         )
 
+    def test_bool_pandas_extension_array(self) -> None:
+        false_value = DataArray(pd.array([False], dtype="boolean"), dims="x")
+        true_value = DataArray(pd.array([True], dtype="boolean"), dims="x")
+        missing_value = DataArray(pd.array([pd.NA], dtype="boolean"), dims="x")
+
+        assert not bool(false_value)
+        assert bool(true_value)
+        with pytest.raises(TypeError, match="boolean value of NA is ambiguous"):
+            bool(missing_value)
+
     def test_repr(self) -> None:
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         v = v.astype(np.uint64)
@@ -1861,6 +1871,16 @@ class TestDataArray:
         actual = arr.coords[1]
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
+
+    def test_indexed_coords_non_string(self) -> None:
+        arr = DataArray(
+            [[0, 1], [2, 3]],
+            dims=(10, ("a", "b")),
+            coords={10: [5, 6], ("a", "b"): ["x", "y"]},
+        )
+        assert list(arr.xindexes) == [10, ("a", "b")]
+        assert arr.sel({10: 6, ("a", "b"): "y"}).item() == 3
+        assert list(arr.rename({10: 11}).xindexes) == [11, ("a", "b")]
 
     def test_coords_delitem_delete_indexes(self) -> None:
         # regression test for GH3746
@@ -7750,12 +7770,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that DataArray subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that DataArray subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyArray(DataArray):

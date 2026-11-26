@@ -128,6 +128,9 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -220,6 +223,16 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
             da = da.fillna(0.0)
 
+        # `dot` accumulates in the input dtype, so promote bool and small
+        # integers like `sum` does; else e.g. uint8 weights overflow (GH11867)
+        data_dtype = getattr(da.dtype, "numpy_dtype", da.dtype)
+        weights_dtype = getattr(weights.dtype, "numpy_dtype", weights.dtype)
+        dtype = np.result_type(data_dtype, weights_dtype)
+        if dtype.kind in "biu" and dtype.itemsize < 8:
+            dtype = np.dtype(np.uint64 if dtype.kind == "u" else np.int64)
+            da = da.astype(dtype)
+            weights = weights.astype(dtype)
+
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
         return dot(da, weights, dim=dim)
@@ -254,10 +267,13 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
+        squared = (
+            (demeaned.conj() * demeaned).real if da.dtype.kind == "c" else demeaned**2
+        )
 
         # TODO: unsure why mypy complains about these being DataArray return types
         # rather than T_DataArray?
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
+        return self._reduce(squared, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,
@@ -561,9 +577,20 @@ class DatasetWeighted(Weighted["Dataset"]):
         return ds.assign_coords(self.obj.coords.drop_vars(to_drop))
 
     @override
-    def _implementation(self, func, dim, **kwargs) -> Dataset:
+    def _implementation(
+        self, func: Callable[..., DataArray], dim: Dims, **kwargs: Any
+    ) -> Dataset:
         self._check_dim(dim)
-        result = self.obj.map(func, dim=dim, **kwargs)
+        dataset = self.obj
+        # Counting valid weights works for nonnumeric variables too.
+        if func != self._sum_of_weights:
+            numeric_vars = [
+                name
+                for name, var in dataset.data_vars.items()
+                if var.dtype.kind in "biufcm"
+            ]
+            dataset = dataset[numeric_vars]
+        result = dataset.map(func, dim=dim, **kwargs)
         result = self._restore_coords(dim, result)
 
         # Clear attrs when keep_attrs is explicitly False
