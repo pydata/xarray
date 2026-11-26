@@ -1087,7 +1087,14 @@ class Variable(
 
         Used by IndexVariable to return IndexVariable objects when possible.
         """
-        return self._replace(dims=dims, data=data)
+        encoding = self._encoding or {}
+        if dims != self.dims and "chunksizes" in encoding:
+            # chunksizes is positional and only valid for the dimensions it was
+            # read with. Drop it when indexing removes or reorders dimensions so
+            # writers do not use a stale, mismatched value (GH#11028).
+            encoding = encoding.copy()
+            del encoding["chunksizes"]
+        return self._replace(dims=dims, data=data, encoding=encoding)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
         """Index this Variable with -1 remapped to fill_value."""
@@ -3179,11 +3186,15 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
 
     @override
     def _finalize_indexing_result(self, dims, data):
+        encoding = self._encoding or {}
+        if dims != self.dims and "chunksizes" in encoding:
+            encoding = encoding.copy()
+            del encoding["chunksizes"]
         if getattr(data, "ndim", 0) != 1:
             # returns Variable rather than IndexVariable if multi-dimensional
-            return Variable(dims, data, self._attrs, self._encoding)
+            return Variable(dims, data, self._attrs, encoding)
         else:
-            return self._replace(dims=dims, data=data)
+            return self._replace(dims=dims, data=data, encoding=encoding)
 
     @override
     def __setitem__(self, key, value):

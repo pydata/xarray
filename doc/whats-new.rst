@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Indexing a variable with :py:meth:`DataArray.isel` or :py:meth:`Dataset.isel`
+  now drops a stale ``encoding["chunksizes"]`` when the operation removes or
+  reorders dimensions. Other encoding entries are preserved, and ``chunksizes``
+  is kept when the dimensions do not change (:issue:`11028`).
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
