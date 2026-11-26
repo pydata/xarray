@@ -87,6 +87,10 @@ New Features
   variable on another, the coordinate "status" is chosen by looking at the first object.
   A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Added `Arrow PyCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`Dataset`.
+  Added :py:meth:`Dataset.to_arrow` & :py:meth:`DataArray.to_arrow` to export to flat :py:class:`pyarrow.Table`.
+  By `Jules Chéron <https://github.com/jules-ch>`_. (:pull:`11600`)
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

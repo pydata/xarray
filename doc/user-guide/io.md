@@ -1736,6 +1736,101 @@ We recommend installing cfgrib via conda:
 conda install -c conda-forge cfgrib
 ```
 
+(io.arrow)=
+
+## Arrow and Parquet
+
+Xarray supports conversion to `pyarrow.Table` through the [Arrow PyCapsule Interface].
+
+This interface lets you export data to [pyarrow] with almost no data copy.
+Through pyarrow, you can then write the
+data to any format that pyarrow supports, for example [Parquet].
+
+To convert an xarray object to a {py:class}`pyarrow.Table`, call its
+`to_arrow` method:
+
+- {py:meth}`Dataset.to_arrow`
+- {py:meth}`DataArray.to_arrow`
+
+```{note}
+| Column               | Zero-copy | Notes                                                     |
+| -------------------- | :-------: | --------------------------------------------------------- |
+| Data values          |    ✅     | Except `bool`, string and `object` dtypes                 |
+| Matching coordinates |    ✅     | Same dims as the data, in the same order                  |
+| Other coordinates    |    ❌     | Copied: 1D, scalar or reordered coordinates are broadcast |
+```
+
+``````{dropdown} Examples
+
+`````{tab-set}
+
+````{tab-item} 1D data
+Xarray does not copy the data.
+
+```python
+da = xr.DataArray([1.0, 2.0, 3.0], dims="x", name="t")
+table = da.to_arrow()
+np.shares_memory(da.values, table["t"].to_numpy())
+# True
+```
+````
+
+````{tab-item} Matching coordinates
+The coordinate has the same dimensions as the data.
+Xarray does not copy the coordinate.
+
+```python
+da = xr.DataArray(
+    np.zeros((2, 3)),
+    dims=("y", "x"),
+    coords={"lon": (("y", "x"), np.ones((2, 3)))},
+    name="t",
+)
+table = da.to_arrow()
+np.shares_memory(da["lon"].values, table["lon"].to_numpy())
+# True
+```
+````
+
+````{tab-item} 1D coordinates
+The data is 2D and the coordinates are 1D. Xarray broadcasts the coordinates
+to the shape of the data. This makes a copy.
+
+```python
+da = xr.DataArray(
+    np.zeros((2, 3)),
+    dims=("x", "y"),
+    coords={"x": [0, 1], "y": [10, 20, 30]},
+    name="t",
+)
+table = da.to_arrow()
+np.shares_memory(da["y"].values, table["y"].to_numpy())
+# False
+```
+````
+
+`````
+
+``````
+
+Write the table to Parquet via {py:func}`pyarrow.parquet.write_table`:
+
+```{code-cell}
+import pyarrow.parquet as pq
+
+ds = xr.Dataset(
+    {"temperature": (["x", "y"], np.arange(6, dtype=float).reshape(2, 3))},
+    coords={"x": [0, 1], "y": [10, 20, 30]},
+)
+
+table = ds.to_arrow()
+table
+```
+
+```{code-cell}
+pq.write_table(table, "example.parquet")
+```
+
 ## CSV and other formats supported by pandas
 
 For more options (tabular formats and CSV files in particular), consider
@@ -1743,6 +1838,7 @@ exporting your objects to pandas and using its broad range of [IO tools].
 For CSV files, one might also consider [xarray_extras].
 
 [amazon s3]: https://aws.amazon.com/s3/
+[arrow pycapsule interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
 [cf conventions on packed data]: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
@@ -1760,6 +1856,8 @@ For CSV files, one might also consider [xarray_extras].
 [ncdata usage examples]: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 [netcdf faq]: https://docs.unidata.ucar.edu/netcdf-c/current/faq.html
 [obstore]: https://developmentseed.org/obstore/latest/
+[parquet]: https://parquet.apache.org/
+[pyarrow]: https://arrow.apache.org/docs/python/index.html
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
 [rioxarray]: https://vylor.github.io/rioxarray/stable/

@@ -17,6 +17,7 @@ Dataset methods
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
+   Dataset.to_arrow
    Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
@@ -46,6 +47,7 @@ DataArray methods
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
+   DataArray.to_arrow
    DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
