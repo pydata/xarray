@@ -26,9 +26,6 @@ git = "*"       # needed for dynamic versioning
 [dependencies]
 xarray = { path = "." }
 
-[target.linux-64.dependencies]
-pydap-server = "*"
-
 [feature.py312.dependencies]
 python = "3.12.*"
 
@@ -55,6 +52,9 @@ lxml = "*"  # Optional dep of pydap
 boto3 = "*"
 fsspec = "*"
 aiobotocore = "*"
+
+[feature.backends.target.linux-64.dependencies]
+pydap-server = "*"
 
 [feature.numba.dependencies]
 numba = "*"
@@ -126,7 +126,11 @@ h5netcdf = "1.8.*"
 h5py = "3.14.*"
 hdf5 = "1.14.*"
 iris = "3.13.*"
-lxml = "6.0.*"             # Optional dep of pydap
+# iris < 3.16.1 breaks with python-xxhash >= 4 (it no longer accepts str):
+# https://github.com/SciTools/iris/issues/7251
+# TODO: remove once the minimum version of iris is >= 3.16.1
+python-xxhash = ">=3.0,<4.0"
+lxml = "6.0.*"               # Optional dep of pydap
 matplotlib-base = "3.10.*"
 nc-time-axis = "1.4.*"
 # netcdf follows a 1.major.minor[.patch] convention

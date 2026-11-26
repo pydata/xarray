@@ -254,6 +254,21 @@ class TestPandasIndex:
         actual = index.sel({"x": index.to_pandas_index().to_numpy()[1]})
         assert actual.dim_indexers == expected_dim_indexers
 
+    @pytest.mark.parametrize("unit", ["s", "ms", "us"])
+    def test_sel_datetime_coarse_unit_outside_nanosecond_range(self, unit) -> None:
+        # GH#10975: pandas parses string slice bounds at nanosecond resolution
+        # and raises for dates past 2262, even for a datetime64[s] index.
+        values = np.arange("2390-01", "2410-01", dtype="datetime64[M]").astype(
+            f"datetime64[{unit}]"
+        )
+        da = xr.DataArray(np.arange(values.size), dims="x", coords={"x": values})
+        actual = da.sel(x=slice("2400-01-01", "2402-01-01"))
+        expected = values[
+            (values >= np.datetime64("2400-01-01", unit))
+            & (values <= np.datetime64("2402-01-01", unit))
+        ]
+        np.testing.assert_array_equal(actual.x.values, expected)
+
     def test_sel_unsorted_datetime_index_raises(self) -> None:
         index = PandasIndex(pd.to_datetime(["2001", "2000", "2002"]), "x")
         with pytest.raises(KeyError):
