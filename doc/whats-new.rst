@@ -729,6 +729,10 @@ Internal Changes
 - Use the public ``zarr.Array.async_array`` of zarr 3.1.4 and later instead of
   the private ``_async_array`` (:issue:`11259`, :pull:`11684`).
   By `rutabaga <https://github.com/0xrutabaga>`_.
+- ``module_available`` returns ``False`` for a submodule of a package that is not
+  installed instead of raising ``ModuleNotFoundError``. Since :pull:`11838` the
+  test suite failed to import without pydap.
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 
 
 .. _whats-new.2026.09.0:
