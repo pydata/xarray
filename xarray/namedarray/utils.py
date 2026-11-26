@@ -49,7 +49,12 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     available : bool
         Whether the module is installed.
     """
-    if importlib.util.find_spec(module) is None:
+    try:
+        spec = importlib.util.find_spec(module)
+    except ModuleNotFoundError:
+        # find_spec imports the parent of a submodule, which may be missing
+        spec = None
+    if spec is None:
         return False
 
     if minversion is not None:

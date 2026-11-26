@@ -724,3 +724,13 @@ def test_module_available_version_none(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_module_available_valid() -> None:
     """module_available should return True for an installed module with version check."""
     assert module_available("packaging", minversion="0.0.1") is True
+
+
+def test_module_available_missing_parent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """module_available should return False for a submodule of a missing package."""
+    # no finders, so the import system doesn't search any paths, and a package
+    # faked as missing with a None entry, like the conftest does
+    monkeypatch.setattr(sys, "modules", {"xarray_faked_missing_package": None})
+    monkeypatch.setattr(sys, "meta_path", [])
+    assert module_available("xarray_no_such_package.client") is False
+    assert module_available("xarray_faked_missing_package.client") is False
