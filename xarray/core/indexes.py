@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast, overload, override
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
@@ -583,11 +584,28 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
         raise NotImplementedError(
             "cannot use ``method`` argument if any indexers are slice objects"
         )
-    indexer = index.slice_indexer(
-        _sanitize_slice_element(label.start),
-        _sanitize_slice_element(label.stop),
-        _sanitize_slice_element(label.step),
-    )
+    start = _sanitize_slice_element(label.start)
+    stop = _sanitize_slice_element(label.stop)
+    step = _sanitize_slice_element(label.step)
+    try:
+        indexer = index.slice_indexer(start, stop, step)
+    except OutOfBoundsDatetime:
+        # pandas parses string bounds at nanosecond resolution, which overflows
+        # for dates outside 1677-2262 even when the index uses a coarser unit.
+        # Convert them to the index unit before asking pandas to slice again.
+        if not isinstance(index, pd.DatetimeIndex) or index.dtype == np.dtype(
+            "datetime64[ns]"
+        ):
+            raise
+        unit = np.datetime_data(index.dtype)[0]
+        if isinstance(start, str):
+            start = np.datetime64(start).astype(f"M8[{unit}]")
+        if isinstance(stop, str):
+            # like pandas, include the whole period of a partial string
+            stop = np.datetime64(stop)
+            period = np.timedelta64(1, np.datetime_data(stop.dtype)[0])
+            stop = (stop + period).astype(f"M8[{unit}]") - np.timedelta64(1, unit)
+        indexer = index.slice_indexer(start, stop, step)
     if not isinstance(indexer, slice):
         # unlike pandas, in xarray we never want to silently convert a
         # slice indexer into an array indexer

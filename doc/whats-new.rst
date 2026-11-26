@@ -228,6 +228,14 @@ Bug Fixes
   filesystem) now treats missing archive members as absent Zarr keys instead of
   raising ``KeyError`` when reading fill-value-only variables or coordinates
   (:issue:`10950`).
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
+  ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
+  produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
+  ``OutOfBoundsDatetime`` for dates outside pandas' nanosecond range
+  (:issue:`10975`).
+- Dataset weighted arithmetic reductions now select data variables with numeric,
+  boolean, or timedelta dtypes and skip variables such as datetimes and strings
+  (:issue:`9322`).
 - Weighted variance, standard deviation and sums of squared deviations now
   use conjugated deviations for complex data, matching unweighted reductions
   and correcting weighted self-correlation.
@@ -243,6 +251,10 @@ Bug Fixes
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Performing a binary operation with a :py:class:`~xarray.core.groupby.DataArrayGroupBy`
+  object no longer mutates scalar coordinates on the right-hand operand in-place
+  (:issue:`11878`).
+  By `uvcode01-max <https://github.com/uvcode01-max>`_.
 - Indexed coordinates can now have non-string names, e.g. integers or tuples,
   instead of raising ``TypeError: keywords must be strings`` (:pull:`11876`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -550,6 +562,12 @@ Bug Fixes
 - Fix numpy ufuncs and :py:func:`apply_ufunc` raising for a :py:class:`DataArray`
   with a coordinate or attribute named ``"keys"`` (:pull:`11908`).
   By `Pieter Eendebak <https://github.com/eendebakpt>`_.
+- :py:meth:`Dataset.to_netcdf` and :py:meth:`DataArray.to_netcdf` accept
+  ``format="NETCDF3_64BIT_DATA"`` (CDF5) without an ``engine`` and use the
+  netCDF4 engine, the only one that writes it. Previously this raised
+  ``ValueError: unexpected format``. The ``format`` docstrings now list it
+  (:issue:`8985`).
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 - Rolling reductions with bottleneck no longer fail for windows larger than the
   array, or with dask larger than its first chunk, and no longer name the result
   after the dask array (:pull:`11925`).
@@ -670,6 +688,8 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Creating the first index no longer imports dask, pint and sparse if they are
+  installed, which took about half a second (:pull:`11838`).
 - Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
   to the array directly, which undoes the slowdown from the fix for :issue:`11336`
   (:pull:`11925`).
