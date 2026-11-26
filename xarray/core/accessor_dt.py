@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -28,6 +28,10 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import CFCalendar
+
+
+def _is_period_dtype(dtype: Any) -> bool:
+    return isinstance(dtype, pd.PeriodDtype)
 
 
 def _season_from_months(months):
@@ -74,15 +78,25 @@ def _access_through_cftimeindex(values, name):
     return field_values.reshape(values.shape)
 
 
-def _access_through_series(values, name):
+def _datetime_series(values: Any) -> pd.Series:
+    if isinstance(values, pd.arrays.PeriodArray):
+        values = values.ravel()
+    elif not isinstance(values, pd.PeriodIndex):
+        values = duck_array_ops.ravel(values)
+    return pd.Series(values, copy=False)
+
+
+def _access_through_series(values: Any, name: str) -> np.ndarray:
     """Access a datetime component via a pandas Series.
 
     Coerce an array of datetime-like values to a pandas Series and access the
     requested datetime component.
     """
-    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
+    values_as_series = _datetime_series(values)
     if name == "season":
         months = values_as_series.dt.month.values
+        if isinstance(values.dtype, pd.PeriodDtype):
+            months = np.where(values_as_series.isna(), np.nan, months)
         field_values = _season_from_months(months)
     elif name == "total_seconds":
         field_values = values_as_series.dt.total_seconds().values
@@ -103,9 +117,17 @@ def _access_through_series(values, name):
             field_values = np.array(field_values, dtype=np.int64)
         # isocalendar returns iso- year, week, and weekday -> reshape
         return field_values.T.reshape(3, *values.shape)
+    elif name == "days_in_year":
+        field_values = values_as_series.dt.is_leap_year.to_numpy(dtype=int) + 365
     else:
         field_values = getattr(values_as_series.dt, name).values
 
+    if (
+        isinstance(values.dtype, pd.PeriodDtype)
+        and np.issubdtype(field_values.dtype, np.integer)
+        and values_as_series.hasnans
+    ):
+        field_values = np.where(values_as_series.isna(), np.nan, field_values)
     return field_values.reshape(values.shape)
 
 
@@ -130,7 +152,7 @@ def _get_date_field(values, name, dtype):
         Array-like of datetime fields accessed for each element in values
 
     """
-    if is_np_datetime_like(values.dtype):
+    if isinstance(values.dtype, pd.PeriodDtype) or is_np_datetime_like(values.dtype):
         access_method = _access_through_series
     else:
         access_method = _access_through_cftimeindex
@@ -163,8 +185,8 @@ def _round_through_series_or_index(values, name, freq):
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
+    if isinstance(values.dtype, pd.PeriodDtype) or is_np_datetime_like(values.dtype):
+        values_as_series = _datetime_series(values)
         method = getattr(values_as_series.dt, name)
     else:
         values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
@@ -230,13 +252,13 @@ def _strftime_through_series(values, date_format: str):
     Coerce an array of datetime-like values to a pandas Series and apply string
     formatting.
     """
-    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
+    values_as_series = _datetime_series(values)
     strs = values_as_series.dt.strftime(date_format)
     return strs.to_numpy().reshape(values.shape)
 
 
 def _strftime(values, date_format):
-    if is_np_datetime_like(values.dtype):
+    if isinstance(values.dtype, pd.PeriodDtype) or is_np_datetime_like(values.dtype):
         access_method = _strftime_through_series
     else:
         access_method = _strftime_through_cftimeindex
@@ -390,7 +412,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """
         obj_type = type(self._obj)
 
-        result = _strftime(self._obj.data, date_format)
+        result = _strftime(_index_or_data(self._obj), date_format)
 
         return obj_type(
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
@@ -405,10 +427,12 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """
         from xarray.core.dataset import Dataset
 
-        if not is_np_datetime_like(self._obj.data.dtype):
+        if not _is_period_dtype(self._obj.dtype) and not is_np_datetime_like(
+            self._obj.dtype
+        ):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        values = _get_date_field(self._obj.data, "isocalendar", np.int64)
+        values = _get_date_field(_index_or_data(self._obj), "isocalendar", np.int64)
 
         obj_type = type(self._obj)
         data_vars = {}
@@ -556,11 +580,15 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         Only relevant for arrays of :py:class:`cftime.datetime` objects,
         returns "proleptic_gregorian" for arrays of :py:class:`numpy.datetime64` values.
         """
+        if isinstance(self._obj.dtype, pd.PeriodDtype):
+            return "proleptic_gregorian"
         return infer_calendar_name(self._obj.data)
 
     @property
     def days_in_year(self) -> T_DataArray:
         """Each datetime as the year plus the fraction of the year elapsed."""
+        if isinstance(self._obj.dtype, pd.PeriodDtype):
+            return self._date_field("days_in_year", np.int64)
         if self.calendar == "360_day":
             result = full_like(self.year, 360)
         else:
@@ -666,14 +694,16 @@ class CombinedDatetimelikeAccessor(
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
-        if not _contains_datetime_like_objects(obj.variable):
+        if not _is_period_dtype(obj.dtype) and not _contains_datetime_like_objects(
+            obj.variable
+        ):
             # We use an AttributeError here so that `obj.dt` raises an error that
             # `getattr` expects; https://github.com/pydata/xarray/issues/8718. It's a
             # bit unusual in a `__new__`, but that's the only case where we use this
             # class.
             raise AttributeError(
                 "'.dt' accessor only available for "
-                "DataArray with datetime64 timedelta64 dtype or "
+                "DataArray with datetime64, timedelta64 or period dtype or "
                 "for arrays containing cftime datetime "
                 "objects."
             )

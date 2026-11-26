@@ -700,3 +700,60 @@ def test_decimal_year_all_nat() -> None:
     expected = xr.DataArray([np.nan, np.nan], dims="time")
     xr.testing.assert_equal(da.dt.decimal_year, expected)
     xr.testing.assert_equal(da[0].dt.decimal_year, expected[0])
+
+
+def test_period_accessor() -> None:
+    periods = pd.period_range("2000-01", "2000-12", freq="M")
+    da = xr.DataArray(periods.array, dims="time", coords={"time": periods})
+    for values in (da, da.time):
+        for field in (
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "day_of_week",
+            "day_of_year",
+            "quarter",
+            "days_in_month",
+            "is_leap_year",
+        ):
+            assert_array_equal(getattr(values.dt, field), getattr(periods, field))
+        assert_array_equal(values.dt.dayofweek, periods.day_of_week)
+        assert_array_equal(values.dt.weekday, periods.day_of_week)
+        assert_array_equal(values.dt.dayofyear, periods.day_of_year)
+        assert_array_equal(values.dt.daysinmonth, periods.days_in_month)
+        assert_array_equal(values.dt.strftime("%Y-%m"), periods.strftime("%Y-%m"))
+        assert values.dt.calendar == "proleptic_gregorian"
+        assert_array_equal(values.dt.days_in_year, np.full(12, 366))
+        assert_array_equal(
+            values.dt.season,
+            ["DJF"] * 2 + ["MAM"] * 3 + ["JJA"] * 3 + ["SON"] * 3 + ["DJF"],
+        )
+        for method in ("floor", "ceil", "round"):
+            with pytest.raises(AttributeError):
+                getattr(values.dt, method)("D")
+        with pytest.raises(AttributeError):
+            values.dt.isocalendar()
+        for field in ("date", "time"):
+            with pytest.raises(AttributeError):
+                getattr(values.dt, field)
+
+
+@pytest.mark.parametrize("freq", ["D", "h", "Q"])
+def test_period_accessor_nat(freq: str) -> None:
+    periods = pd.PeriodIndex(["2000-01-01", pd.NaT], freq=freq)
+    da = xr.DataArray(periods.array, dims="time", coords={"time": periods})
+    for values in (da, da.time):
+        for field in ("year", "month", "day", "days_in_month", "quarter"):
+            assert_array_equal(
+                getattr(values.dt, field), [getattr(periods[0], field), np.nan]
+            )
+        assert_array_equal(values.dt.days_in_year, [366, np.nan])
+        assert_array_equal(values.dt.season, ["MAM" if freq == "Q" else "DJF", "nan"])
+
+
+def test_non_period_extension_accessor() -> None:
+    with pytest.raises(AttributeError):
+        _ = xr.DataArray(pd.CategoricalIndex(["a"])).dt

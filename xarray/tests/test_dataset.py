@@ -8843,3 +8843,11 @@ def test_transpose_error() -> None:
         ),
     ):
         ds.transpose(["y", "x"])  # type: ignore[arg-type]
+
+
+def test_period_virtual_variables() -> None:
+    periods = pd.period_range("2000-01", "2000-12", freq="M")
+    ds = xr.Dataset({"a": ("time", np.arange(12))}, coords={"time": periods})
+    np.testing.assert_array_equal(ds["time.month"], periods.month)
+    np.testing.assert_array_equal(ds.a["time.month"], periods.month)
+    np.testing.assert_array_equal(ds.a.groupby("time.month").sum(), ds.a)
