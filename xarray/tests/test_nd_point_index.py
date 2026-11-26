@@ -179,6 +179,7 @@ def test_tree_index_equals() -> None:
     assert not ds1.xindexes["xx"].equals(ds3.xindexes["xx"])
 
 
+@requires_scipy
 def test_tree_index_rename() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
