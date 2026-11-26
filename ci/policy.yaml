@@ -32,6 +32,7 @@ policy:
     - pytest-reportlog
     - pyarrow # transitive dependency of dask.dataframe, not an xarray dependency
     - google-crc32c # used by numcodecs if installed, not an xarray dependency
+    - python-xxhash # transitive dependency of iris, only pinned to work around iris < 3.16.1
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations:
     - array-api-strict

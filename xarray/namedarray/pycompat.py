@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Literal
@@ -77,7 +78,13 @@ def _get_cached_duck_array_module(mod: ModType) -> DuckArrayModule:
 
 
 def array_type(mod: ModType) -> DuckArrayTypes:
-    """Quick wrapper to get the array class of the module."""
+    """Quick wrapper to get the array class of the module.
+
+    Objects can only be instances of the array class once the module is imported, so
+    this doesn't import the module but returns an empty tuple until then.
+    """
+    if mod not in sys.modules:
+        return ()
     return _get_cached_duck_array_module(mod).type
 
 
