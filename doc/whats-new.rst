@@ -223,6 +223,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Preserve indexed coordinates whose name differs from their dimension as
+  columns in :py:meth:`Dataset.to_dataframe` (:issue:`10851`).
+  By `Yuvraj Lamba <https://github.com/uvcode01-max>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

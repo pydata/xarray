@@ -5659,6 +5659,31 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_to_dataframe_indexed_coord_differing_name(self) -> None:
+        # GH10851: Index coordinates whose name differs from dimension name
+        # should still be included in DataFrame columns.
+        ds = Dataset(
+            data_vars={"temp": (["time", "pos"], np.array([[5, 10, 15, 20, 25]]))},
+            coords={
+                "pf": ("pos", [1.0, 2.0, 4.2, 8.0, 10.0]),
+                "time": ("time", [pd.to_datetime("2025-01-01")]),
+            },
+        ).set_xindex("pf")
+
+        df = ds.to_dataframe()
+        assert "pf" in df.columns
+        assert "temp" in df.columns
+        np.testing.assert_array_equal(df["pf"].values, [1.0, 2.0, 4.2, 8.0, 10.0])
+
+        # Verify dimension index coordinate is still excluded from columns
+        ds_dim = Dataset(
+            data_vars={"temp": (["x"], [1, 2, 3])},
+            coords={"x": ("x", [10, 20, 30])},
+        )
+        df_dim = ds_dim.to_dataframe()
+        assert "temp" in df_dim.columns
+        assert "x" not in df_dim.columns
+
     @requires_sparse
     def test_to_dataframe_sparse_crash_regression(self) -> None:
         # `Dataset.to_dataframe()` used to unconditionally call `.values` on
