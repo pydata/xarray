@@ -100,6 +100,9 @@ def test_get_default_netcdf_write_engine() -> None:
     engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
     assert engine == "netcdf4"
 
+    engine = get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
+    assert engine == "netcdf4"
+
     engine = get_default_netcdf_write_engine(io.BytesIO(), format=None)
     assert engine == "h5netcdf"
 
@@ -138,16 +141,20 @@ def test_get_default_netcdf_write_engine() -> None:
         engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
         assert engine == "scipy"
 
+        engine = get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
+        assert engine == "netcdf4"
+
         engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF3_CLASSIC")
         assert engine == "scipy"
 
 
 @requires_h5netcdf
-def test_default_engine_h5netcdf(monkeypatch):
+def test_default_engine_h5netcdf(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test the default netcdf engine when h5netcdf is the only importable module."""
-    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
-    monkeypatch.delitem(sys.modules, "scipy", raising=False)
-    monkeypatch.setattr(sys, "meta_path", [])
+    # Pretend the other libraries are not installed: a None entry in sys.modules makes
+    # importlib.util.find_spec return None, while all other imports keep working.
+    monkeypatch.setitem(sys.modules, "netCDF4", None)
+    monkeypatch.setitem(sys.modules, "scipy", None)
 
     engine = get_default_netcdf_write_engine("", format=None)
     assert engine == "h5netcdf"
@@ -161,10 +168,20 @@ def test_default_engine_h5netcdf(monkeypatch):
     ):
         get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
 
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "cannot write NetCDF files with format='NETCDF3_64BIT_DATA' because "
+            "none of the suitable backend libraries (netCDF4) are installed"
+        ),
+    ):
+        get_default_netcdf_write_engine("", format="NETCDF3_64BIT_DATA")
 
-def test_default_engine_nczarr_no_netcdf4_python(monkeypatch):
-    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
-    monkeypatch.setattr(sys, "meta_path", [])
+
+def test_default_engine_nczarr_no_netcdf4_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "netCDF4", None)
 
     with pytest.raises(
         ValueError,

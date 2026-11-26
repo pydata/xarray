@@ -102,9 +102,12 @@ jobs:
           # This is a trial; if it presents a problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
           #
-          # If dependencies emit warnings we can't do anything about, add ignores to
-          # `xarray/tests/__init__.py`.
-          pixi run -e ${{env.PIXI_ENV}} -- python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+          # If dependencies emit warnings we can't do anything about, ignore them with
+          # `-W` after `-Werror`. Optional dependencies are imported lazily, so this
+          # includes warnings raised when importing them.
+          pixi run -e ${{env.PIXI_ENV}} -- python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror \
+            -W "ignore:numpy.ndarray size changed:RuntimeWarning" \
+            -W "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning"
 
   mypy:
     name: Mypy
