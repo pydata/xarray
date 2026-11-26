@@ -87,6 +87,10 @@ New Features
   variable on another, the coordinate "status" is chosen by looking at the first object.
   A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- The error raised by :py:meth:`Dataset.to_zarr` when ``append_dim`` is not an
+  existing dimension of the store now suggests adding the new dimension with
+  :py:meth:`Dataset.expand_dims` before each write (:issue:`9892`).
+  By `José Ferreira <https://github.com/hereiszepedro>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

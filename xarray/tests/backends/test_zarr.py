@@ -734,6 +734,15 @@ class ZarrBase(CFEncodedBase):
                     store_target, append_dim="notvalid", **self.version_kwargs
                 )
 
+    def test_append_with_new_dim_raises_with_expand_dims_hint(self) -> None:
+        ds = Dataset({"temp": (("lat", "lon"), np.zeros((2, 3)))})
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            with pytest.raises(
+                ValueError, match=r"`ds\.expand_dims\('time'\)\.to_zarr\(\.\.\.\)`"
+            ):
+                ds.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+
     def test_append_with_no_dims_raises(self) -> None:
         with self.create_zarr_target() as store_target:
             Dataset({"foo": ("x", [1])}).to_zarr(

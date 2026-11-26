@@ -1129,7 +1129,10 @@ class ZarrStore(AbstractWritableDataStore):
             if self._append_dim not in existing_dims:
                 raise ValueError(
                     f"append_dim={self._append_dim!r} does not match any existing "
-                    f"dataset dimensions {existing_dims}"
+                    f"dataset dimensions {existing_dims}. To append along a new "
+                    f"dimension, add it with `expand_dims` before the initial write "
+                    f"and before each append, e.g. "
+                    f"`ds.expand_dims({self._append_dim!r}).to_zarr(...)`."
                 )
 
         variables_encoded, attributes = self.encode(
