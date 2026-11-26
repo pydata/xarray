@@ -29,19 +29,39 @@ def test_coarsen_skipna(skipna):
     # create data with NaNs in every other element
     data = np.arange(10, dtype=float)
     data[::2] = np.nan
-    ds = Dataset({"x": ("x", data)})
+    ds = Dataset({"v": ("x", data)})
     # window length of 2, so each window will contain one NaN and one non-NaN value
     actual = ds.coarsen(x=2).mean(skipna=skipna)
     if skipna is None or skipna is True:
         # if we are skipping NaNs, mean in each window should just be the non-NaN value
         expected_data = data[1::2]
-        expected = Dataset({"x": ("x", expected_data)})
+        expected = Dataset({"v": ("x", expected_data)})
         assert_equal(actual, expected)
     else:
         # if we are not skipping NaNs, mean in each window should be NaN
         expected_data = np.full_like(data[::2], np.nan)
-        expected = Dataset({"x": ("x", expected_data)})
+        expected = Dataset({"v": ("x", expected_data)})
         assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize("name, last", [("sum", 5.0), ("prod", 6.0)])
+@pytest.mark.parametrize("as_dataset", [False, True])
+def test_coarsen_min_count_with_coords(
+    name: str, last: float, as_dataset: bool
+) -> None:
+    # min_count is an argument of the data reduction, not of coord_func
+    times = pd.date_range("2000-01-01", periods=4)
+    da = DataArray([np.nan, np.nan, 2.0, 3.0], dims="time", coords={"time": times})
+    expected = DataArray(
+        [np.nan, last],
+        dims="time",
+        coords={"time": pd.to_datetime(["2000-01-01T12:00", "2000-01-03T12:00"])},
+    )
+    if as_dataset:
+        actual = getattr(da.to_dataset(name="v").coarsen(time=2), name)(min_count=1)
+        assert_equal(actual, expected.to_dataset(name="v"))
+    else:
+        assert_equal(getattr(da.coarsen(time=2), name)(min_count=1), expected)
 
 
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])

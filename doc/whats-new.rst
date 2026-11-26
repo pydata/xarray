@@ -223,6 +223,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Reductions on :py:meth:`DataArray.coarsen` and :py:meth:`Dataset.coarsen`
+  no longer pass their keyword arguments, e.g. ``min_count`` or ``skipna``, on to
+  ``coord_func``.
+  Previously, ``da.coarsen(time=2).sum(min_count=1)`` raised a ``TypeError`` if
+  ``da`` had a coordinate along ``time`` (:issue:`8059`).
+  By `Tushar Sharma <https://github.com/tushar-mahalya>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

@@ -1358,7 +1358,6 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
                         self.boundary,
                         self.side,
                         keep_attrs,
-                        **kwargs,
                     )
                 else:
                     coords[c] = v
@@ -1453,7 +1452,6 @@ class DatasetCoarsen(Coarsen["Dataset"]):
                     self.boundary,
                     self.side,
                     keep_attrs=keep_attrs,
-                    **kwargs,
                 )
 
             return Dataset(reduced, coords=coords, attrs=attrs)
