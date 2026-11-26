@@ -3085,6 +3085,18 @@ class TestDataArray:
         actual = renamed.drop_vars("foo", errors="ignore")
         assert_identical(actual, renamed)
 
+    @pytest.mark.parametrize("method", ["drop_vars", "drop_indexes"])
+    @pytest.mark.parametrize("names", ["x", "missing", []])
+    @pytest.mark.parametrize("errors", ["raises", None])
+    def test_drop_invalid_errors(
+        self, method: str, names: str | list[str], errors: str | None
+    ) -> None:
+        arr = DataArray([1, 2], dims="x", coords={"x": [0, 1]})
+        with pytest.raises(
+            ValueError, match='errors must be either "raise" or "ignore"'
+        ):
+            getattr(arr, method)(names, errors=errors)
+
     def test_drop_vars_callable(self) -> None:
         A = DataArray(
             np.random.randn(2, 3), dims=["x", "y"], coords={"x": [1, 2], "y": [3, 4, 5]}

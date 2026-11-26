@@ -243,6 +243,12 @@ Bug Fixes
   explains that ``pandas.Interval`` values are plotted at their midpoints or
   bounds, which must themselves be plottable (:issue:`4378`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:meth:`Dataset.drop_vars`, :py:meth:`DataArray.drop_vars`,
+  :py:meth:`Dataset.drop_indexes`, :py:meth:`DataArray.drop_indexes`, and
+  :py:meth:`DataTree.drop_nodes` now raise a ``ValueError`` for invalid
+  ``errors`` values instead of silently treating them as ``"ignore"``
+  (:pull:`11930`).
+  By `Yuen Li <https://github.com/yuenlii>`_.
 - The HTML representation of a :py:class:`Dataset` no longer fails when a data
   variable has non-string dimension names, e.g. tuples (:issue:`10613`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
