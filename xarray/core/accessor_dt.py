@@ -30,6 +30,10 @@ if TYPE_CHECKING:
     from xarray.core.types import CFCalendar
 
 
+def _is_period_dtype(dtype: Any) -> bool:
+    return isinstance(dtype, pd.PeriodDtype)
+
+
 def _season_from_months(months):
     """Compute season (DJF, MAM, JJA, SON) from month ordinal."""
     # TODO: Move "season" accessor upstream into pandas
@@ -423,7 +427,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """
         from xarray.core.dataset import Dataset
 
-        if not isinstance(self._obj.dtype, pd.PeriodDtype) and not is_np_datetime_like(
+        if not _is_period_dtype(self._obj.dtype) and not is_np_datetime_like(
             self._obj.dtype
         ):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
@@ -690,9 +694,9 @@ class CombinedDatetimelikeAccessor(
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
-        if not isinstance(
-            obj.dtype, pd.PeriodDtype
-        ) and not _contains_datetime_like_objects(obj.variable):
+        if not _is_period_dtype(obj.dtype) and not _contains_datetime_like_objects(
+            obj.variable
+        ):
             # We use an AttributeError here so that `obj.dt` raises an error that
             # `getattr` expects; https://github.com/pydata/xarray/issues/8718. It's a
             # bit unusual in a `__new__`, but that's the only case where we use this
