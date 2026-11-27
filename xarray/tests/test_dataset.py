@@ -4357,6 +4357,7 @@ class TestDataset:
         expected4 = ds.unstack("index").fillna({"var": -1, "other_var": np.nan})
         assert_equal(actual4, expected4)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_unstack_sparse(self) -> None:
         import sparse
@@ -5659,6 +5660,7 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_to_dataframe_sparse_crash_regression(self) -> None:
         # `Dataset.to_dataframe()` used to unconditionally call `.values` on
@@ -5673,6 +5675,7 @@ class TestDataset:
         )
         ds.to_dataframe()  # should not raise
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_to_dataframe_sparse(self) -> None:
         import sparse
@@ -5721,6 +5724,7 @@ class TestDataset:
         assert expected_t.loc[actual_t.index].equals(actual_t)
         assert len(actual_t) == stored.sum()
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_to_dataframe_sparse_disjoint_union(self) -> None:
         # Regression test for a question raised in review of gh-11528: two
@@ -5789,6 +5793,7 @@ class TestDataset:
         ds = ser.to_xarray()
         assert ds.coords.dtypes["index"] == ser.index.dtype
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
         import sparse
@@ -8765,6 +8770,7 @@ class TestNumpyCoercion:
 
         assert_identical(ds_chunked.as_numpy(), ds.compute())
 
+    @pytest.mark.duckarray
     @requires_pint
     def test_from_pint(self) -> None:
         from pint import Quantity
@@ -8778,6 +8784,7 @@ class TestNumpyCoercion:
         expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
         assert_identical(ds.as_numpy(), expected)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_from_sparse(self) -> None:
         import sparse
@@ -8805,6 +8812,7 @@ class TestNumpyCoercion:
         expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
         assert_identical(ds.as_numpy(), expected)
 
+    @pytest.mark.duckarray
     @requires_dask
     @requires_pint
     def test_from_pint_wrapping_dask(self) -> None:

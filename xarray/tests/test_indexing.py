@@ -1163,6 +1163,7 @@ def test_as_indexable(array, expected_type):
     assert isinstance(actual, expected_type)
 
 
+@pytest.mark.duckarray
 @requires_sparse
 @pytest.mark.parametrize(
     "key",

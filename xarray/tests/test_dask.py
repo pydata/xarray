@@ -325,8 +325,9 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
+    @pytest.mark.duckarray
     @requires_pint
-    def test_tokenize_duck_dask_array(self):
+    def test_tokenize_duck_dask_array(self) -> None:
         import pint
 
         unit_registry: pint.UnitRegistry = pint.UnitRegistry()
@@ -820,8 +821,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
+    @pytest.mark.duckarray
     @requires_pint
-    def test_tokenize_duck_dask_array(self):
+    def test_tokenize_duck_dask_array(self) -> None:
         import pint
 
         unit_registry: pint.UnitRegistry = pint.UnitRegistry()

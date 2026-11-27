@@ -20,6 +20,8 @@ from xarray.tests import (
     requires_dask,
 )
 
+pytestmark = pytest.mark.duckarray
+
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail

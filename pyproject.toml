@@ -403,6 +403,7 @@ filterwarnings = [
 
 log_cli_level = "INFO"
 markers = [
+  "duckarray: tests integrating JAX, Pint, or Sparse arrays",
   "flaky: flaky tests",
   "mypy: type annotation tests",
   "network: tests requiring a network connection",

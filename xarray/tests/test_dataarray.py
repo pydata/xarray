@@ -3979,6 +3979,7 @@ class TestDataArray:
         assert (actual.sel(alpha="B") == [1, 2, 3]).all()
         assert (actual.sel(alpha="A") == [4, 5, 6]).all()
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_from_series_sparse(self) -> None:
         import sparse
@@ -3992,6 +3993,7 @@ class TestDataArray:
         actual_sparse.data = actual_sparse.data.todense()
         assert_identical(actual_sparse, actual_dense)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_from_multiindex_series_sparse(self) -> None:
         # regression test for GH4019
@@ -4012,6 +4014,7 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_to_series_sparse(self) -> None:
         import sparse
@@ -4052,6 +4055,7 @@ class TestDataArray:
         # (which to_series() never materializes for sparse data) is not
         assert len(actual) == dense[dense != 0].size
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_to_series_sparse_1d(self) -> None:
         import sparse
@@ -7979,6 +7983,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
         np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
+    @pytest.mark.duckarray
     @requires_pint
     def test_from_pint(self) -> None:
         from pint import Quantity
@@ -7995,6 +8000,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), arr)
         np.testing.assert_equal(da["lat"].to_numpy(), arr + 3)
 
+    @pytest.mark.duckarray
     @requires_sparse
     def test_from_sparse(self) -> None:
         import sparse
@@ -8024,6 +8030,7 @@ class TestNumpyCoercion:
         assert_identical(da.as_numpy(), expected)
         np.testing.assert_equal(da.to_numpy(), arr)
 
+    @pytest.mark.duckarray
     @requires_dask
     @requires_pint
     def test_from_pint_wrapping_dask(self) -> None:
