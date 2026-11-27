@@ -894,6 +894,93 @@ def test_datetime_interp_noerror() -> None:
     a.interp(x=xi, time=xi.time)  # should not raise an error
 
 
+@requires_scipy
+@pytest.mark.parametrize("src_unit", ["s", "ms", "us", "ns"])
+@pytest.mark.parametrize("tgt_unit", ["s", "ms", "us", "ns"])
+def test_datetime_mismatched_units(src_unit, tgt_unit) -> None:
+    # GH#11946
+    src = pd.date_range("2000-01-01", periods=10, freq="6h").as_unit(src_unit)
+    tgt = pd.date_range("2000-01-01T03", periods=3, freq="12h").as_unit(tgt_unit)
+    da = xr.DataArray(np.arange(10.0), coords={"time": src}, dims="time")
+    expected = xr.DataArray([0.5, 2.5, 4.5], coords={"time": tgt}, dims="time")
+
+    actual = da.interp(time=tgt)
+    assert_allclose(actual, expected)
+
+    actual_extrap = da.interp(time=tgt, kwargs={"fill_value": "extrapolate"})
+    assert_allclose(actual_extrap, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize("src_unit", ["s", "ms", "us"])
+@pytest.mark.parametrize("tgt_unit", ["ms", "us", "ns"])
+def test_timedelta_mismatched_units(src_unit, tgt_unit) -> None:
+    # GH#11946
+    src = pd.timedelta_range("0h", periods=10, freq="6h").as_unit(src_unit)
+    tgt = pd.timedelta_range("3h", periods=3, freq="12h").as_unit(tgt_unit)
+    da = xr.DataArray(np.arange(10.0), coords={"time": src}, dims="time")
+    expected = xr.DataArray([0.5, 2.5, 4.5], coords={"time": tgt}, dims="time")
+
+    actual = da.interp(time=tgt)
+    assert_allclose(actual, expected)
+
+
+@requires_scipy
+def test_datetime_mismatched_units_nd_and_dataset() -> None:
+    # GH#11946
+    src = pd.date_range("2000-01-01", periods=10, freq="6h").as_unit("us")
+    tgt = pd.date_range("2000-01-01T03", periods=3, freq="12h").as_unit("ns")
+    da = xr.DataArray(
+        np.arange(20.0).reshape(10, 2),
+        coords={"time": src, "x": [0.0, 1.0]},
+        dims=("time", "x"),
+    )
+
+    tgt_da = xr.DataArray(tgt, dims="p")
+    x_da = xr.DataArray([0.5, 0.5, 0.5], dims="p")
+    actual_nd = da.interp(time=tgt_da, x=x_da)
+    expected_nd = xr.DataArray(
+        [1.5, 5.5, 9.5],
+        coords={"p": tgt, "time": ("p", tgt), "x": ("p", [0.5, 0.5, 0.5])},
+        dims="p",
+    )
+    assert_allclose(actual_nd, expected_nd)
+
+    ds = xr.Dataset({"a": da})
+    actual_ds = ds.interp(time=tgt)
+    expected_ds = xr.Dataset(
+        {
+            "a": xr.DataArray(
+                [[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]],
+                coords={"time": tgt, "x": [0.0, 1.0]},
+                dims=("time", "x"),
+            )
+        }
+    )
+    assert_allclose(actual_ds, expected_ds)
+
+    other = xr.DataArray(np.zeros(3), coords={"time": tgt}, dims="time")
+    actual_like = da.isel(x=0, drop=True).interp_like(other)
+    expected_like = xr.DataArray([1.0, 5.0, 9.0], coords={"time": tgt}, dims="time")
+    assert_allclose(actual_like, expected_like)
+
+
+@requires_scipy
+@requires_dask
+def test_datetime_mismatched_units_dask() -> None:
+    # GH#11946
+    src = pd.date_range("2000-01-01", periods=10, freq="6h").as_unit("us")
+    tgt = pd.date_range("2000-01-01T03", periods=3, freq="12h").as_unit("ns")
+    da = xr.DataArray(np.arange(10.0), coords={"time": src}, dims="time").chunk(
+        {"time": 4}
+    )
+    tgt_da = xr.DataArray(tgt, dims="time").chunk({"time": 2})
+
+    actual = da.interp(time=tgt_da).compute()
+    expected = xr.DataArray([0.5, 2.5, 4.5], coords={"time": tgt}, dims="time")
+    assert_allclose(actual, expected)
+
+
 @requires_cftime
 @requires_scipy
 def test_3641() -> None:
