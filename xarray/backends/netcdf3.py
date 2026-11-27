@@ -131,17 +131,21 @@ def _maybe_prepare_times(var):
 
 
 def encode_nc3_variable(var, name=None):
-    # Keep diagnostic context without capturing the variable in deferred tasks.
-    note = f"Raised while encoding variable {name!r} with value {var!r}"
+    original = var
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
         var = coder.encode(var, name=name)
     data = _maybe_prepare_times(var)
-    dtype = np.dtype(_nc3_dtype_coercions.get(str(data.dtype), data.dtype))
-    transform = partial(_coerce_nc3_dtype_with_note, note=note)
-    data = lazy_elemwise_func(data, transform, dtype=dtype)
+    dtype = str(data.dtype)
+    if dtype in _nc3_dtype_coercions:
+        # Keep diagnostic context without capturing the variable in deferred tasks.
+        note = f"Raised while encoding variable {name!r} with value {original!r}"
+        transform = partial(_coerce_nc3_dtype_with_note, note=note)
+        data = lazy_elemwise_func(
+            data, transform, dtype=np.dtype(_nc3_dtype_coercions[dtype])
+        )
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 

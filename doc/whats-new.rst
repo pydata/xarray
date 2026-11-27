@@ -223,9 +223,15 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Defer NetCDF3 integer narrowing checks on chunked arrays until data is written,
-  and avoid computing narrower integer arrays with time-like units while preparing
-  the write (:issue:`10826`). Unsafe casts still raise ``ValueError``.
+- Defer NetCDF3 integer narrowing checks until data is written for both chunked
+  and in-memory arrays, and avoid computing narrower integer arrays with
+  time-like units while preparing the write (:issue:`10826`, :pull:`11669`).
+  Unsafe casts still raise ``ValueError`` (now at write time rather than during
+  encoding).
+  By `Abhisek Behera <https://github.com/abhisek343>`_.
+- Pass variable names when encoding datastore variables, so backend encoding
+  warnings (such as Zarr's object-dtype warning) report the variable name
+  instead of ``None`` (:pull:`11669`).
   By `Abhisek Behera <https://github.com/abhisek343>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one

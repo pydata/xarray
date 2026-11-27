@@ -51,7 +51,7 @@ def test_encode_nc3_variable_lazy_unsafe(dtype) -> None:
 
 
 @pytest.mark.parametrize(
-    "dtype", ["int64", "uint64", "uint32", "uint16", "uint8", "bool", "float64"]
+    "dtype", ["int64", "uint64", "uint32", "uint16", "uint8", "bool"]
 )
 def test_encode_nc3_variable_numpy_lazy(dtype, monkeypatch) -> None:
     values = np.array([0, 1, 2], dtype=dtype)
@@ -68,6 +68,22 @@ def test_encode_nc3_variable_numpy_lazy(dtype, monkeypatch) -> None:
     assert not calls
     assert_array_equal(actual.data, expected)
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("dtype", ["float64", "float32", "int32"])
+@pytest.mark.parametrize("chunked", [False, pytest.param(True, marks=requires_dask)])
+def test_encode_nc3_variable_no_coercion_unwrapped(dtype, chunked, monkeypatch) -> None:
+    values = np.array([0, 1, 2], dtype=dtype)
+    data = dask_array_api.from_array(values, chunks=1) if chunked else values
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("unexpected coercion wrapper call")
+
+    monkeypatch.setattr("xarray.backends.netcdf3.lazy_elemwise_func", fail_if_called)
+    monkeypatch.setattr("xarray.backends.netcdf3.coerce_nc3_dtype", fail_if_called)
+    actual = encode_nc3_variable(xr.Variable("x", data))
+    assert actual._data is data
+    assert actual.dtype == values.dtype
 
 
 @pytest.mark.parametrize("dtype", ["int64", "uint64", "uint32", "uint16", "uint8"])
