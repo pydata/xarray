@@ -3867,3 +3867,30 @@ def test_format_object_dtype() -> None:
 
     assert result.dtype == np.object_
     assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "obj_dtype",
+    [
+        pytest.param(np.str_, id="str"),
+        pytest.param(np.dtypes.StringDType(), id="StringDType"),
+    ],
+)
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(lambda da, other: da.str.contains(other), id="contains"),
+        pytest.param(lambda da, other: da.str.cat(other, sep="-"), id="cat"),
+        pytest.param(lambda da, other: da.str + other, id="add"),
+        pytest.param(lambda da, other: da.str.replace("a", other), id="replace"),
+        pytest.param(lambda da, other: da.str.startswith(other), id="startswith"),
+    ],
+)
+def test_stringdtype_argument(obj_dtype: np.dtype | type, func: Callable) -> None:
+    # GH11785: StringDType arguments can't be cast to "U" with astype("U")
+    values = xr.DataArray(["abc", "a_b"], dims="x")
+    other = xr.DataArray(["a", "_"], dims="x")
+
+    result = func(values.astype(obj_dtype), other.astype(np.dtypes.StringDType()))
+    expected = func(values, other)
+    assert result.values.tolist() == expected.values.tolist()
