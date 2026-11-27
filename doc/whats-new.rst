@@ -572,7 +572,7 @@ Bug Fixes
   :py:class:`pandas.DatetimeIndex`. Since ``Day`` stopped being a ``Tick``
   offset (:pull:`10650`) this raised ``ValueError: offset must be a
   datetime.timedelta object or an offset string that can be converted to a
-  timedelta``.
+  timedelta`` (:pull:`11948`).
   By `Jyotishman Das <https://github.com/rishi02102017>`_.
 
 
