@@ -49,7 +49,12 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     available : bool
         Whether the module is installed.
     """
-    if importlib.util.find_spec(module) is None:
+    try:
+        spec = importlib.util.find_spec(module)
+    except ModuleNotFoundError:
+        # find_spec imports the parent of a submodule, which may be missing
+        spec = None
+    if spec is None:
         return False
 
     if minversion is not None:
@@ -64,7 +69,8 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
-    if module_available("dask"):
+    # dask collections can only exist once dask is imported
+    if "dask" in sys.modules:
         from dask.base import is_dask_collection
 
         # use is_dask_collection function instead of dask.typing.DaskCollection

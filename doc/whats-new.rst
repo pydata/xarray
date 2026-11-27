@@ -227,6 +227,11 @@ Bug Fixes
   as when the masked array is first wrapped in a :py:class:`DataArray`, so
   comparisons return booleans (:issue:`1792`).
   By `Zackary Loevseth <https://github.com/ZackaryLoevseth>`_.
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
+  ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
+  produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise
+  ``OutOfBoundsDatetime`` for dates outside pandas' nanosecond range
+  (:issue:`10975`).
 - Dataset weighted arithmetic reductions now select data variables with numeric,
   boolean, or timedelta dtypes and skip variables such as datetimes and strings
   (:issue:`9322`).
@@ -682,6 +687,8 @@ Performance
   ``pd.NA``) in such arrays are no longer converted to ``NaN``
   (:issue:`11470`, :pull:`11484`).
   By `Florian Knappers <https://github.com/JJFlorian>`_.
+- Creating the first index no longer imports dask, pint and sparse if they are
+  installed, which took about half a second (:pull:`11838`).
 - Rolling ``argmin`` and ``argmax`` with bottleneck compute the indices relative
   to the array directly, which undoes the slowdown from the fix for :issue:`11336`
   (:pull:`11925`).
@@ -726,6 +733,10 @@ Internal Changes
 - Use the public ``zarr.Array.async_array`` of zarr 3.1.4 and later instead of
   the private ``_async_array`` (:issue:`11259`, :pull:`11684`).
   By `rutabaga <https://github.com/0xrutabaga>`_.
+- ``module_available`` returns ``False`` for a submodule of a package that is not
+  installed instead of raising ``ModuleNotFoundError``. Since :pull:`11838` the
+  test suite failed to import without pydap.
+  By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
 
 
 .. _whats-new.2026.09.0:

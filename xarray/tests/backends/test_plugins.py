@@ -304,7 +304,7 @@ def test_lazy_import() -> None:
     deny_list = [
         "cubed",
         "cupy",
-        # "dask",  # TODO: backends.locks is not lazy yet :(
+        "dask",
         "dask.array",
         "dask.distributed",
         "flox",
@@ -330,6 +330,7 @@ import xarray
 from xarray.backends import list_engines
 
 list_engines()
+xarray.DataArray([1, 2], coords={{"x": [1, 2]}})
 
 deny_list = {deny_list!r}
 imported = sorted(
