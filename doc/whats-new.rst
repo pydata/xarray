@@ -87,6 +87,8 @@ New Features
   variable on another, the coordinate "status" is chosen by looking at the first object.
   A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Support CuPy-backed arrays in DaskManager - :pull:`11383`
+  By `Wei Ji Leong <https://github.com/weiji14>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
