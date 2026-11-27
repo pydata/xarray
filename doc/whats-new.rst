@@ -567,6 +567,13 @@ Bug Fixes
   array, or with dask larger than its first chunk, and no longer name the result
   after the dask array (:pull:`11925`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Resampling along a :py:class:`~xarray.CFTimeIndex` accepts a day-based
+  ``offset``, e.g. ``offset="1D"``, again, like resampling along a
+  :py:class:`pandas.DatetimeIndex`. Since ``Day`` stopped being a ``Tick``
+  offset (:pull:`10650`) this raised ``ValueError: offset must be a
+  datetime.timedelta object or an offset string that can be converted to a
+  timedelta`` (:pull:`11948`).
+  By `Jyotishman Das <https://github.com/rishi02102017>`_.
 
 
 Documentation

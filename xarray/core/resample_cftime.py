@@ -505,11 +505,13 @@ def _convert_offset_to_timedelta(
 ) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
-    if isinstance(offset, str | Tick):
+    if isinstance(offset, str | Tick | Day):
         timedelta_cftime_offset = to_offset(offset)
+        if isinstance(timedelta_cftime_offset, Day):
+            timedelta_cftime_offset = Hour(24 * timedelta_cftime_offset.n)
         if isinstance(timedelta_cftime_offset, Tick):
             return timedelta_cftime_offset.as_timedelta()
-    raise TypeError(f"Expected timedelta, str or Tick, got {type(offset)}")
+    raise TypeError(f"Expected timedelta, str, Tick or Day, got {type(offset)}")
 
 
 def _ceil_via_cftimeindex(date: CFTimeDatetime, freq: str | BaseCFTimeOffset):

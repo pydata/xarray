@@ -297,6 +297,17 @@ def test_timedelta_offset() -> None:
     xr.testing.assert_identical(timedelta_result, string_result)
 
 
+@pytest.mark.parametrize("days", [1, 3])
+def test_day_offset(days: int) -> None:
+    cftime_index = xr.date_range("2000", periods=10, freq="12h", use_cftime=True)
+    da_cftime = da(cftime_index)
+
+    timedelta = datetime.timedelta(days=days)
+    expected = da_cftime.resample(time="2D", offset=timedelta).mean()
+    result = da_cftime.resample(time="2D", offset=f"{days}D").mean()
+    xr.testing.assert_identical(result, expected)
+
+
 @pytest.mark.parametrize(("option", "value"), [("offset", "5s"), ("origin", "start")])
 def test_non_tick_option_warning(option, value) -> None:
     cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
