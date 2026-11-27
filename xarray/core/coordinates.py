@@ -268,18 +268,18 @@ class Coordinates(AbstractCoordinates):
     >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
     Coordinates:
       * x          (x) object 32B MultiIndex
-      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_0  (x) ... 'a' 'a' 'b' 'b'
       * x_level_1  (x) int64 32B 0 1 0 1
 
     Create a new Dataset object by passing a Coordinates object:
 
     >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     >>> xr.Dataset(coords=midx_coords)
-    <xarray.Dataset> Size: 96B
+    <xarray.Dataset> Size: ...B
     Dimensions:    (x: 4)
     Coordinates:
       * x          (x) object 32B MultiIndex
-      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_0  (x) ... 'a' 'a' 'b' 'b'
       * x_level_1  (x) int64 32B 0 1 0 1
     Data variables:
         *empty*
@@ -708,7 +708,7 @@ class Coordinates(AbstractCoordinates):
         >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
         Coordinates:
           * y          (y) object 32B MultiIndex
-          * y_level_0  (y) object 32B 'a' 'a' 'b' 'b'
+          * y_level_0  (y) ... 'a' 'a' 'b' 'b'
           * y_level_1  (y) int64 32B 0 1 0 1
 
         """

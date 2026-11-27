@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -131,6 +131,21 @@ class TestPandasIndex:
         pd_idx.name = None
         index = PandasIndex(pd_idx, "x")
         assert index.index.name == "x"
+
+    @pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+    def test_pandas_string_dtype_coordinate_preserved(self, na_value: Any) -> None:
+        string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+        pd_idx = pd.Index(["a", None, "c"], name="x", dtype=string_dtype)
+        expected_dtype = np.dtypes.StringDType(na_object=na_value)
+
+        array = xr.DataArray([1, 2, 3], dims="x", coords={"x": pd_idx})
+        dataset = xr.Dataset(coords={"x": pd_idx})
+        assigned = xr.DataArray([1, 2, 3], dims="x").assign_coords(x=pd_idx)
+        series = pd.Series([1, 2, 3], index=pd_idx).to_xarray()
+
+        for obj in [array, dataset, assigned, series]:
+            assert obj["x"].dtype == expected_dtype
+            assert obj["x"].isnull().values.tolist() == [False, True, False]
 
     def test_from_variables(self) -> None:
         # pandas has only Float64Index but variable dtype should be preserved
