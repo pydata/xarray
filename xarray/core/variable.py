@@ -2695,9 +2695,14 @@ class Variable(
             return result
 
     @override
-    def _binary_op(self, other, f, reflexive=False):
+    def _binary_op(
+        self, other: Any, f: Callable, reflexive: bool = False
+    ) -> Variable[Shape, Any, DimType_co]:
         if isinstance(other, xr.DataTree | xr.DataArray | xr.Dataset):
             return NotImplemented
+        if isinstance(other, np.ma.MaskedArray):
+            # replace masked values by NaN, like the Variable constructor (GH1792)
+            other = as_compatible_data(other)
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:

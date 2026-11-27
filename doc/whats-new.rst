@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Binary operations with a NumPy masked array now treat masked values as missing,
+  as when the masked array is first wrapped in a :py:class:`DataArray`, so
+  comparisons return booleans (:issue:`1792`).
+  By `Zackary Loevseth <https://github.com/ZackaryLoevseth>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

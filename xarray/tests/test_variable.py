@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import operator
 import warnings
 from abc import ABC
+from collections.abc import Callable
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -3356,3 +3358,55 @@ def test_explicitly_indexed_array_preserved() -> None:
     var = Variable(["x"], arr)
     result = var.drop_encoding()
     assert isinstance(result._data, indexing.ExplicitlyIndexed)
+
+
+@pytest.mark.parametrize("constructor", [Variable, DataArray])
+@pytest.mark.parametrize("dtype", [np.int64, np.float64])
+@pytest.mark.parametrize(
+    "operation, expected",
+    [
+        (operator.gt, [False, True, False]),
+        (operator.ge, [False, True, True]),
+        (operator.lt, [False, False, False]),
+        (operator.le, [False, False, True]),
+        (operator.eq, [False, False, True]),
+        (operator.ne, [True, True, False]),
+    ],
+)
+def test_comparison_with_masked_array(
+    constructor: type[Variable | DataArray],
+    dtype: type[np.int64 | np.float64],
+    operation: Callable,
+    expected: list[bool],
+    use_dask: bool,
+) -> None:
+    array = constructor(dims="x", data=[0, 1, 2])
+    if use_dask:
+        array = array.chunk()
+    masked = np.ma.array([0, 0, 2], mask=[True, False, False], dtype=dtype)
+    with raise_if_dask_computes():
+        actual = operation(array, masked)
+    assert actual.dtype == np.dtype(bool)
+    assert_identical(actual, constructor(dims="x", data=expected))
+    assert_array_equal(masked.data, [0, 0, 2])
+    assert_array_equal(masked.mask, [True, False, False])
+
+
+@pytest.mark.parametrize("mask", [True, False])
+def test_comparison_with_masked_scalar(mask: bool) -> None:
+    array = Variable("x", [0, 1, 2])
+    masked = np.ma.array(1, mask=mask)
+    actual = array >= masked
+    expected = [False, False, False] if mask else [False, True, True]
+    assert actual.dtype == np.dtype(bool)
+    assert_identical(actual, Variable("x", expected))
+
+
+def test_comparison_with_masked_array_broadcast() -> None:
+    array = Variable(("x", "y"), [[0, 1, 2], [2, 1, 0]])
+    masked = np.ma.array([0, 0, 2], mask=[True, False, False])
+    actual = array == masked
+    assert actual.dtype == np.dtype(bool)
+    assert_identical(
+        actual, Variable(("x", "y"), [[False, False, True], [False, False, False]])
+    )
