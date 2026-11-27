@@ -213,12 +213,18 @@ def maybe_wrap_array(original, new_array):
 def equivalent[T](first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality).
 
-    Uses array_equiv if either object is an ndarray. If both objects are lists,
-    equivalent is sequentially called on all the elements.
-
-    Returns False for any comparison that doesn't return a boolean,
-    making this function safer to use with objects that have non-standard
-    __eq__ implementations.
+    - Lazy objects, such as dask arrays and dask-backed xarray objects, are
+      never computed. Two lazy arrays are equivalent only if
+      ``lazy_array_equiv`` can tell without computing them (e.g. equal dask
+      tokens); anything else involving a lazy object is not equivalent.
+    - Two scalars are equivalent if they are equal or both missing (e.g. NaN,
+      NaT, or ``pd.NA``). ``None`` is only equivalent to ``None``.
+    - If either object is an array (including NumPy scalars and non-NumPy duck
+      arrays), the values are compared with ``array_equiv``.
+    - If either object is a list, ``equivalent`` is called on all the elements.
+    - Anything else is compared with ``==``, which must return a boolean,
+      making this function safe to use with objects that have non-standard
+      ``__eq__`` implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
@@ -226,27 +232,66 @@ def equivalent[T](first: T, second: T) -> bool:
     if first is second:
         return True
 
-    if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
+    first_is_array, first_is_lazy = _array_kind(first)
+    second_is_array, second_is_lazy = _array_kind(second)
+    if first_is_lazy or second_is_lazy:
+        # Only lazy arrays can be compared without computing them (GH11841).
+        # lazy_array_equiv would convert other lazy objects, e.g. a dask-backed
+        # DataArray, with np.asarray and compute them. It returns None when it
+        # can't tell without computing, which we treat as not equivalent.
+        return (
+            first_is_lazy
+            and second_is_lazy
+            and first_is_array
+            and second_is_array
+            and duck_array_ops.lazy_array_equiv(first, second) is True
+        )
+
+    # NumPy scalars are also duck arrays, so check for scalars first
+    if pd.api.types.is_scalar(first) and pd.api.types.is_scalar(second):
+        return _scalar_equiv(first, second)
+
+    if first_is_array or second_is_array:
         return duck_array_ops.array_equiv(first, second)
 
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
 
-    # Check for NaN equivalence early (before equality comparison)
-    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
-    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+    return _bool_eq(first, second)
+
+
+def _array_kind(value: object) -> tuple[bool, bool]:
+    """Return whether ``value`` is a duck array and whether it is lazy.
+
+    Lazy objects can't be compared by value without computing them. They are
+    dask collections, which include dask-backed DataArray, Variable, and
+    Dataset objects, and other chunked duck arrays (see ``is_chunked_array``).
+    """
+    is_array = is_duck_array(value)
+    is_lazy = is_dask_collection(value) or (is_array and hasattr(value, "chunks"))
+    return is_array, is_lazy
+
+
+def _scalar_equiv(first: object, second: object) -> bool:
+    # NaN != NaN, so check for missing values first (GH10833). Pandas
+    # considers None as a null value, but we don't so check for it explicitly.
+    if (
+        first is not None
+        and second is not None
+        and pd.isnull(first)  # type: ignore[call-overload]
+        and pd.isnull(second)  # type: ignore[call-overload]
+    ):
         return True
+    return _bool_eq(first, second)
 
-    # For non-array/list types, use == but require boolean result
+
+def _bool_eq(first: object, second: object) -> bool:
     result = first == second
-    if not isinstance(result, bool):
-        # Accept numpy bool scalars as well
-        if isinstance(result, np.bool_):
-            return bool(result)
-        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
-        return False
-
-    return result
+    # Accept numpy bool scalars as well, but reject any other non-boolean
+    # result (Dataset, Series, custom objects, etc.)
+    if isinstance(result, bool | np.bool_):
+        return bool(result)
+    return False
 
 
 def list_equiv[T](first: Sequence[T], second: Sequence[T]) -> bool:
