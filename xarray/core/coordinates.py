@@ -85,8 +85,9 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        """Mapping of :py:class:`~xarray.indexes.Index` objects
-        used for label based indexing.
+        """Mapping of :py:class:`~xarray.indexes.Index` objects.
+
+        The indexes are used for label based indexing.
         """
         return self._data.xindexes
 
@@ -482,7 +483,9 @@ class Coordinates(AbstractCoordinates):
         del self._data.coords[key]
 
     def equals(self, other: Self) -> bool:
-        """Two Coordinates objects are equal if they have matching variables,
+        """Check whether two Coordinates objects are equal.
+
+        Two Coordinates objects are equal if they have matching variables,
         all of which are equal.
 
         See Also
@@ -553,7 +556,7 @@ class Coordinates(AbstractCoordinates):
         *,
         compat: CompatOptions | CombineKwargDefault = "minimal",
     ) -> Dataset:
-        """Merge two sets of coordinates to create a new Dataset
+        """Merge two sets of coordinates to create a new Dataset.
 
         The method implements the logic used for joining coordinates in the
         result of a binary operation performed on xarray objects:
@@ -592,7 +595,7 @@ class Coordinates(AbstractCoordinates):
         )
 
     def __or__(self, other: Mapping[Any, Any] | None) -> Coordinates:
-        """Merge two sets of coordinates to create a new Coordinates object
+        """Merge two sets of coordinates to create a new Coordinates object.
 
         The method implements the logic used for joining coordinates in the
         result of a binary operation performed on xarray objects:
@@ -625,7 +628,6 @@ class Coordinates(AbstractCoordinates):
 
     def update(self, other: Mapping[Any, Any]) -> None:
         """Update this Coordinates variables with other coordinate variables."""
-
         if not len(other):
             return
 
@@ -662,8 +664,10 @@ class Coordinates(AbstractCoordinates):
         self._update_coords(coords, indexes)
 
     def assign(self, coords: Mapping | None = None, **coords_kwargs: Any) -> Self:
-        """Assign new coordinates (and indexes) to a Coordinates object, returning
-        a new object with all the original coordinates in addition to the new ones.
+        """Assign new coordinates (and indexes) to a Coordinates object.
+
+        Return a new object with all the original coordinates in addition to the
+        new ones.
 
         Parameters
         ----------
@@ -735,7 +739,7 @@ class Coordinates(AbstractCoordinates):
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
     ) -> Self:
-        """Callback called from ``Aligner`` to create a new reindexed Coordinate."""
+        """Create a new reindexed Coordinates object (callback for ``Aligner``)."""
         aligned = self.to_dataset()._reindex_callback(
             aligner,
             dim_pos_indexers,
@@ -838,7 +842,7 @@ class Coordinates(AbstractCoordinates):
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims: Hashable,
     ) -> Self:
-        """Returns a new object with renamed dimensions only.
+        """Return a new object with renamed dimensions only.
 
         Parameters
         ----------
@@ -862,7 +866,7 @@ class Coordinates(AbstractCoordinates):
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Coordinates:
-        """Returns a new object with renamed variables.
+        """Return a new object with renamed variables.
 
         Parameters
         ----------
@@ -941,8 +945,7 @@ class DatasetCoordinates(Coordinates):
 
     @override
     def to_dataset(self) -> Dataset:
-        """Convert these coordinates into a new Dataset"""
-
+        """Convert these coordinates into a new Dataset."""
         names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 
@@ -998,8 +1001,7 @@ class DatasetCoordinates(Coordinates):
 
 
 class DataTreeCoordinates(Coordinates):
-    """
-    Dictionary like container for coordinates of a DataTree node (variables + indexes).
+    """Dictionary like container for coordinates of a DataTree node (variables + indexes).
 
     This collection can be passed directly to the :py:class:`~xarray.Dataset`
     and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
@@ -1053,7 +1055,7 @@ class DataTreeCoordinates(Coordinates):
 
     @override
     def to_dataset(self) -> Dataset:
-        """Convert these coordinates into a new Dataset"""
+        """Convert these coordinates into a new Dataset."""
         return self._data.dataset._copy_listed(self._names)
 
     @override
@@ -1259,7 +1261,7 @@ def assert_coordinate_consistent(obj: T_Xarray, coords: Mapping[Any, Variable]) 
 def create_coords_with_default_indexes(
     coords: Mapping[Any, Any], data_vars: DataVars | None = None
 ) -> Coordinates:
-    """Returns a Coordinates object from a mapping of coordinates (arbitrary objects).
+    """Return a Coordinates object from a mapping of coordinates (arbitrary objects).
 
     Create default (pandas) indexes for each of the input dimension coordinates.
     Extract coordinates from each input DataArray.
@@ -1346,7 +1348,9 @@ def validate_dataarray_coords(
     coords: Coordinates | Mapping[Hashable, Variable],
     dim: tuple[Hashable, ...],
 ):
-    """Validate coordinates ``coords`` to include in a DataArray defined by
+    """Validate coordinates to include in a DataArray.
+
+    The coordinates ``coords`` are validated against a DataArray defined by
     ``shape`` and dimensions ``dim``.
 
     If a coordinate is associated with an index, the validation is performed by

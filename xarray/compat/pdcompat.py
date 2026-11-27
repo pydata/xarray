@@ -38,6 +38,7 @@ from enum import Enum
 from typing import Literal
 
 import pandas as pd
+from packaging.version import Version
 
 
 def count_not_none(*args) -> int:
@@ -50,9 +51,11 @@ def count_not_none(*args) -> int:
 
 class _NoDefault(Enum):
     """Used by pandas to specify a default value for a deprecated argument.
+
     Copied from pandas._libs.lib._NoDefault.
 
-    See also:
+    See Also
+    --------
     - pandas-dev/pandas#30788
     - pandas-dev/pandas#40684
     - pandas-dev/pandas#40715
@@ -80,3 +83,14 @@ def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     if dt.unit != "ns":
         dt = dt.as_unit("ns")
     return dt
+
+
+def pandas_infers_string_dtype() -> bool:
+    """Whether ``pd.Series`` infers the (slow to build) ``str`` dtype for strings."""
+    # TODO: remove once pandas 3.0 is the oldest supported version, together with
+    #       its call in `xarray.core.variable._possibly_convert_objects`
+    if Version(pd.__version__) >= Version("3.0.0dev0"):
+        # Default since pandas 3.0; the option is deprecated there and will be
+        # removed in pandas 4.0, so don't query it.
+        return True
+    return bool(pd.get_option("future.infer_string"))

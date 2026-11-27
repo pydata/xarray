@@ -1,5 +1,4 @@
-"""
-Expression evaluation for Dataset.eval().
+"""Expression evaluation for Dataset.eval().
 
 This module provides AST-based expression evaluation to support N-dimensional
 arrays (N > 2), which pd.eval() doesn't support. See GitHub issue #11062.

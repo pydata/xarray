@@ -12,7 +12,7 @@ from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import Variable
+from xarray.core.variable import Variable, _as_shared_dtype
 from xarray.core.variable import concat as concat_vars
 from xarray.structure.alignment import align, reindex_variables
 from xarray.structure.merge import (
@@ -344,9 +344,9 @@ def concat(
 def _calc_concat_dim_index(
     dim_or_data: Hashable | Any,
 ) -> tuple[Hashable, PandasIndex | None]:
-    """Infer the dimension name and 1d index / coordinate variable (if appropriate)
-    for concatenating along the new dimension.
+    """Infer the dimension name and 1d index for concatenating along the new dimension.
 
+    The 1d index / coordinate variable is only inferred if appropriate.
     """
     from xarray.core.dataarray import DataArray
 
@@ -363,6 +363,11 @@ def _calc_concat_dim_index(
         else:
             (dim,) = dim_or_data.dims
         coord_dtype = getattr(dim_or_data, "dtype", None)
+        if isinstance(coord_dtype, pd.StringDtype):
+            # pandas 3 gives a string pd.Index a StringDtype, which is not a
+            # dtype PandasIndex would pick for itself, so map it to the numpy
+            # string dtype the same way PandasIndexingAdapter does (GH#11317)
+            coord_dtype = np.dtypes.StringDType(na_object=coord_dtype.na_value)
         index = PandasIndex(dim_or_data, dim, coord_dtype=coord_dtype)
 
     return dim, index
@@ -376,9 +381,7 @@ def _calc_concat_over(
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
 ) -> tuple[set[Hashable], dict[Hashable, bool], list[int], set[Hashable]]:
-    """
-    Determine which dataset variables need to be concatenated in the result,
-    """
+    """Determine which dataset variables need to be concatenated in the result."""
     # variables to be concatenated
     concat_over = set()
     # variables checked for equality
@@ -616,9 +619,7 @@ def _dataset_concat(
     *,
     preexisting_dim: bool = False,
 ) -> T_Dataset:
-    """
-    Concatenate a sequence of datasets along a new or existing dimension
-    """
+    """Concatenate a sequence of datasets along a new or existing dimension."""
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -723,6 +724,8 @@ def _dataset_concat(
         common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim_name not in common_dims:
             common_dims = (dim_name,) + common_dims
+        if any(var.dims != common_dims for var in vars):
+            vars = _as_shared_dtype(vars)
         for var, dim_len in zip(vars, concat_dim_lengths, strict=True):
             if var.dims != common_dims:
                 common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
@@ -746,8 +749,7 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
-    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
-    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    file_start_indexes = np.cumulative_sum(concat_dim_lengths, include_initial=True)
     concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
     variable_reindexer = None
@@ -938,9 +940,7 @@ def _datatree_concat(
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
 ) -> DataTree:
-    """
-    Concatenate a sequence of datatrees along a new or existing dimension
-    """
+    """Concatenate a sequence of datatrees along a new or existing dimension."""
     from xarray.core.datatree import DataTree
     from xarray.core.treenode import TreeIsomorphismError, group_subtrees
 

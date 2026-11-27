@@ -19,6 +19,7 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
     _asarray_tuplesafe,
+    is_full_ordered_product,
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
@@ -252,6 +253,21 @@ class TestPandasIndex:
 
         actual = index.sel({"x": index.to_pandas_index().to_numpy()[1]})
         assert actual.dim_indexers == expected_dim_indexers
+
+    @pytest.mark.parametrize("unit", ["s", "ms", "us"])
+    def test_sel_datetime_coarse_unit_outside_nanosecond_range(self, unit) -> None:
+        # GH#10975: pandas parses string slice bounds at nanosecond resolution
+        # and raises for dates past 2262, even for a datetime64[s] index.
+        values = np.arange("2390-01", "2410-01", dtype="datetime64[M]").astype(
+            f"datetime64[{unit}]"
+        )
+        da = xr.DataArray(np.arange(values.size), dims="x", coords={"x": values})
+        actual = da.sel(x=slice("2400-01-01", "2402-01-01"))
+        expected = values[
+            (values >= np.datetime64("2400-01-01", unit))
+            & (values <= np.datetime64("2402-01-01", unit))
+        ]
+        np.testing.assert_array_equal(actual.x.values, expected)
 
     def test_sel_unsorted_datetime_index_raises(self) -> None:
         index = PandasIndex(pd.to_datetime(["2001", "2000", "2002"]), "x")
@@ -703,15 +719,17 @@ class TestIndexes:
             assert_identical(new, original)
 
 
-def test_safe_cast_to_index():
+def test_safe_cast_to_index() -> None:
     dates = pd.date_range("2000-01-01", periods=10)
     x = np.arange(5)
     td = x * np.timedelta64(1, "D")
+    struct = np.array([(1, "a"), (2, "b")], dtype=[("x", int), ("y", "U1")])
     for expected, array in [
         (dates, dates.values),
         (pd.Index(x, dtype=object), x.astype(object)),
         (pd.Index(td), td),
         (pd.Index(td, dtype=object), td.astype(object)),
+        (pd.Index(struct.astype(object)), struct),
     ]:
         actual = safe_cast_to_index(array)
         assert_array_equal(expected, actual)
@@ -805,7 +823,6 @@ class IndexWithExtraVariables(Index):
 
 def test_set_xindex_with_extra_variables() -> None:
     """Test that set_xindex raises an error when custom index creates extra variables."""
-
     ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
 
     # Test that set_xindex raises error for extra variables
@@ -825,3 +842,40 @@ def test_set_xindex_factory_method_pattern() -> None:
     assert "time" in result.variables
     assert "valid_time" in result.variables
     assert_array_equal(result.valid_time.data, result.time.data + 1)
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"], [3, 4]]),
+            True,
+            id="product",
+        ),
+        pytest.param(
+            pd.MultiIndex(
+                levels=[[2, 1, 0], ["b", "a"]],
+                codes=[[0, 0, 1, 1, 2, 2], [0, 1, 0, 1, 0, 1]],
+            ),
+            True,
+            id="product-unsorted-levels",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1], ["a", "b"]])[::-1],
+            False,
+            id="reversed",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]),
+            False,
+            id="missing",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a"), (1, np.nan)]),
+            False,
+            id="nan-label",
+        ),
+    ],
+)
+def test_is_full_ordered_product(index: pd.MultiIndex, expected: bool) -> None:
+    assert is_full_ordered_product(index) is expected

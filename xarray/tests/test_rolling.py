@@ -15,7 +15,6 @@ from xarray.tests import (
     dask_array_api,
     requires_bottleneck,
     requires_dask,
-    requires_dask_ge_2024_11_0,
     requires_numbagg,
 )
 
@@ -40,6 +39,42 @@ def test_cumulative(d, func, min_periods) -> None:
         func,
     )()
     assert_identical(result, expected)
+
+
+@pytest.mark.parametrize("func", ["argmin", "argmax"])
+def test_cumulative_argminmax(func) -> None:
+    # GH11336
+    da = DataArray([1, 2, 1.5, 3.5, 4], dims="time")
+    result = getattr(da.cumulative("time"), func)()
+    expected = {"argmin": [0, 0, 0, 0, 0], "argmax": [0, 1, 1, 3, 4]}[func]
+    np.testing.assert_array_equal(result.values, expected)
+
+    result = getattr(da.to_dataset(name="a").cumulative("time"), func)()
+    np.testing.assert_array_equal(result["a"].values, expected)
+
+
+@pytest.mark.parametrize(
+    "func, data",
+    [
+        ("argmin", [True, True, False, True]),
+        ("argmin", [np.inf, np.inf, 0.0, np.inf]),
+        ("argmax", [-np.inf, -np.inf, 0.0, -np.inf]),
+        ("argmin", np.array([2**63 - 1] * 2 + [0, 2**63 - 1], dtype="int64")),
+        ("argmax", np.array([-(2**63)] * 2 + [0, -(2**63)], dtype="int64")),
+    ],
+    ids=["bool-argmin", "float-argmin", "float-argmax", "int-argmin", "int-argmax"],
+)
+@pytest.mark.parametrize("use_numbagg", [True, False])
+def test_rolling_argminmax_ties_with_padding(
+    func: str, data: list | np.ndarray, use_numbagg: bool
+) -> None:
+    # GH11899: real values equal to the padding sentinel must not give negative indices
+    da = DataArray(data, dims="t")
+    with set_options(use_numbagg=use_numbagg, use_bottleneck=False):
+        for obj in (da.rolling(t=3, min_periods=1), da.cumulative("t")):
+            result = getattr(obj, func)()
+            expected = [getattr(window, func)("t").item() for _, window in obj]
+            np.testing.assert_array_equal(result.values, expected)
 
 
 def test_cumulative_vs_cum(d) -> None:
@@ -68,6 +103,33 @@ class TestDataArrayRolling:
             expected = window_da.mean("time")
 
             np.testing.assert_allclose(actual.values, expected.values)
+
+    @pytest.mark.parametrize("name", ["argmin", "argmax"])
+    @pytest.mark.parametrize("center", [True, False])
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 10])
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            "numpy",
+            pytest.param("bottleneck", marks=requires_bottleneck),
+            pytest.param("dask", marks=requires_dask),
+        ],
+    )
+    def test_rolling_argminmax_vs_iter(
+        self, name: str, center: bool, size: int, backend: str
+    ) -> None:
+        # GH11336: the index is relative to the part of the window within the array
+        da = DataArray([3.0, 1, 4, 1.5, 5, 9, 2, 6, 5.5, 3.5, 8, 7], dims="time")
+        rolling_obj = da.rolling(time=size, center=center, min_periods=1)
+        expected = [getattr(window, name)("time").item() for _, window in rolling_obj]
+
+        if backend == "dask":
+            rolling_obj = da.chunk(time=6).rolling(
+                time=size, center=center, min_periods=1
+            )
+        with set_options(use_bottleneck=backend != "numpy", use_numbagg=False):
+            actual = getattr(rolling_obj, name)()
+        np.testing.assert_array_equal(actual.values, expected)
 
     @pytest.mark.parametrize("da", (1,), indirect=True)
     def test_rolling_repr(self, da) -> None:
@@ -129,11 +191,11 @@ class TestDataArrayRolling:
         expected = getattr(bn, func_name)(
             da.values, window=window, axis=1, min_count=min_periods
         )
-        # index 0 is at the rightmost edge of the window
-        # need to reverse index here
-        # see GH #8541
+        # bottleneck counts from the rightmost edge of the window, xarray from the
+        # first value of the window within the array (GH #8541, GH #11336)
         if func_name in ["move_argmin", "move_argmax"]:
-            expected = window - 1 - expected
+            i = np.arange(da.sizes["time"])[:, np.newaxis]
+            expected = np.minimum(i, window - 1) - expected
 
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
@@ -146,6 +208,17 @@ class TestDataArrayRolling:
         actual = getattr(rolling_obj, name)()["time"]
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         assert_allclose(actual, da["time"])
+
+    @requires_dask
+    @pytest.mark.parametrize("name", ("sum", "mean", "count"))
+    def test_rolling_dask_keeps_chunks(self, name) -> None:
+        # these reductions don't copy the windows, so dask doesn't need to split
+        # the chunks to limit the memory of the window views
+        da = DataArray(np.ones((40, 20)), dims=("x", "y")).chunk({"x": 10, "y": 10})
+        with set_options(use_bottleneck=False, use_numbagg=False):
+            actual = getattr(da.rolling(x=4), name)()
+        assert actual.chunksizes["y"] == da.chunksizes["y"]
+        assert len(actual.chunksizes["x"]) == len(da.chunksizes["x"])
 
     @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
@@ -436,7 +509,7 @@ class TestDataArrayRolling:
         assert chunked_result.dtype == unchunked_result.dtype
 
     @requires_bottleneck
-    @requires_dask_ge_2024_11_0
+    @requires_dask
     @pytest.mark.parametrize(
         "name, center, dtype",
         [
@@ -490,6 +563,21 @@ class TestDataArrayRolling:
         assert actual_block.dtype == expected.dtype
         assert computed.dtype == expected.dtype
         assert_allclose(computed, expected)
+
+    @requires_bottleneck
+    @pytest.mark.parametrize("window", [3, 4, 8])
+    def test_rolling_bottleneck_vs_numpy(self, window: int, use_dask: bool) -> None:
+        # bottleneck failed for windows larger than the array, or with dask than its
+        # first chunk, and named the result after the dask array
+        da = DataArray(np.arange(7.0), dims="x")
+        if use_dask:
+            da = da.chunk(x=3)
+        rolling_obj = da.rolling(x=window, min_periods=1)
+        with set_options(use_bottleneck=False, use_numbagg=False):
+            expected = rolling_obj.max()
+        with set_options(use_bottleneck=True, use_numbagg=False):
+            actual = rolling_obj.max()
+        assert_identical(actual, expected)
 
     def test_rolling_mean_bool(self) -> None:
         bool_raster = DataArray(
@@ -678,7 +766,7 @@ class TestDatasetRolling:
         ):
             ds.rolling(foo=2)
 
-    @requires_dask_ge_2024_11_0
+    @requires_dask
     def test_rolling_construct_automatic_rechunk(self):
         da = dask_array_api
 
@@ -944,12 +1032,12 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("ds", (2,), indirect=True)
     @pytest.mark.parametrize("name", ("mean", "max"))
     def test_raise_no_warning_dask_rolling_assert_close(self, ds, name) -> None:
-        """
+        """Test that no warning is raised by assert_allclose on rolling dask data.
+
         This is a puzzle — I can't easily find the source of the warning. It
         requires `assert_allclose` to be run, for the `ds` param to be 2, and is
         different for `mean` and `max`. `sum` raises no warning.
         """
-
         ds = ds.chunk({"x": 4})
 
         rolling_obj = ds.rolling(time=4, x=3)

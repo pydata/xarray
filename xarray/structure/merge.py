@@ -76,7 +76,7 @@ _VALID_COMPAT = Frozen(
 
 
 class Context:
-    """object carrying the information of a call"""
+    """Object carrying the information of a call."""
 
     def __init__(self, func):
         self.func = func
@@ -195,8 +195,9 @@ def _assert_prioritized_valid(
     grouped: dict[Hashable, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement],
 ) -> None:
-    """Make sure that elements given in prioritized will not corrupt any
-    index given in grouped.
+    """Make sure that elements given in prioritized will not corrupt any index.
+
+    The indexes checked are those given in grouped.
     """
     prioritized_names = set(prioritized)
     grouped_by_index: dict[int, list[Hashable]] = defaultdict(list)
@@ -634,7 +635,7 @@ def equivalent_attrs(a: Any, b: Any) -> bool:
 
 
 def merge_attrs(variable_attrs, combine_attrs, context=None):
-    """Combine attributes from different variables according to combine_attrs"""
+    """Combine attributes from different variables according to combine_attrs."""
     if not variable_attrs:
         # no attributes to merge
         return None
@@ -787,10 +788,18 @@ def merge_core(
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:
-        raise MergeError(
-            "unable to determine if these variables should be "
-            f"coordinates or not in the merged result: {ambiguous_coords}"
+        emit_user_level_warning(
+            "unable to unambiguously determine if these variables should be "
+            f"coordinates or not in the merged result: {ambiguous_coords}, "
+            "their status will be taken from the first object.",
+            UserWarning,
         )
+        keep_coords, _ = determine_coords([coerced[0]])
+        if explicit_coords is not None:
+            keep_coords.update(explicit_coords)
+        coord_names = coord_names - {
+            crd for crd in ambiguous_coords if crd not in keep_coords
+        }
 
     attrs = merge_attrs(
         [var.attrs for var in coerced if isinstance(var, Dataset | DataArray)],
@@ -940,6 +949,19 @@ def merge(
     Dataset or DataTree
         Objects with combined variables from the inputs. If any inputs are a
         DataTree, this will also be a DataTree. Otherwise it will be a Dataset.
+        If a variable appears as a coordinate on one input but as a data variable
+        on another, it's coordinate status is taken from the first input.
+
+    Raises
+    ------
+    xarray.MergeError
+        If any variables with the same name have conflicting values.
+
+    See Also
+    --------
+    concat
+    combine_nested
+    combine_by_coords
 
     Examples
     --------
@@ -1086,19 +1108,7 @@ def merge(
     Traceback (most recent call last):
     ...
     xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
-
-    Raises
-    ------
-    xarray.MergeError
-        If any variables with the same name have conflicting values.
-
-    See Also
-    --------
-    concat
-    combine_nested
-    combine_by_coords
     """
-
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
@@ -1229,7 +1239,7 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
 
 
 def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
-    """Used in Dataset.__init__."""
+    """Merge data variables and coordinates (used in Dataset.__init__)."""
     from xarray.core.coordinates import Coordinates, create_coords_with_default_indexes
 
     if isinstance(coords, Coordinates):

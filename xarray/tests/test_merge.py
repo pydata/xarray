@@ -189,7 +189,7 @@ class TestMergeFunction:
     def test_merge_arrays_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         input_attrs1 = attrs1.copy()
         data1 = xr.Dataset(
             {"var1": ("dim1", [], attrs1)}, coords={"dim1": ("dim1", [], attrs1)}
@@ -501,7 +501,7 @@ class TestMergeFunction:
         assert "zero" not in actual.attrs
 
     def test_merge_attrs_no_conflicts_compat_minimal(self):
-        """make sure compat="minimal" does not silence errors"""
+        """Make sure compat="minimal" does not silence errors."""
         ds1 = xr.Dataset({"a": ("x", [], {"a": 0})})
         ds2 = xr.Dataset({"a": ("x", [], {"a": 1})})
 
@@ -625,10 +625,14 @@ class TestMergeMethod:
 
         with pytest.raises(ValueError, match="conflicting values for variable"):
             ds1.merge(ds2.rename({"var3": "var1"}), compat="no_conflicts")
-        with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.reset_coords().merge(data)
-        with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.merge(data.reset_coords())
+
+        with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+            out = data.reset_coords().merge(data)
+        assert "numbers" in out.data_vars
+
+        with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+            out = data.merge(data.reset_coords())
+        assert "numbers" in out.coords
 
     @pytest.mark.parametrize(
         "join", ["outer", "inner", "left", "right", "exact", "override"]
@@ -672,8 +676,9 @@ class TestMergeMethod:
 
         ds2 = xr.Dataset({"x": [0, 0]})
         for compat in ["equals", "identical"]:
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
+            assert "x" in out.data_vars
 
         ds2 = xr.Dataset({"x": ((), 0, {"foo": "bar"})})
         with pytest.raises(xr.MergeError):
@@ -826,10 +831,13 @@ class TestNewDefaults:
 
             ds1.merge(ds2.rename({"var3": "var1"}))
 
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                data.reset_coords().merge(data)
-            with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                data.merge(data.reset_coords())
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = data.reset_coords().merge(data)
+            assert "numbers" in out.data_vars
+
+            with pytest.warns(UserWarning, match=r"should be coordinates or not"):
+                out = data.merge(data.reset_coords())
+            assert "numbers" in out.coords
 
     def test_merge_broadcast_equals(self):
         ds1 = xr.Dataset({"x": 0})

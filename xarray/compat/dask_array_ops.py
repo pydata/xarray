@@ -12,7 +12,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 def dask_rolling_wrapper(
     moving_func, a, window, min_count=None, axis=-1, input_dtype=None
 ):
-    """Wrapper to apply bottleneck moving window funcs on dask arrays"""
+    """Apply bottleneck moving window funcs on dask arrays."""
     if input_dtype is None:
         input_dtype = a.dtype
     if input_dtype.kind in "biufc":
@@ -21,8 +21,22 @@ def dask_rolling_wrapper(
         ).dtype
     else:
         dtype, _ = dtypes.maybe_promote(a.dtype)
+
+    def moving_block(
+        block: np.ndarray, window: int, min_count: int | None, axis: int
+    ) -> np.ndarray:
+        # Only the first chunk, which isn't overlapped with a previous chunk, can be
+        # shorter than the window, which bottleneck refuses. Its windows are cut off
+        # by the start of the array, so a window of the chunk's size is equivalent.
+        size = block.shape[axis]
+        if size < window:
+            if min_count is None or min_count > size:
+                return np.full(block.shape, np.nan, dtype=dtype)
+            window = size
+        return moving_func(block, window=window, min_count=min_count, axis=axis)
+
     return a.data.map_overlap(
-        moving_func,
+        moving_block,
         depth={axis: (window - 1, 0)},
         axis=axis,
         dtype=dtype,
@@ -103,9 +117,7 @@ def _dtype_push(a, axis, dtype=None):
 
 
 def push(array, n, axis, method="blelloch"):
-    """
-    Dask-aware bottleneck.push
-    """
+    """Dask-aware bottleneck.push."""
     import numpy as np
 
     from xarray.core.duck_array_ops import _push

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import functools
 import inspect
-import warnings
 from collections.abc import Callable, Hashable, Iterable
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
+from xarray.core.utils import emit_user_level_warning
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _add_colorbar,
+    _check_col_wrap,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
     _process_cmap_cbar_kwargs,
@@ -214,7 +215,7 @@ levels : int or array-like, optional
             if len(args) > 5:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+                emit_user_level_warning(msg, FutureWarning)
             del msg
         del args
 
@@ -227,6 +228,8 @@ levels : int or array-like, optional
             )
 
         hue_style = meta_data["hue_style"]
+
+        _check_col_wrap(col_wrap, row, col)
 
         # handle facetgrids first
         if col or row:
@@ -652,12 +655,10 @@ def streamplot(
     return hdl.lines
 
 
-F = TypeVar("F", bound=Callable)
-
-
-def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
-    """
-    Add a common docstring by reusing the DataArray one.
+def _update_doc_to_dataset[F: Callable](
+    dataarray_plotfunc: Callable,
+) -> Callable[[F], F]:
+    """Add a common docstring by reusing the DataArray one.
 
     TODO: Reduce code duplication.
 
@@ -672,7 +673,6 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     dataarray_plotfunc : Callable
         Function that returns a finished plot primitive.
     """
-
     # Build on the original docstring
     da_doc = dataarray_plotfunc.__doc__
     if da_doc is None:
@@ -760,7 +760,6 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -801,7 +800,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -842,7 +840,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -883,7 +880,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -931,7 +927,6 @@ def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -972,7 +967,6 @@ def lines(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1013,7 +1007,6 @@ def lines(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1054,7 +1047,6 @@ def lines(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1085,8 +1077,7 @@ def lines(
     levels: ArrayLike | None = None,
     **kwargs: Any,
 ) -> LineCollection | FacetGrid[DataArray]:
-    """
-    Line plot Dataset data variables against each other.
+    """Line plot Dataset data variables against each other.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
     efficient plotting of many lines in a similar fashion to

@@ -108,17 +108,30 @@ benchmark_transform_warp.WarpSuite.time_to_float64 [fv-az95-499/conda-py3.7-cyth
 
 ## Other details
 
-### Skipping slow or demanding tests
+### Parameterizing and skipping benchmarks
 
-To minimize the time required to run the full suite, we trimmed the parameter matrix in some cases and, in others, directly skipped tests that ran for too long or require too much memory. Unlike `pytest`, `asv` does not have a notion of marks. However, you can `raise NotImplementedError` in the setup step to skip a test. In that vein, a new private function is defined at `benchmarks.__init__`: `_skip_slow`. This will check if the `ASV_SKIP_SLOW` environment variable has been defined. If set to `1`, it will raise `NotImplementedError` and skip the test. To implement this behavior in other tests, you can add the following attribute:
+Benchmarks are parameterized and skipped with the decorators from [`asv_runner.benchmarks.mark`](https://asv.readthedocs.io/en/latest/writing_benchmarks.html#skipping-benchmarks):
 
 ```python
-from . import _skip_slow  # this function is defined in benchmarks.__init__
+from asv_runner.benchmarks.mark import parameterize, skip_for_params
 
 
-def time_something_slow():
+@skip_for_params([("cumsum", 2)])
+@parameterize({"method": ("sum", "cumsum"), "ndim": (1, 2)})
+def time_something(method, ndim):
     pass
-
-
-time_something.setup = _skip_slow
 ```
+
+To minimize the time required to run the full suite, we trimmed the parameter matrix in some cases and, in others, skipped benchmarks that ran for too long or require too much memory. The `skip_slow` decorator defined in `benchmarks.__init__` skips a benchmark function, or all benchmarks of a class, if the `ASV_SKIP_SLOW` environment variable is set to `1` (as in CI):
+
+```python
+from . import skip_slow  # this function is defined in benchmarks.__init__
+
+
+@skip_slow
+class SomethingSlow:
+    def time_something(self):
+        pass
+```
+
+These decorators are evaluated once, when asv discovers the benchmarks, not for every benchmarked commit. Skips that depend on the benchmarked version of xarray (e.g. a method that doesn't exist in older releases) or on the parameters at runtime still have to `raise NotImplementedError` in `setup`.

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from types import EllipsisType
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -11,6 +13,7 @@ from xarray import DataArray, Dataset
 from xarray.tests import (
     assert_allclose,
     assert_equal,
+    assert_identical,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -25,6 +28,50 @@ def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
         data.weighted([1, 2])  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("values", "retained"),
+    (
+        pytest.param([1.0, 3.0], True, id="float"),
+        pytest.param(pd.array([1, 3], dtype="Int64"), True, id="nullable-int"),
+        pytest.param(np.array([1, 3], dtype="timedelta64[ns]"), True, id="timedelta"),
+        pytest.param(pd.date_range("2000", periods=2), False, id="datetime"),
+        pytest.param(["a", "b"], False, id="string"),
+        pytest.param(pd.Categorical(["a", "b"]), False, id="categorical"),
+    ),
+)
+def test_dataset_weighted_dtype_filter(values: Any, retained: bool) -> None:
+    ds = Dataset({"numeric": ("x", [1.0, 3.0]), "candidate": ("x", values)})
+    weights = DataArray([1.0, 2.0], dims="x")
+    weighted = ds.weighted(weights)
+
+    assert_identical(
+        weighted.sum_of_weights(), Dataset({"numeric": 3.0, "candidate": 3.0})
+    )
+
+    # Quantile also accepts timedeltas, unlike some of the other reductions.
+    expected = {"numeric", "candidate"} if retained else {"numeric"}
+    assert set(weighted.quantile(0.5).data_vars) == expected
+
+
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_nullable_data_and_weights(as_dataset: bool) -> None:
+    data: DataArray | Dataset = DataArray(
+        pd.array([100, 200], dtype="Int64"), dims="x", name="values"
+    )
+    weights = DataArray(pd.array([True, True], dtype="boolean"), dims="x")
+    if as_dataset:
+        data = data.to_dataset()
+
+    expected_sum: DataArray | Dataset = DataArray(300, name="values")
+    expected_mean: DataArray | Dataset = DataArray(150, name="values")
+    if as_dataset:
+        expected_sum = expected_sum.to_dataset()
+        expected_mean = expected_mean.to_dataset()
+
+    assert_equal(data.weighted(weights).sum(), expected_sum)
+    assert_equal(data.weighted(weights).mean(), expected_mean)
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -384,6 +431,38 @@ def test_weighted_mean_bool():
     assert_equal(expected, result)
 
 
+@pytest.mark.parametrize("dtype", ["uint8", "int8", "bool"])
+@pytest.mark.parametrize("n", [255, 256, 300])
+def test_weighted_small_int_weights_no_overflow(
+    dtype: str, n: int, use_dask: bool
+) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.ones(n), dims="x")
+    weights = DataArray(np.ones(n, dtype=dtype), dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum_of_weights(), DataArray(n))
+    assert_equal(weighted.mean(), DataArray(1))
+
+
+def test_weighted_small_int_data_no_overflow(use_dask: bool) -> None:
+    # https://github.com/pydata/xarray/issues/11867
+    da = DataArray(np.array([100, 200], dtype="uint8"), dims="x")
+    weights = DataArray([True, True], dims="x")
+    if use_dask:
+        da = da.chunk()
+        weights = weights.chunk()
+
+    weighted = da.weighted(weights)
+
+    assert_equal(weighted.sum(), DataArray(300))
+    assert_equal(weighted.mean(), DataArray(150))
+
+
 @pytest.mark.parametrize(
     ("weights", "expected"),
     (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
@@ -428,6 +507,18 @@ def test_weighted_var_equal_weights(da, skipna, factor):
     result = da.weighted(weights).var(skipna=skipna)
 
     assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("operation", "expected"),
+    (("sum_of_squares", 6.0), ("var", 1.5), ("std", np.sqrt(1.5))),
+)
+def test_weighted_complex_variance(operation: str, expected: float) -> None:
+    da = DataArray([1 + 1j, 3 + 3j], dims="x")
+    weights = DataArray([1.0, 3.0], dims="x")
+    result = getattr(da.weighted(weights), operation)()
+    assert_allclose(result, DataArray(expected))
+    assert result.dtype.kind == "f"
 
 
 @pytest.mark.parametrize(
@@ -523,11 +614,10 @@ def test_weighted_std_bool():
 
 
 def expected_weighted(da, weights, dim, skipna, operation):
-    """
-    Generate expected result using ``*`` and ``sum``. This is checked against
-    the result of da.weighted which uses ``dot``
-    """
+    """Generate expected result using ``*`` and ``sum``.
 
+    This is checked against the result of da.weighted which uses ``dot``.
+    """
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
 
     if operation == "sum":
@@ -666,7 +756,6 @@ def test_weighted_operations_nonequal_coords(
 ) -> None:
     """Check that weighted operations work with unequal coords.
 
-
     Parameters
     ----------
     coords_weights : Iterable[Any]
@@ -786,6 +875,24 @@ def test_weighted_mean_keep_attrs_ds():
     assert data.coords["dim_1"].attrs == result.coords["dim_1"].attrs
 
 
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_operations_drop_coord_attrs(as_dataset):
+    # Test that coord attrs are cleared when keep_attrs=False
+    weights = DataArray(np.random.randn(2))
+    ds = Dataset(
+        {"a": (["dim_0", "dim_1"], np.random.randn(2, 2), {"attr": "data"})},
+        coords={"dim_1": ("dim_1", ["a", "b"], {"coord_attr": "value"})},
+    )
+
+    data: DataArray | Dataset = ds if as_dataset else ds["a"]
+
+    result = data.weighted(weights).mean(dim="dim_0", keep_attrs=False)
+
+    # All attrs should be cleared
+    assert result.attrs == {}
+    assert result.coords["dim_1"].attrs == {}
+
+
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
@@ -808,3 +915,54 @@ def test_weighted_bad_dim(operation, as_dataset):
         ),
     ):
         getattr(data.weighted(weights), operation)(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "operation", ["sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"]
+)
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+@pytest.mark.parametrize("dim", [None, ..., "x"])
+def test_dataset_weighted_keeps_unreduced_coords(
+    operation: str, coords: dict[str, Any], dim: str | EllipsisType | None
+) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = getattr(data.weighted(weights), operation)(dim=dim)
+    unweighted_op = (
+        "sum" if operation in ("sum_of_weights", "sum_of_squares") else operation
+    )
+    expected = getattr(data, unweighted_op)(dim=dim)
+
+    assert_identical(result.coords.to_dataset(), expected.coords.to_dataset())
+
+
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+def test_dataset_weighted_none_ellipsis_equiv(coords: dict[str, Any]) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result_none = data.weighted(weights).quantile(0.5, dim=None)
+    result_ellipsis = data.weighted(weights).quantile(0.5, dim=...)
+
+    assert_identical(result_none, result_ellipsis)

@@ -19,6 +19,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    _raise_if_zarr_store,
     collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
@@ -254,6 +255,16 @@ def _force_native_endianness(var):
     return var
 
 
+def _force_native_endianness_attr(value):
+    # netCDF4-python writes non-native-endian attribute arrays without
+    # byte-swapping, silently corrupting the stored values (variable data
+    # is handled by _force_native_endianness above):
+    # https://github.com/Unidata/netcdf4-python/issues/1502
+    if isinstance(value, np.ndarray) and value.dtype.byteorder not in ("=", "|"):
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _extract_nc4_variable_encoding(
     variable: Variable,
     raise_on_invalid=False,
@@ -364,8 +375,8 @@ def _is_list_of_strings(value) -> bool:
 def _build_and_get_enum(
     store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
 ) -> ncEnumType | h5EnumType:
-    """
-    Add or get the netCDF4 Enum based on the dtype in encoding.
+    """Add or get the netCDF4 Enum based on the dtype in encoding.
+
     The return type should be ``netCDF4.EnumType``,
     but we avoid importing netCDF4 globally for performances.
     """
@@ -473,6 +484,17 @@ class NetCDF4DataStore(WritableCFDataStore):
             autoclose=self.autoclose,
         )
 
+    def __dask_tokenize__(self) -> object:
+        """Token for dask, identifying the data by the type, file manager, and group.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager, self._group))
+
     @classmethod
     def open(
         cls,
@@ -490,8 +512,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if isinstance(filename, os.PathLike):
-            filename = os.fspath(filename)
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, IOBase):
             raise TypeError(
@@ -499,6 +522,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             )
 
         if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
+            _raise_if_zarr_store(filename, "netCDF4")
             raise TypeError(f"invalid filename for netCDF4 backend: {filename}")
 
         if format is None:
@@ -553,8 +577,22 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock=lock,
             )
         else:
+            # netCDF3 must keep fresh opens, while read-only HDF5 handles can be
+            # shared until the last dataset using them is closed.
+            is_hdf5 = (
+                mode == "r"
+                and isinstance(filename, str)
+                and not is_remote_uri(filename)
+                and try_read_magic_number_from_path(filename) == b"\x89HDF\r\n\x1a\n"
+            )
+            share = is_hdf5 and lock is NETCDF4_PYTHON_LOCK and not diskless
             manager = CachingFileManager(
-                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
+                netCDF4.Dataset,
+                filename,
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
+                share=share,
             )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
@@ -679,6 +717,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     @override
     def set_attribute(self, key, value):
+        value = _force_native_endianness_attr(value)
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
         if _is_list_of_strings(value):
@@ -701,7 +740,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-        attrs = variable.attrs.copy()
+        attrs = {k: _force_native_endianness_attr(v) for k, v in variable.attrs.items()}
         fill_value = attrs.pop("_FillValue", None)
         datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
@@ -774,8 +813,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the netCDF4 package.
+    """Backend for netCDF files based on the netCDF4 package.
 
     It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.

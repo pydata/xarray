@@ -172,8 +172,10 @@ class TestH5NetCDFData(NetCDF4Base):
                     assert v == actual["var2"].encoding[k]
 
     def test_compression_check_encoding_h5py(self) -> None:
-        """When mismatched h5py and NetCDF4-Python encodings are expressed
-        in to_netcdf(encoding=...), must raise ValueError
+        """Test that mismatched h5py and NetCDF4-Python encodings raise ValueError.
+
+        When mismatched h5py and NetCDF4-Python encodings are expressed in
+        to_netcdf(encoding=...), must raise ValueError.
         """
         data = Dataset({"x": ("y", np.arange(10.0))})
         # Compatible encodings are graciously supported

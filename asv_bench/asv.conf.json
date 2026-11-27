@@ -72,7 +72,8 @@
     "flox": [""],
     "numpy_groupies": [""],
     "sparse": [""],
-    "cftime": [""]
+    "cftime": [""],
+    "zarr": [""]
   },
   // fix for bad builds
   // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185

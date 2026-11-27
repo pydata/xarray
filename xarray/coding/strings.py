@@ -17,12 +17,10 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.utils import emit_user_level_warning, module_available
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
-
-HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 def create_vlen_dtype(element_type):
@@ -127,19 +125,20 @@ def ensure_fixed_length_bytes(var: Variable) -> Variable:
 
 def validate_char_dim_name(strlen, encoding, name) -> str:
     """Check character array dimension naming and size and return it."""
-
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
         # 1 - extract all characters up to last number sequence
         # 2 - extract last number sequence
-        match = re.search(r"^(.*?)(\d+)(?!.*\d)", char_dim_name)
+        # 3 - extract the remaining characters after it
+        match = re.search(r"^(.*?)(\d+)(\D*)$", char_dim_name)
         if match:
-            new_dim_name = match.group(1)
-            if int(match.group(2)) != strlen:
+            prefix, length, suffix = match.groups()
+            new_dim_name = f"{prefix}{strlen}{suffix}"
+            if int(length) != strlen:
                 emit_user_level_warning(
-                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using '{new_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using {new_dim_name!r} instead of {char_dim_name!r} to prevent possible naming clash.\n"
                     "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
                 )
-            char_dim_name = f"{new_dim_name}{strlen}"
+            char_dim_name = new_dim_name
         elif (
             original_shape := encoding.get("original_shape", [-1])[-1]
         ) != -1 and original_shape != strlen:
@@ -199,12 +198,8 @@ def bytes_to_char(arr):
 
 def _numpy_bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible."""
-    # adapt handling of copy-kwarg to numpy 2.0
-    # see https://github.com/numpy/numpy/issues/25916
-    # and https://github.com/numpy/numpy/pull/25922
-    copy = None if HAS_NUMPY_2_0 else False
     # ensure the array is contiguous
-    arr = np.array(arr, copy=copy, order="C", dtype=np.bytes_)
+    arr = np.array(arr, copy=None, order="C", dtype=np.bytes_)
     return arr.reshape(arr.shape + (1,)).view("S1")
 
 
@@ -246,19 +241,17 @@ def char_to_bytes(arr):
 
 def _numpy_char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible."""
-    # adapt handling of copy-kwarg to numpy 2.0
-    # see https://github.com/numpy/numpy/issues/25916
-    # and https://github.com/numpy/numpy/pull/25922
-    copy = None if HAS_NUMPY_2_0 else False
     # based on: https://stackoverflow.com/a/10984878/809705
-    arr = np.array(arr, copy=copy, order="C")
+    arr = np.array(arr, copy=None, order="C")
     dtype = "S" + str(arr.shape[-1])
     return arr.view(dtype).reshape(arr.shape[:-1])
 
 
 class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Wrapper around array-like objects to create a new indexable object where
-    values, when accessed, are automatically stacked along the last dimension.
+    """Wrapper that stacks character arrays along the last dimension.
+
+    Wraps array-like objects to create a new indexable object where values, when
+    accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
     >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
@@ -266,7 +259,8 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array):
-        """
+        """Initialize the wrapper.
+
         Parameters
         ----------
         array : array-like

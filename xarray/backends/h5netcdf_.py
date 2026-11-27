@@ -4,7 +4,7 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Self, override
+from typing import TYPE_CHECKING, Any, Self, cast, override
 
 import numpy as np
 from packaging.version import Version
@@ -17,6 +17,7 @@ from xarray.backends.common import (
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
+    _raise_if_zarr_store,
     collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
@@ -109,7 +110,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf"""
+    """Store for reading and writing data via h5netcdf."""
 
     __slots__ = (
         "_filename",
@@ -171,6 +172,17 @@ class H5NetCDFStore(WritableCFDataStore):
             autoclose=self.autoclose,
         )
 
+    def __dask_tokenize__(self) -> object:
+        """Token for dask, identifying the data by the type, file manager, and group.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager, self._group))
+
     @classmethod
     def open(
         cls,
@@ -189,6 +201,10 @@ class H5NetCDFStore(WritableCFDataStore):
         open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
+
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
@@ -251,12 +267,22 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager_cls = (
-            CachingFileManager
-            if isinstance(filename, str) and not is_remote_uri(filename)
-            else PickleableFileManager
-        )
-        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager: FileManager[Any]
+        if isinstance(filename, str) and not is_remote_uri(filename):
+            share = mode == "r" and lock is HDF5_LOCK
+            # Shared handles use the same HDF5 lock as reads.
+            manager = CachingFileManager(
+                h5netcdf.File,
+                filename,
+                mode=mode,
+                kwargs=kwargs,
+                lock=HDF5_LOCK if share else None,
+                share=share,
+            )
+        else:
+            manager = PickleableFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
 
         return cls(
             manager,
@@ -297,8 +323,8 @@ class H5NetCDFStore(WritableCFDataStore):
                 },
             )
         else:
-            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-            if vlen_dtype is str:
+            string_info = h5py.check_string_dtype(var.dtype)
+            if string_info is not None and string_info.length is None:
                 encoding["dtype"] = str
             else:
                 # xarray doesn't support writing arbitrary vlen dtypes yet, so
@@ -491,13 +517,14 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    else:
-        return _normalize_path(filename_or_obj)
+    _raise_if_zarr_store(filename_or_obj, "h5netcdf")
+    return cast(
+        "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
+    )
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the h5netcdf package.
+    """Backend for netCDF files based on the h5netcdf package.
 
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.

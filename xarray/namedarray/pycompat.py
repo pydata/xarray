@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from importlib import import_module
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Literal
@@ -7,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.utils import is_scalar
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
 
 class DuckArrayModule:
-    """
-    Solely for internal isinstance and version checks.
+    """Solely for internal isinstance and version checks.
 
     Motivated by having to only import pint when required (as pint currently imports xarray)
     https://github.com/pydata/xarray/pull/5561#discussion_r664815718
@@ -79,7 +78,13 @@ def _get_cached_duck_array_module(mod: ModType) -> DuckArrayModule:
 
 
 def array_type(mod: ModType) -> DuckArrayTypes:
-    """Quick wrapper to get the array class of the module."""
+    """Quick wrapper to get the array class of the module.
+
+    Objects can only be instances of the array class once the module is imported, so
+    this doesn't import the module but returns an empty tuple until then.
+    """
+    if mod not in sys.modules:
+        return ()
     return _get_cached_duck_array_module(mod).type
 
 
@@ -90,10 +95,6 @@ def mod_version(mod: ModType) -> Version:
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
-
-
-def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) and is_scalar(x)
 
 
 def to_numpy(
