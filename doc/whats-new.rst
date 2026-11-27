@@ -223,6 +223,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.interp`, :py:meth:`Dataset.interp` and ``interp_like`` now
+  convert both source and target datetime/timedelta coordinates using the source
+  coordinate's unit, fixing incorrect or ``NaN`` results when target coordinates
+  have a finer resolution (:issue:`11946`).
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` with a string slice on a
   ``datetime64`` index that uses a unit coarser than nanoseconds, e.g. one
   produced by :py:class:`~xarray.coders.CFDatetimeCoder`, no longer raise

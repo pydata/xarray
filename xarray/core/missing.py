@@ -607,8 +607,17 @@ def _floatize_x(
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
             xmin = x[i].values.min()
-            x[i] = x[i]._to_numeric(offset=xmin, dtype=np.float64)
-            new_x[i] = new_x[i]._to_numeric(offset=xmin, dtype=np.float64)
+            datetime_unit = (
+                np.datetime_data(x[i].dtype)[0] if x[i].dtype.kind in "mM" else None
+            )
+            if datetime_unit == "generic":
+                datetime_unit = None
+            x[i] = x[i]._to_numeric(
+                offset=xmin, datetime_unit=datetime_unit, dtype=np.float64
+            )
+            new_x[i] = new_x[i]._to_numeric(
+                offset=xmin, datetime_unit=datetime_unit, dtype=np.float64
+            )
     return x, new_x
 
 
