@@ -569,6 +569,10 @@ Bug Fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
+- Fix the :py:class:`DataTree` constructor error message to correctly list
+  the accepted input types, and include :py:class:`Coordinates` in the
+  constructor documentation (:issue:`11514`).
+
 Documentation
 ~~~~~~~~~~~~~
 - Update the user guide on multi-index levels, which are indexed coordinates
@@ -733,7 +737,6 @@ Internal Changes
   installed instead of raising ``ModuleNotFoundError``. Since :pull:`11838` the
   test suite failed to import without pydap.
   By `Vanshaj Poonia <https://github.com/VanshajPoonia>`_.
-
 
 .. _whats-new.2026.09.0:
 
