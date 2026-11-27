@@ -23,6 +23,10 @@ notebooks-examples:
     path: examples/ERA5-GRIB-example.html
     thumbnail: _static/thumbnails/ERA5-GRIB-example.png
 
+  - title: Geospatial Filtering and Indexing
+    path: examples/geospatial-indexing.html
+    thumbnail: _static/thumbnails/geospatial-indexing.png
+
 external-examples:
   - title: Applying unvectorized functions with apply_ufunc
     path: https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html

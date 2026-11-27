@@ -574,6 +574,10 @@ Documentation
 - Update the user guide on multi-index levels, which are indexed coordinates
   marked by ``*`` when printing (:issue:`8071`, :pull:`11888`).
   By `Ramy Akin Saidi <https://github.com/RamyAkin>`_.
+- Added a documentation example on geospatial filtering and indexing
+  (:issue:`1861`).
+  By `Koussay Mehdouani <https://github.com/amkkoussay>`_.
+
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
   docstring. The ``apply_ufunc`` example notebook was removed in favor of the
   `apply_ufunc interpolation tutorial
